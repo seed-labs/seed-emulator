@@ -89,6 +89,9 @@ python3 -m generator.nl.cli nl-plan \
 
 详见 `nl/README.md`。
 
+NL 层内置 deterministic、通用 OpenAI-compatible 和 Xiaomi MiMo Provider；所有远程
+Provider 都只负责结构化意图翻译，API Key 仅从环境变量读取，后续编译与生命周期不调用 AI。
+
 ## 根层模块
 
 | 文件 | 作用 |

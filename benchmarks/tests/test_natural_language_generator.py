@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
 
 BENCHMARKS_DIR = Path(__file__).resolve().parents[1]
@@ -16,7 +17,7 @@ from generator.nl.catalog import build_capability_catalog  # noqa: E402
 from generator.nl.compiler import compile_intent  # noqa: E402
 from generator.nl.models import BenchmarkIntent  # noqa: E402
 from generator.nl.provider import (  # noqa: E402
-    DeterministicLLMProvider, LLMProvider, OpenAICompatibleProvider,
+    DeterministicLLMProvider, LLMProvider, MiMoProvider, OpenAICompatibleProvider,
 )
 from generator.nl.schema import BENCHMARK_INTENT_OUTPUT_SCHEMA, validate_provider_output  # noqa: E402
 from generator.nl.security import inspect_natural_language  # noqa: E402
@@ -95,6 +96,14 @@ class MustNotRunProvider(LLMProvider):
         raise AssertionError("provider was invoked for blocked input")
 
 
+class FailingProvider(LLMProvider):
+    provider_id = "failing"
+    model_id = "failing-v1"
+
+    def complete_structured(self, messages, output_schema, *, seed):
+        raise RuntimeError("synthetic provider outage")
+
+
 with tempfile.TemporaryDirectory(prefix="nl-generator-tests-") as temporary:
     root = Path(temporary)
     planner = NaturalLanguagePlanner(BENCHMARKS_DIR, root)
@@ -103,6 +112,16 @@ with tempfile.TemporaryDirectory(prefix="nl-generator-tests-") as temporary:
         provider=MustNotRunProvider(), seed="blocked", session_id="blocked_case",
     )
     assert blocked["status"] == "blocked" and blocked["provider_invoked"] is False
+
+    provider_error = planner.plan(
+        READY_TEXT,
+        provider=FailingProvider(), seed="provider-error", session_id="provider_error_case",
+    )
+    assert provider_error["status"] == "provider_error"
+    assert provider_error["provider_invoked"] is True
+    assert (root / "provider_error_case/provider_error.json").is_file()
+    assert (root / "provider_error_case/audit.json").is_file()
+    assert not (root / "provider_error_case/approval_challenge.json").exists()
 
     clarification = planner.plan(
         "生成 nginx 场景并注入容器停止故障",
@@ -161,5 +180,44 @@ expect_error(
     lambda: remote.complete_structured(messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed="x"),
     RuntimeError,
 )
+
+
+class FakeHTTPResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self):
+        return json.dumps({
+            "choices": [{"message": {"content": json.dumps(first.output)}}],
+            "usage": {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18},
+        }).encode("utf-8")
+
+
+os.environ["MIMO_TEST_KEY"] = "temporary-test-value"
+mimo = MiMoProvider(api_key_env="MIMO_TEST_KEY")
+captured = {}
+
+
+def fake_urlopen(request, timeout):
+    captured["payload"] = json.loads(request.data.decode("utf-8"))
+    captured["timeout"] = timeout
+    return FakeHTTPResponse()
+
+
+with patch("generator.nl.provider.urlopen", fake_urlopen):
+    mimo_response = mimo.complete_structured(
+        messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed="mimo-test"
+    )
+os.environ.pop("MIMO_TEST_KEY")
+validate_provider_output(mimo_response.output)
+assert mimo_response.provider == "mimo"
+assert captured["payload"]["response_format"] == {"type": "json_object"}
+assert captured["payload"]["thinking"] == {"type": "disabled"}
+assert captured["payload"]["max_completion_tokens"] == 4096
+assert "seed" not in captured["payload"]
+assert "Return exactly one JSON object" in captured["payload"]["messages"][-1]["content"]
 
 print("natural_language_generator_tests=passed")

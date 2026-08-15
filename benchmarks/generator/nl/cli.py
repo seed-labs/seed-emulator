@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 
 from generator.nl.catalog import build_capability_catalog
-from generator.nl.provider import DeterministicLLMProvider, OpenAICompatibleProvider
+from generator.nl.provider import (
+    DeterministicLLMProvider, MiMoProvider, OpenAICompatibleProvider,
+)
 from generator.nl.session import NaturalLanguageExecutor, NaturalLanguagePlanner
 
 
@@ -29,10 +31,13 @@ def build_parser() -> argparse.ArgumentParser:
     plan = commands.add_parser("nl-plan", help="parse, clarify and compile plan-only evidence")
     plan.add_argument("--text", required=True)
     plan.add_argument("--seed", default="natural-language-v1")
-    plan.add_argument("--provider", choices=("deterministic", "openai-compatible"), default="deterministic")
-    plan.add_argument("--model", default="deterministic-nl-v1")
-    plan.add_argument("--base-url", default="https://api.openai.com/v1")
-    plan.add_argument("--api-key-env", default="BENCHMARK_LLM_API_KEY")
+    plan.add_argument(
+        "--provider", choices=("deterministic", "openai-compatible", "mimo"),
+        default="deterministic",
+    )
+    plan.add_argument("--model")
+    plan.add_argument("--base-url")
+    plan.add_argument("--api-key-env")
     plan.add_argument("--timeout", type=int, default=60)
     plan.add_argument("--session-id")
     plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
@@ -46,11 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _provider(args):
     if args.provider == "deterministic":
-        return DeterministicLLMProvider(args.model)
+        return DeterministicLLMProvider(args.model or "deterministic-nl-v1")
+    if args.provider == "mimo":
+        return MiMoProvider(
+            model_id=args.model or "mimo-v2.5-pro",
+            base_url=args.base_url or "https://api.xiaomimimo.com/v1",
+            api_key_env=args.api_key_env or "MIMO_API_KEY",
+            timeout_seconds=args.timeout,
+        )
     return OpenAICompatibleProvider(
-        model_id=args.model,
-        base_url=args.base_url,
-        api_key_env=args.api_key_env,
+        model_id=args.model or "gpt-4.1-mini",
+        base_url=args.base_url or "https://api.openai.com/v1",
+        api_key_env=args.api_key_env or "BENCHMARK_LLM_API_KEY",
         timeout_seconds=args.timeout,
     )
 
@@ -70,7 +82,13 @@ def main(argv=None) -> int:
                 session_id=args.session_id,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-            return {"ready": 0, "needs_clarification": 2, "extension_required": 2, "blocked": 3}[result["status"]]
+            return {
+                "ready": 0,
+                "needs_clarification": 2,
+                "extension_required": 2,
+                "blocked": 3,
+                "provider_error": 4,
+            }[result["status"]]
         intent = _under_session_root(args.intent)
         result = NaturalLanguageExecutor(BENCHMARKS_DIR, DEFAULT_SESSION_ROOT).execute(
             intent, args.approval_token, release_version=args.release_version

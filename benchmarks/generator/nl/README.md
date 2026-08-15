@@ -36,7 +36,7 @@
 |---|---|
 | `models.py` | 严格、无执行权限的 `BenchmarkIntent v1` 和 canonical fingerprint |
 | `schema.py` | LLM structured output 的 Draft 2020-12 JSON Schema |
-| `provider.py` | `LLMProvider`、无密钥确定性 Provider、OpenAI-compatible 适配器 |
+| `provider.py` | `LLMProvider`、无密钥确定性 Provider、OpenAI-compatible 与 MiMo 适配器 |
 | `catalog.py` | 应用、FaultDriver、拓扑和资源策略的版本化动态快照 |
 | `prompts.py` | 版本化系统提示和最小能力上下文 |
 | `security.py` | prompt injection、权限绕过、答案/凭据窃取和宿主破坏检查 |
@@ -72,11 +72,29 @@ python3 -m generator.nl.cli nl-plan \
 
 代码和审计记录只保存环境变量名称，不读取回显 API Key。
 
+小米 MiMo 使用其官方 JSON mode，并在返回后继续执行同一套本地 Draft 2020-12 Schema
+校验；模型无法因为不支持 wire-level `json_schema` 而绕开严格 Intent 边界：
+
+```bash
+export MIMO_API_KEY='<临时密钥，仅设置在进程环境中>'
+python3 -m generator.nl.cli nl-plan \
+  --provider mimo \
+  --model mimo-v2.5-pro \
+  --text "生成一个包含 nginx 和 DNS 的 hard 场景，注入延迟和容器停止故障"
+```
+
+MiMo 默认端点为 `https://api.xiaomimimo.com/v1`，默认关闭 thinking，并把完整输出
+Schema 追加到系统消息；官方 Chat API 未声明支持 wire-level seed，因此 seed 只进入本地
+缓存键、request ID 和 Intent 指纹。响应仍必须通过本地 Schema、能力、安全和资源门禁。
+
 ## 澄清和未知能力
 
 缺少应用、难度或故障时，返回 `needs_clarification`（退出码 2），不会产生审批 token。
 未知应用/故障/拓扑返回 `extension_required`，只生成需要 `ApplicationTemplate`、
 `FaultDriver`、workload/probe 和无 AI 证据的扩展提案，不能执行。
+
+Provider 网络、鉴权或服务错误返回 `provider_error`（退出码 4），写入
+`provider_error.json` 和最终 `audit.json`，不会产生 Intent、审批 token 或 Docker 操作。
 
 默认仅把未指定规模安全地设为 5，并在 `assumptions` 中记录
 `scale_defaulted_to_5`；其他关键字段不猜测。
@@ -113,6 +131,7 @@ reports/nl_sessions/<session>/
 ├── capability_snapshot.json
 ├── provider_request.json
 ├── provider_response.json
+├── provider_error.json             # Provider 失败时，与 response 二选一
 ├── normalized_intent.json
 ├── security_intent.json
 ├── clarification.json

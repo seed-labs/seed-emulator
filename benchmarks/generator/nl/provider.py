@@ -152,6 +152,10 @@ class OpenAICompatibleProvider(LLMProvider):
         base_url: str,
         api_key_env: str = "BENCHMARK_LLM_API_KEY",
         timeout_seconds: int = 60,
+        response_format_mode: str = "json_schema",
+        disable_thinking: bool = False,
+        max_completion_tokens: int | None = None,
+        send_seed: bool = True,
     ):
         parsed = urlparse(base_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username:
@@ -160,30 +164,58 @@ class OpenAICompatibleProvider(LLMProvider):
             raise ValueError("invalid API key environment variable name")
         if not 1 <= timeout_seconds <= 300:
             raise ValueError("LLM timeout is out of range")
+        if response_format_mode not in {"json_schema", "json_object"}:
+            raise ValueError("unsupported structured-output mode")
+        if max_completion_tokens is not None and not 128 <= max_completion_tokens <= 131072:
+            raise ValueError("LLM completion-token budget is out of range")
         self.model_id = model_id
         self.base_url = base_url.rstrip("/")
         self.api_key_env = api_key_env
         self.timeout_seconds = timeout_seconds
+        self.response_format_mode = response_format_mode
+        self.disable_thinking = disable_thinking
+        self.max_completion_tokens = max_completion_tokens
+        self.send_seed = send_seed
 
     def complete_structured(self, messages, output_schema, *, seed):
         api_key = os.environ.get(self.api_key_env)
         if not api_key:
             raise RuntimeError(f"missing LLM API key environment: {self.api_key_env}")
         numeric_seed = int(hashlib.sha256(seed.encode("utf-8")).hexdigest()[:8], 16)
-        payload = {
-            "model": self.model_id,
-            "messages": list(messages),
-            "temperature": 0,
-            "seed": numeric_seed,
-            "response_format": {
+        request_messages = list(messages)
+        if self.response_format_mode == "json_object":
+            request_messages.append({
+                "role": "system",
+                "content": (
+                    "Return exactly one JSON object matching this schema; do not add "
+                    "Markdown or commentary: "
+                    + json.dumps(output_schema, sort_keys=True, separators=(",", ":"))
+                ),
+            })
+        response_format = (
+            {
                 "type": "json_schema",
                 "json_schema": {
                     "name": "benchmark_intent_v1",
                     "strict": True,
                     "schema": dict(output_schema),
                 },
-            },
+            }
+            if self.response_format_mode == "json_schema"
+            else {"type": "json_object"}
+        )
+        payload = {
+            "model": self.model_id,
+            "messages": request_messages,
+            "temperature": 0,
+            "response_format": response_format,
         }
+        if self.send_seed:
+            payload["seed"] = numeric_seed
+        if self.disable_thinking:
+            payload["thinking"] = {"type": "disabled"}
+        if self.max_completion_tokens is not None:
+            payload["max_completion_tokens"] = self.max_completion_tokens
         request = Request(
             f"{self.base_url}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
@@ -211,4 +243,29 @@ class OpenAICompatibleProvider(LLMProvider):
             usage=normalized_usage,
             latency_ms=round((time.monotonic() - started) * 1000),
             response_fingerprint=_fingerprint(output),
+        )
+
+
+class MiMoProvider(OpenAICompatibleProvider):
+    """Xiaomi MiMo JSON-mode adapter with local strict-schema enforcement."""
+
+    provider_id = "mimo"
+
+    def __init__(
+        self,
+        *,
+        model_id: str = "mimo-v2.5-pro",
+        base_url: str = "https://api.xiaomimimo.com/v1",
+        api_key_env: str = "MIMO_API_KEY",
+        timeout_seconds: int = 120,
+    ):
+        super().__init__(
+            model_id=model_id,
+            base_url=base_url,
+            api_key_env=api_key_env,
+            timeout_seconds=timeout_seconds,
+            response_format_mode="json_object",
+            disable_thinking=True,
+            max_completion_tokens=4096,
+            send_seed=False,
         )

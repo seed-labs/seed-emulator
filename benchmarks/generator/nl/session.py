@@ -146,9 +146,27 @@ class NaturalLanguagePlanner:
         if cache_hit:
             response = ProviderResponse(**_read(cache_path)["response"])
         else:
-            response = provider.complete_structured(
-                messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed=seed
-            )
+            try:
+                response = provider.complete_structured(
+                    messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed=seed
+                )
+            except Exception as exc:
+                failure = {
+                    "schema_version": 1,
+                    "provider": provider.provider_id,
+                    "model": provider.model_id,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                    "failed_at": _utcnow().isoformat(),
+                }
+                atomic_json(session / "provider_error.json", failure)
+                return self._finish(session, {
+                    "status": "provider_error",
+                    "session": str(session),
+                    "provider_invoked": True,
+                    "provider_cache_hit": False,
+                    "provider_error": failure,
+                })
             validate_provider_output(response.output)
             atomic_json(cache_path, {"schema_version": 1, "cache_key": cache_key, "response": response.to_dict()})
         validate_provider_output(response.output)
