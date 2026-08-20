@@ -40,15 +40,17 @@ flowchart TB
     N4 -->|"已知且完整"| N5["确定性编译 TopologyRequest + BenchmarkRequest"]
     N5 --> P1
 
-    B -->|"自然语言：任意场景"| U1["UnsafePlan 严格 Schema"]
-    U1 --> U2["Compose / Dockerfile / Shell 静态策略编译"]
-    U2 -->|"越权或超预算"| UR["fail closed；无 token、无 Docker"]
-    U2 -->|"通过"| U3["完整预览：Compose、Dockerfile、Shell、预算、风险"]
-    U3 --> U4["独立一次性高风险审批 + arbitrary-code acknowledgement"]
-    U4 --> U5["session-label Compose 隔离执行"]
-    U5 --> U6["stdout / stderr / 镜像摘要 / 运行时快照"]
-    U6 --> U7["finally 清理 + label-scoped 兜底清理 + 无残留核验"]
-    U7 --> UX["unsafe_generated=true；禁止晋级与发布"]
+    subgraph ARBITRARY_TEMP["开发临时工作流：任意场景自然语言桥接层"]
+        direction TB
+        U1["自然语言：任意场景"] --> U2["LLM 生成任意声明式场景"]
+        U2 --> U3["统一场景 Schema 规范化"]
+        U3 --> U4["拓扑 / 软件 / 故障 / 资源安全检查"]
+        U4 -->|"越权、歧义或超预算"| UR["fail closed；澄清或拒绝，不执行"]
+        U4 -->|"检查通过"| U5["确定性编译 TopologyRequest + BenchmarkRequest"]
+    end
+    style ARBITRARY_TEMP fill:#fff8e1,stroke:#d97706,stroke-width:2px,stroke-dasharray:8 5
+    B -.->|"开发中入口"| U1
+    U5 -.->|"最终目标接入点"| P1
 
     P3 --> G["质量 / 安全 / 规模门禁"]
     S4 -.-> G
@@ -62,7 +64,11 @@ flowchart TB
 ```
 
 普通路径中 LLM 只负责把语言转换成受约束意图，确定性编译器和九 Worker 才生成场景；真实验证阶段保持
-`ai_invoked=false`。任意场景路径与正式晋级路径永久分离，即使执行和测试全部通过也只能保留实验性证据。
+`ai_invoked=false`。虚线框中的任意场景自然语言桥接层仍处于开发阶段；最终目标是让它生成完整的声明式
+场景，经过统一 Schema、拓扑、软件、故障、资源和安全检查后，确定性编译为请求并接入
+`Topology capability manifest`，随后复用九 Worker、质量门禁和无 AI 生命周期。
+当前 `nl-unsafe-*` Compose 隔离执行仍属于兼容实验模式，继续标记 `unsafe_generated=true`，不能晋级或发布；
+它不代表图中目标接入已经完成。
 虚线框中的 `GenerationJob` 是开发期兼容工作流，仅用于现有 Suite/BaseScenario 迁移，后续将移除，
 不属于 Generator 的长期生产架构。
 
