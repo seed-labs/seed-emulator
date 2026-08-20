@@ -53,7 +53,7 @@ BENCHMARK_SCENE_OUTPUT_SCHEMA: Dict[str, Any] = {
                 "as_count", "hosts_per_as", "edge_policy", "extra_links",
                 "explicit_edges", "asn_start", "lan_pool", "ix_pool",
                 "loopback_pool", "lan_prefixlen", "ix_prefixlen", "platform",
-                "budget",
+                "budget_mode", "budget",
             ],
             "properties": {
                 "as_count": {"type": "integer", "minimum": 1, "maximum": 128},
@@ -76,12 +76,26 @@ BENCHMARK_SCENE_OUTPUT_SCHEMA: Dict[str, Any] = {
                 "lan_prefixlen": {"type": "integer", "minimum": 8, "maximum": 30},
                 "ix_prefixlen": {"type": "integer", "minimum": 8, "maximum": 30},
                 "platform": {"enum": ["amd", "arm"]},
-                "budget": {
-                    "type": "object", "additionalProperties": False,
-                    "required": list(SYSTEM_CEILINGS),
-                    "properties": _budget_properties,
-                },
+                "budget_mode": {"enum": ["auto", "explicit"]},
+                "budget": {"oneOf": [
+                    {"type": "null"},
+                    {
+                        "type": "object", "additionalProperties": False,
+                        "required": list(SYSTEM_CEILINGS),
+                        "properties": _budget_properties,
+                    },
+                ]},
             },
+            "allOf": [
+                {
+                    "if": {"properties": {"budget_mode": {"const": "auto"}}},
+                    "then": {"properties": {"budget": {"type": "null"}}},
+                },
+                {
+                    "if": {"properties": {"budget_mode": {"const": "explicit"}}},
+                    "then": {"properties": {"budget": {"type": "object"}}},
+                },
+            ],
         },
         "application_placements": {
             "type": "array", "maxItems": 16,
@@ -263,13 +277,19 @@ class BenchmarkSceneIntent:
             raise ValueError("invalid scene difficulty")
         if not re.fullmatch(r"[0-9a-f]{64}", self.source_text_sha256):
             raise ValueError("invalid scene source fingerprint")
-        budget = self.topology.get("budget")
-        if not isinstance(budget, Mapping) or set(budget) != set(SYSTEM_CEILINGS):
-            raise ValueError("invalid scene resource budget")
-        for field, ceiling in SYSTEM_CEILINGS.items():
-            minimum = 0 if field == "max_links" else 0.000001
-            if float(budget[field]) < minimum or float(budget[field]) > ceiling:
-                raise ValueError(f"scene resource ceiling exceeded: {field}")
+        budget_mode, budget = self.topology.get("budget_mode"), self.topology.get("budget")
+        if budget_mode == "auto":
+            if budget is not None:
+                raise ValueError("automatic scene budget must be null")
+        elif budget_mode == "explicit":
+            if not isinstance(budget, Mapping) or set(budget) != set(SYSTEM_CEILINGS):
+                raise ValueError("invalid explicit scene resource budget")
+            for field, ceiling in SYSTEM_CEILINGS.items():
+                minimum = 0 if field == "max_links" else 0.000001
+                if float(budget[field]) < minimum or float(budget[field]) > ceiling:
+                    raise ValueError(f"scene resource ceiling exceeded: {field}")
+        else:
+            raise ValueError("invalid scene resource budget mode")
 
     def to_dict(self) -> Dict[str, Any]:
         return {

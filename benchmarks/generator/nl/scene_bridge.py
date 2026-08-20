@@ -11,7 +11,9 @@ from typing import Any, Dict, Mapping, Tuple
 from generator.bundle.request import BenchmarkRequest
 from generator.bundle.templates import builtin_template_registry
 from generator.nl.catalog import CapabilityCatalog
-from generator.nl.scene_models import BenchmarkSceneIntent, SceneApplicationPlacement
+from generator.nl.scene_models import (
+    SYSTEM_CEILINGS, BenchmarkSceneIntent, SceneApplicationPlacement,
+)
 from generator.software import SoftwareSpec
 from generator.topology.models import ResourceBudget, TopologyPlan, TopologyRequest
 from generator.topology.planner import plan_topology
@@ -355,19 +357,48 @@ def compile_scene_intent(
         software.append(spec)
         capabilities[placement.template_id] = capability
     topology_value = dict(intent.topology)
-    budget = ResourceBudget.from_dict(topology_value.pop("budget"))
-    topology_request = TopologyRequest(
-        topology_id=intent.topology_id,
-        master_seed=intent.seed,
-        budget=budget,
-        software=tuple(software),
-        explicit_edges=tuple(
-            tuple(int(endpoint) for endpoint in edge)
-            for edge in topology_value.pop("explicit_edges")
-        ),
-        **topology_value,
+    budget_mode = str(topology_value.pop("budget_mode"))
+    budget_value = topology_value.pop("budget")
+    explicit_edges = tuple(
+        tuple(int(endpoint) for endpoint in edge)
+        for edge in topology_value.pop("explicit_edges")
     )
+
+    def request_with_budget(budget: ResourceBudget) -> TopologyRequest:
+        return TopologyRequest(
+            topology_id=intent.topology_id,
+            master_seed=intent.seed,
+            budget=budget,
+            software=tuple(software),
+            explicit_edges=explicit_edges,
+            **topology_value,
+        )
+
+    if budget_mode == "auto":
+        preliminary = plan_topology(request_with_budget(
+            ResourceBudget.from_dict(SYSTEM_CEILINGS)
+        ))
+        estimate = preliminary.resource_estimate
+        budget = ResourceBudget(
+            max_containers=max(3, estimate.containers),
+            max_networks=max(1, estimate.networks),
+            max_memory_mb=max(256, estimate.memory_mb),
+            max_cpu_cores=max(0.01, estimate.cpu_cores),
+            max_ases=max(1, estimate.ases),
+            max_links=max(0, estimate.links),
+        )
+    else:
+        budget = ResourceBudget.from_dict(budget_value)
+    topology_request = request_with_budget(budget)
     topology_plan = plan_topology(topology_request)
+    safety["resource_budget_check"] = {
+        "allowed": True,
+        "mode": budget_mode,
+        "provider_budget": budget_value,
+        "effective_budget": budget.__dict__,
+        "resource_estimate": topology_plan.resource_estimate.__dict__,
+        "explicit_budget_was_modified": False,
+    }
     if any(
         fault in {"network.acl.scoped", "routing.bird.wrong_asn"}
         for fault in intent.fault_types

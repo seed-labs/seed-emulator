@@ -90,7 +90,7 @@ assert classifier_phrase.output["fault_types"] == [
 catalog = build_capability_catalog(BENCHMARKS_DIR)
 scene_prompt = build_scene_messages(TEXT, catalog.snapshot)[0]["content"]
 scene_catalog_prompt = build_scene_messages(TEXT, catalog.snapshot)[1]["content"]
-assert "containers=as_count*(hosts_per_as+1)+2" in scene_prompt
+assert 'budget_mode="auto" and budget=null' in scene_prompt
 assert "observer_required must be true" in scene_prompt
 assert "at most one application_placements entry" in scene_prompt
 assert '"software_id": "iptables"' in scene_catalog_prompt
@@ -103,6 +103,9 @@ assert bridge.topology_request.topology_id.startswith("nlscene_")
 assert bridge.topology_request.master_seed == SEED
 assert bridge.topology_plan.resource_estimate.containers == 11
 assert bridge.topology_plan.resource_estimate.links == 3
+assert bridge.topology_request.budget.max_containers == 11
+assert bridge.safety_report["resource_budget_check"]["mode"] == "auto"
+assert bridge.safety_report["resource_budget_check"]["provider_budget"] is None
 assert bridge.application_capabilities == {
     "network_observer": "observer.network.v1",
     "nginx": "http.nginx.v1",
@@ -174,7 +177,12 @@ expect_error(lambda: compile_scene_intent(
 ))
 
 insufficient_budget = copy.deepcopy(first.output)
-insufficient_budget["topology"]["budget"]["max_containers"] = 3
+insufficient_budget["topology"]["budget_mode"] = "explicit"
+insufficient_budget["topology"]["budget"] = {
+    "max_containers": 3, "max_networks": 512,
+    "max_memory_mb": 262144, "max_cpu_cores": 256.0,
+    "max_ases": 128, "max_links": 256,
+}
 expect_error(lambda: compile_scene_intent(intent_from_output(insufficient_budget), catalog))
 
 unknown_app = copy.deepcopy(first.output)

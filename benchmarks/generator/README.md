@@ -89,8 +89,8 @@ flowchart TB
 严格 Schema。Provider/prompt 版本属于缓存键，解析语义更新时必须提升版本以淘汰旧缓存。
 外部响应还受大小、UTF-8、单对象、重复键、嵌套深度、tool-call 禁止和本地 Draft 2020-12 Schema
 门禁约束；有限修复重试始终复用原 Schema，不能放宽安全策略。
-场景 prompt 提供与拓扑规划器一致的资源估算公式；外部模型低估的预算仍由本地规划器 fail closed，
-不会在验证后被静默修改。
+自然语言未指定预算时使用 `auto`，由本地拓扑规划器确定性固化准确预算；只有用户明确给出的预算才
+使用 `explicit`，并保持原值接受资源门禁，绝不静默抬高。
 拓扑内置软件（当前为 router 上的 `iptables`）会进入自然语言 capability snapshot，但不进入应用
 placement；重复应用 placement 被路由到澄清/扩展流程，而不是静默合并。
 

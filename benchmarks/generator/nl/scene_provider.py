@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 import time
 from typing import Any, Dict, List, Mapping
@@ -13,7 +12,7 @@ from generator.nl.provider import LLMProvider, ProviderResponse
 from generator.software import BUILTIN_ROUTER_SOFTWARE
 
 
-SCENE_PROMPT_VERSION = "benchmark-scene-v1.0.3"
+SCENE_PROMPT_VERSION = "benchmark-scene-v1.0.4"
 SCENE_SUPPORTED_FAULTS = {
     "container.stopped", "dns.nameserver", "network.acl.scoped",
     "network.netem", "routing.bird.wrong_asn",
@@ -31,14 +30,11 @@ Emit at most one application_placements entry for each template_id. Built-in top
 software is installed by the deterministic compiler and must not appear in
 application_placements or unknown_requirements; record its implicit placement in
 assumptions instead.
-The budget is a reservation ceiling and must be no smaller than the deterministic
-estimate: containers=as_count*(hosts_per_as+1)+2; links are n*(n-1)/2 for mesh,
-n-1 for tree, 0/1/n for ring with n=1/n=2/n>2, len(explicit_edges) for explicit,
-and at least n-1+extra_links for random_connected; networks=as_count+links;
-memory_mb=as_count*(128+hosts_per_as*64); cpu_cores=
-as_count*(0.10+hosts_per_as*0.05); max_ases>=as_count and max_links>=links.
-All reservation values must also remain within the supplied schema ceilings. A
-benchmark always needs the protected observer, so observer_required must be true.
+If the user did not state resource ceilings, emit budget_mode="auto" and budget=null;
+the deterministic local planner will calculate the exact reservation. Only when the
+user explicitly states resource ceilings emit budget_mode="explicit" with every
+budget field, without weakening or increasing the user's limits. A benchmark always
+needs the protected observer, so observer_required must be true.
 """
 
 
@@ -170,10 +166,6 @@ class DeterministicSceneProvider(LLMProvider):
             links = 1
         else:
             links = as_count if edge_policy == "ring" else as_count - 1
-        containers = as_count * (hosts_per_as + 1) + 2
-        networks = as_count + links
-        memory = as_count * (128 + hosts_per_as * 64)
-        cpu = round(as_count * (0.10 + hosts_per_as * 0.05), 2)
         output = {
             "schema_version": 1,
             "objective": " ".join(text.split()),
@@ -190,14 +182,8 @@ class DeterministicSceneProvider(LLMProvider):
                 "lan_prefixlen": 24,
                 "ix_prefixlen": 29,
                 "platform": "amd",
-                "budget": {
-                    "max_containers": min(10000, max(3, containers)),
-                    "max_networks": min(512, max(1, networks)),
-                    "max_memory_mb": min(262144, max(256, memory)),
-                    "max_cpu_cores": min(256.0, max(0.1, math.ceil(cpu * 100) / 100)),
-                    "max_ases": min(128, max(1, as_count)),
-                    "max_links": min(256, max(0, links)),
-                },
+                "budget_mode": "auto",
+                "budget": None,
             },
             "application_placements": placements,
             "fault_types": faults,
