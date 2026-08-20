@@ -183,6 +183,7 @@ Provider 都只负责结构化意图翻译，API Key 仅从环境变量读取，
 - `MULTI_AGENT_BUNDLE_DESIGN.md`
 - `PRODUCTION_GENERATOR_DESIGN.md`
 - `GROUP_MEETING_DEMO_GUIDE.md`
+- `MCP_PROVIDER_FEASIBILITY_REPORT.md`（外部模型 Provider MCP 化的只读可行性分析）
 
 ## 输入与产物边界
 
