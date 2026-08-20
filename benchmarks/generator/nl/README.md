@@ -237,3 +237,62 @@ Run the unsafe regression with the normal NL checks:
 ```bash
 python3 tests/test_unsafe_natural_language_generator.py
 ```
+
+## 任意声明式场景桥接层
+
+`nl-scene-*` 是正式拓扑能力路径，不允许 LLM 生成代码。模型只能填写严格的
+`BenchmarkSceneIntent v1`：AS 数量、每 AS 主机数、树/环/全连接/随机连通/显式边、私有 ASN、三个
+地址池、资源预算、已审核应用放置和已审核故障类型。请求中不存在 Shell、Compose、Docker、宿主路径、
+发布或生命周期执行字段。
+
+默认入口只规划，不编译 SEED、不改变 Docker 状态：
+
+```bash
+python3 -m generator.nl.cli nl-scene-plan \
+  --text "生成一个包含3个AS、每个AS 2个主机的环形网络，部署nginx和网络观测，注入延迟故障，难度hard"
+```
+
+成功后会展示确定分配的边、资源估算、应用 capability、FaultDriver 绑定、安全报告和
+`Topology capability manifest` 接入目标，并产生只显示一次的审批 token。显式交付命令为：
+
+```bash
+python3 -m generator.nl.cli nl-scene-generate \
+  --scene reports/nl_sessions/<session>/approved_scene.json \
+  --approval-token '<one-time-token>'
+```
+
+交付命令重新计算 Intent、catalog、拓扑计划和 bridge 指纹，原子消费 token，然后：
+
+1. 注册确定性的 `TopologyRequest`；
+2. 使用 SEED Emulator 编译拓扑（不启动 Docker）；
+3. 验证真实 `topology_manifest.json` 的资产、软件 capability、故障目标和拓扑指纹；应用空选择器由
+   编译器确定性收敛到单个资产，业务应用与受保护观测节点必须物理互斥；
+4. 原子写入 manifest handoff 证据，并把 `BenchmarkRequest` 标记为可由九 Worker 消费；
+5. 在桥接命令内不运行九 Worker、生命周期或发布，保持 `execute_lifecycle=false`、
+   `publish=false` 和 `docker_state_changed=false`。
+
+桥接层的成功边界是经过验收的 `Topology capability manifest`。九 Worker 的质量门禁属于后续独立生产
+阶段；它的难度评分或 bundle 资格失败不会反向删除一个已经安全编译并验收通过的拓扑 manifest。
+
+安全范围固定为：LAN 必须位于 `10.0.0.0/8`、IX 位于 `172.16.0.0/12`、loopback 位于
+`100.64.0.0/10`；ASN 必须完整落在私有 ASN 段；图必须连通；地址、节点选择器和资源估算必须通过
+`TopologyRequest` 规划器；软件包和 capability 只能从 `ApplicationTemplate` 推导；故障只能使用已有
+FaultDriver 且必须在编译 manifest 中找到实际目标。未知应用/故障只产生扩展提案，公共地址、公共 ASN、
+断连图、越界节点、应用/观测器选择器重叠、资源超限和额外代码字段全部 fail closed。自然语言中的空
+`target_asns + target_nodes` 不表示“部署到全部容器”，而表示由确定性编译器选择一个合法且未被保护的
+资产；最终解析结果与观测器资产会写入 `safety.application_placement_check`，供审批与审计。
+
+新增模块：
+
+| 文件 | 职责 |
+|---|---|
+| `scene_models.py` | `BenchmarkSceneIntent v1`、Draft 2020-12 Schema、规范化 ID 和指纹 |
+| `scene_provider.py` | 厂商无关 prompt 与可复现 deterministic scene provider |
+| `scene_bridge.py` | 歧义/扩展路由、安全边界、TopologyRequest/BenchmarkRequest 确定性编译和 manifest 验收 |
+| `scene_session.py` | plan-only 证据、一次性审批、SEED 编译、manifest 交付和下游就绪记录（不运行 Worker） |
+
+相关测试：
+
+```bash
+python3 tests/test_natural_language_scene_bridge.py
+```

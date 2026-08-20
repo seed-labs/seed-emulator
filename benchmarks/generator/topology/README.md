@@ -111,3 +111,17 @@ python3 tests/test_generator_readmes.py
 
 规模语义必须明确：`plan.json` 的 10,002 个预计容器不代表实际启动了 10,002 个容器；实际
 执行、拓扑编译、计划性能和抽样覆盖应分别记录。
+
+## 自然语言场景交付
+
+`generator.nl.scene_bridge` 将通过安全检查的 `BenchmarkSceneIntent v1` 确定性转换为本层的
+`TopologyRequest`。`nl-scene-generate` 使用 `compile_topology(..., root=<benchmarks>)` 在指定
+benchmark 根目录注册并编译拓扑，再调用 `validate_compiled_output(..., root=<benchmarks>)` 验证
+`topology_manifest.json`。该 manifest 和配套 `BenchmarkRequest` 是桥接层的交付边界；生产 Bundle
+Worker 在后续独立阶段消费，桥接命令本身不运行 Worker 或生命周期。
+
+`root` 参数只改变 benchmark 本地注册/输出根，用于受控会话测试；缺省行为和原 CLI 路径不变。
+自然语言层不能绕过本层的连通性、地址分配、私有 ASN、软件选择器和资源预算检查，也不能直接构造
+capability manifest。
+进入本层前，桥接编译器会把应用空选择器确定性解析为单个 ASN/节点，并拒绝业务应用与受保护
+`network_observer` 的资产交集；因此 manifest 中供盲测使用的观测资产不会同时成为业务故障目标。

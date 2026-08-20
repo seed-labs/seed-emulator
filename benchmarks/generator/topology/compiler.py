@@ -196,10 +196,12 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
     }
 
 
-def compile_topology(plan: TopologyPlan, *, override: bool = True) -> Path:
+def compile_topology(
+    plan: TopologyPlan, *, override: bool = True, root: Path | None = None,
+) -> Path:
     from seedemu.compiler import Docker, Platform
 
-    destination = output_dir(plan.topology_id)
+    destination = output_dir(plan.topology_id, root) if root is not None else output_dir(plan.topology_id)
     destination.parent.mkdir(parents=True, exist_ok=True)
     emulator = build_emulator(plan)
     emulator.render()
@@ -232,8 +234,10 @@ def compile_topology(plan: TopologyPlan, *, override: bool = True) -> Path:
     return destination
 
 
-def validate_compiled_output(plan: TopologyPlan) -> Dict[str, object]:
-    destination = output_dir(plan.topology_id)
+def validate_compiled_output(
+    plan: TopologyPlan, *, root: Path | None = None,
+) -> Dict[str, object]:
+    destination = output_dir(plan.topology_id, root) if root is not None else output_dir(plan.topology_id)
     manifest = json.loads((destination / "topology_manifest.json").read_text(encoding="utf-8"))
     if manifest["topology_fingerprint"] != plan.fingerprint:
         raise ValueError("compiled topology fingerprint differs from registered plan")

@@ -11,6 +11,10 @@ from generator.nl.provider import (
     DeterministicLLMProvider, MiMoProvider, OpenAICompatibleProvider,
 )
 from generator.nl.session import NaturalLanguageExecutor, NaturalLanguagePlanner
+from generator.nl.scene_provider import DeterministicSceneProvider
+from generator.nl.scene_session import (
+    NaturalLanguageSceneDeliverer, NaturalLanguageScenePlanner,
+)
 from generator.nl.unsafe_provider import DeterministicUnsafeProvider
 from generator.nl.unsafe_session import (
     UnsafeNaturalLanguageExecutor, UnsafeNaturalLanguagePlanner,
@@ -49,6 +53,28 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--intent", type=Path, required=True)
     generate.add_argument("--approval-token", required=True)
     generate.add_argument("--release-version", default="1.0.0")
+    scene_plan = commands.add_parser(
+        "nl-scene-plan",
+        help="translate an arbitrary scene into a safe declarative topology plan",
+    )
+    scene_plan.add_argument("--text", required=True)
+    scene_plan.add_argument("--seed", default="natural-language-scene-v1")
+    scene_plan.add_argument(
+        "--provider", choices=("deterministic", "openai-compatible", "mimo"),
+        default="deterministic",
+    )
+    scene_plan.add_argument("--model")
+    scene_plan.add_argument("--base-url")
+    scene_plan.add_argument("--api-key-env")
+    scene_plan.add_argument("--timeout", type=int, default=120)
+    scene_plan.add_argument("--session-id")
+    scene_plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
+    scene_generate = commands.add_parser(
+        "nl-scene-generate",
+        help="register, compile, and deliver an approved scene capability manifest",
+    )
+    scene_generate.add_argument("--scene", type=Path, required=True)
+    scene_generate.add_argument("--approval-token", required=True)
     unsafe_plan = commands.add_parser(
         "nl-unsafe-plan",
         help="generate a container-scoped arbitrary-code plan without Docker changes",
@@ -82,12 +108,16 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _provider(args, *, unsafe: bool = False):
+def _provider(args, *, unsafe: bool = False, scene: bool = False):
     if args.provider == "deterministic":
         if unsafe:
             return DeterministicUnsafeProvider(
                 args.model or "deterministic-unsafe-v1",
                 args.unsafe_base_image,
+            )
+        if scene:
+            return DeterministicSceneProvider(
+                args.model or "deterministic-scene-v1"
             )
         return DeterministicLLMProvider(args.model or "deterministic-nl-v1")
     if args.provider == "mimo":
@@ -127,6 +157,31 @@ def main(argv=None) -> int:
                 "blocked": 3,
                 "provider_error": 4,
             }[result["status"]]
+        if args.command == "nl-scene-plan":
+            root = _under_session_root(args.session_root)
+            result = NaturalLanguageScenePlanner(BENCHMARKS_DIR, root).plan(
+                args.text,
+                provider=_provider(args, scene=True),
+                seed=args.seed,
+                session_id=args.session_id,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return {
+                "ready": 0,
+                "needs_clarification": 2,
+                "extension_required": 2,
+                "blocked": 3,
+                "provider_error": 4,
+                "schema_rejected": 6,
+                "policy_rejected": 6,
+            }[result["status"]]
+        if args.command == "nl-scene-generate":
+            scene = _under_session_root(args.scene)
+            result = NaturalLanguageSceneDeliverer(
+                BENCHMARKS_DIR, DEFAULT_SESSION_ROOT
+            ).deliver(scene, args.approval_token)
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return 0 if result["status"] == "delivered" else 5
         if args.command == "nl-unsafe-plan":
             root = _under_session_root(args.session_root)
             result = UnsafeNaturalLanguagePlanner(BENCHMARKS_DIR, root).plan(

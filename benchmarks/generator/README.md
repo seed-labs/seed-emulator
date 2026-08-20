@@ -40,7 +40,7 @@ flowchart TB
     N4 -->|"已知且完整"| N5["确定性编译 TopologyRequest + BenchmarkRequest"]
     N5 --> P1
 
-    subgraph ARBITRARY_TEMP["开发临时工作流：任意场景自然语言桥接层"]
+    subgraph ARBITRARY["任意场景自然语言桥接层（已接入）"]
         direction TB
         U1["自然语言：任意场景"] --> U2["LLM 生成任意声明式场景"]
         U2 --> U3["统一场景 Schema 规范化"]
@@ -48,9 +48,9 @@ flowchart TB
         U4 -->|"越权、歧义或超预算"| UR["fail closed；澄清或拒绝，不执行"]
         U4 -->|"检查通过"| U5["确定性编译 TopologyRequest + BenchmarkRequest"]
     end
-    style ARBITRARY_TEMP fill:#fff8e1,stroke:#d97706,stroke-width:2px,stroke-dasharray:8 5
-    B -.->|"开发中入口"| U1
-    U5 -.->|"最终目标接入点"| P1
+    style ARBITRARY fill:#ecfdf5,stroke:#059669,stroke-width:2px
+    B -->|"任意场景入口"| U1
+    U5 -->|"安全检查通过"| P1
 
     P3 --> G["质量 / 安全 / 规模门禁"]
     S4 -.-> G
@@ -64,11 +64,12 @@ flowchart TB
 ```
 
 普通路径中 LLM 只负责把语言转换成受约束意图，确定性编译器和九 Worker 才生成场景；真实验证阶段保持
-`ai_invoked=false`。虚线框中的任意场景自然语言桥接层仍处于开发阶段；最终目标是让它生成完整的声明式
-场景，经过统一 Schema、拓扑、软件、故障、资源和安全检查后，确定性编译为请求并接入
-`Topology capability manifest`，随后复用九 Worker、质量门禁和无 AI 生命周期。
-当前 `nl-unsafe-*` Compose 隔离执行仍属于兼容实验模式，继续标记 `unsafe_generated=true`，不能晋级或发布；
-它不代表图中目标接入已经完成。
+`ai_invoked=false`。任意场景自然语言桥接层会生成完整声明式场景，经过统一 Schema、拓扑、软件、故障、
+资源和安全检查后，确定性解析应用放置（业务服务与受保护观测器互斥），再编译为
+`TopologyRequest + BenchmarkRequest`；显式审批后注册、编译并验证真实 `Topology capability manifest`。
+该 manifest 与 `BenchmarkRequest` 是桥接层的交付边界，后续九 Worker 作为独立生产阶段消费。当前
+`nl-unsafe-*` Compose
+隔离执行仍属于兼容实验模式，继续标记 `unsafe_generated=true`，不能晋级或发布；它不属于这条安全接入。
 虚线框中的 `GenerationJob` 是开发期兼容工作流，仅用于现有 Suite/BaseScenario 迁移，后续将移除，
 不属于 Generator 的长期生产架构。
 
