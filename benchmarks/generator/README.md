@@ -19,9 +19,14 @@ Bundle、质量门禁、晋级和生产调度。所有入口都必须保持可�
 flowchart TB
     A["输入"] --> B{"入口类型"}
 
-    B -->|"GenerationJob"| S1["Suite planner + audited templates"]
-    S1 --> S2["SuiteManifest"]
-    S2 --> S3["BaseScenario runtime adapter"]
+    subgraph TEMP["开发临时工作流（后续将移除）"]
+        direction TB
+        S1["GenerationJob"] --> S2["Suite planner + audited templates"]
+        S2 --> S3["SuiteManifest"]
+        S3 --> S4["BaseScenario runtime adapter"]
+    end
+    style TEMP fill:#fff8e1,stroke:#d97706,stroke-width:2px,stroke-dasharray:8 5
+    B -.->|"临时入口"| S1
 
     B -->|"BenchmarkRequest v1"| P1["Topology capability manifest"]
     P1 --> P2["九 Worker DAG"]
@@ -46,7 +51,7 @@ flowchart TB
     U7 --> UX["unsafe_generated=true；禁止晋级与发布"]
 
     P3 --> G["质量 / 安全 / 规模门禁"]
-    S3 --> G
+    S4 -.-> G
     G -->|"plan-only"| PV["计划、预算、影响与审计证据"]
     G -->|"显式一次性审批"| L["无 AI 盲测生命周期"]
     L --> L1["基线 → 注入 → 观测 → 修复 → 恢复"]
@@ -58,6 +63,8 @@ flowchart TB
 
 普通路径中 LLM 只负责把语言转换成受约束意图，确定性编译器和九 Worker 才生成场景；真实验证阶段保持
 `ai_invoked=false`。任意场景路径与正式晋级路径永久分离，即使执行和测试全部通过也只能保留实验性证据。
+虚线框中的 `GenerationJob` 是开发期兼容工作流，仅用于现有 Suite/BaseScenario 迁移，后续将移除，
+不属于 Generator 的长期生产架构。
 
 ## 目录结构
 
