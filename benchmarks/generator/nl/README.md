@@ -265,6 +265,10 @@ python3 -m generator.nl.cli nl-scene-plan \
 解析语义变化会同步提升 prompt/provider 版本，使旧 provider cache 自动失效，避免继续复用旧规模结果。
 外部场景 prompt 明确给出容器、链路、网络、内存和 CPU 的确定性估算公式；模型提供的是不低于估算值
 且不超过系统上限的资源预留。模型低估预算不会被本地自动抬高，而会被策略门禁拒绝。
+能力快照还公开拓扑编译器内置软件；当前 `iptables` 由编译器安装到每个 router，LLM 不得把它伪装成
+应用 placement 或未知能力，只能在 assumptions 中披露该隐式放置。同一应用模板出现多个 placement
+时进入 `needs_clarification`（若同时存在未知能力则优先 `extension_required`），不会静默去重或形成
+选择器笛卡尔积。
 
 成功后会展示确定分配的边、资源估算、应用 capability、FaultDriver 绑定、安全报告和
 `Topology capability manifest` 接入目标，并产生只显示一次的审批 token。显式交付命令为：

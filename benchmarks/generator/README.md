@@ -91,6 +91,8 @@ flowchart TB
 门禁约束；有限修复重试始终复用原 Schema，不能放宽安全策略。
 场景 prompt 提供与拓扑规划器一致的资源估算公式；外部模型低估的预算仍由本地规划器 fail closed，
 不会在验证后被静默修改。
+拓扑内置软件（当前为 router 上的 `iptables`）会进入自然语言 capability snapshot，但不进入应用
+placement；重复应用 placement 被路由到澄清/扩展流程，而不是静默合并。
 
 详细说明分别见各目录的 `README.md`。
 

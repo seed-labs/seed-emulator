@@ -78,6 +78,19 @@ def analyze_scene_requirements(
             "question": "请指定至少一种可验证故障。",
         })
     application_ids = {item.template_id for item in intent.application_placements}
+    placement_ids = [item.template_id for item in intent.application_placements]
+    duplicate_placements = sorted({
+        item for item in placement_ids if placement_ids.count(item) > 1
+    })
+    if duplicate_placements:
+        questions.append({
+            "code": "duplicate_application_placement",
+            "field": "application_placements",
+            "question": (
+                "同一应用模板出现多个 placement；请明确单一选择器或扩展多实例放置模型："
+                + ", ".join(duplicate_placements)
+            ),
+        })
     unknown_apps = sorted(application_ids - set(catalog.application_ids))
     unknown_faults = sorted(set(intent.fault_types) - set(catalog.fault_ids))
     unsupported_scene_faults = sorted(

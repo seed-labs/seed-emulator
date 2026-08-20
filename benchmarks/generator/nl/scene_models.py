@@ -253,10 +253,6 @@ class BenchmarkSceneIntent:
             raise ValueError("invalid normalized scene identity")
         if not self.objective or not self.seed or not self.provider_model:
             raise ValueError("incomplete normalized scene metadata")
-        if len({item.template_id for item in self.application_placements}) != len(
-            self.application_placements
-        ):
-            raise ValueError("scene application placements must be unique")
         if len(set(self.fault_types)) != len(self.fault_types):
             raise ValueError("scene fault types must be unique")
         if self.fault_count < 0 or self.fault_relationship not in {

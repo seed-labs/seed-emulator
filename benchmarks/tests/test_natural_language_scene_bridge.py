@@ -89,8 +89,11 @@ assert classifier_phrase.output["fault_types"] == [
 
 catalog = build_capability_catalog(BENCHMARKS_DIR)
 scene_prompt = build_scene_messages(TEXT, catalog.snapshot)[0]["content"]
+scene_catalog_prompt = build_scene_messages(TEXT, catalog.snapshot)[1]["content"]
 assert "containers=as_count*(hosts_per_as+1)+2" in scene_prompt
 assert "observer_required must be true" in scene_prompt
+assert "at most one application_placements entry" in scene_prompt
+assert '"software_id": "iptables"' in scene_catalog_prompt
 assert analyze_scene_requirements(intent, catalog).status == "ready"
 bridge = compile_scene_intent(intent, catalog)
 same_bridge = compile_scene_intent(same_intent, catalog)
@@ -178,6 +181,27 @@ unknown_app = copy.deepcopy(first.output)
 unknown_app["application_placements"][0]["template_id"] = "unknown_service"
 unknown_intent = intent_from_output(unknown_app)
 assert analyze_scene_requirements(unknown_intent, catalog).status == "extension_required"
+
+duplicate_app = copy.deepcopy(first.output)
+duplicate_placement = copy.deepcopy(duplicate_app["application_placements"][0])
+duplicate_placement["target_nodes"] = ["host1"]
+duplicate_app["application_placements"].append(duplicate_placement)
+duplicate_intent = intent_from_output(duplicate_app, suffix="duplicate-app")
+duplicate_requirements = analyze_scene_requirements(duplicate_intent, catalog)
+assert duplicate_requirements.status == "needs_clarification"
+assert any(
+    item["code"] == "duplicate_application_placement"
+    for item in duplicate_requirements.questions
+)
+
+duplicate_unknown = copy.deepcopy(duplicate_app)
+duplicate_unknown["unknown_requirements"] = ["iptables_host_placement"]
+duplicate_unknown_intent = intent_from_output(
+    duplicate_unknown, suffix="duplicate-unknown-app"
+)
+assert analyze_scene_requirements(
+    duplicate_unknown_intent, catalog
+).status == "extension_required"
 
 unsupported_fault = copy.deepcopy(first.output)
 unsupported_fault["fault_types"] = ["docker.network.disconnected"]
@@ -290,6 +314,17 @@ with tempfile.TemporaryDirectory(prefix="scene-bridge-test-") as temporary:
     rejected_session = Path(rejected["session"])
     assert (rejected_session / "provider_response.json").is_file()
     assert not (rejected_session / "scene_approval_challenge.json").exists()
+
+    routed_duplicate = planner.plan(
+        TEXT,
+        provider=OutputProvider(duplicate_unknown),
+        seed="duplicate-extension-scene",
+        session_id="scene_duplicate_extension",
+    )
+    assert routed_duplicate["status"] == "extension_required"
+    routed_session = Path(routed_duplicate["session"])
+    assert not (routed_session / "scene_schema_rejection.json").exists()
+    assert not (routed_session / "scene_approval_challenge.json").exists()
 
     escaped = copy.deepcopy(first.output)
     escaped["topology"]["lan_pool"] = "8.0.0.0/8"
