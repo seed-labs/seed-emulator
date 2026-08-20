@@ -6,6 +6,7 @@ on:
       - master
       - development
       - development-ipv6
+      - ipv6-new
   workflow_dispatch:
     inputs:
       selected-example:
