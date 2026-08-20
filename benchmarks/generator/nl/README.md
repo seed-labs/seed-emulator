@@ -170,3 +170,70 @@ python3 tests/test_natural_language_generator.py
 python3 tests/run_nl_regression.py
 python3 tests/test_generator_readmes.py
 ```
+
+## Container-scoped arbitrary execution (`unsafe_generated`)
+
+The unsafe NL path is a separate, fail-closed mode for experiments that need generated
+Compose, Dockerfiles, and shell. It does not weaken the normal `BenchmarkIntent` path.
+Its default command is plan-only:
+
+```bash
+python3 -m generator.nl.cli nl-unsafe-plan \
+  --text "Generate an arbitrary private topology and the required scripts"
+```
+
+The successful result prints a one-time token and writes the complete raw and hardened
+Compose, every Dockerfile/generated file, every shell step, effective resource limits,
+and the risk report to `reports/nl_sessions/<session>/unsafe_preview.json`. Planning
+does not invoke Docker. Execution is deliberately a different command and needs both
+the high-risk token and a literal acknowledgement flag:
+
+```bash
+python3 -m generator.nl.cli nl-unsafe-generate \
+  --plan reports/nl_sessions/<session>/unsafe_plan.json \
+  --approval-token '<one-time-token>' \
+  --acknowledge-arbitrary-code
+```
+
+The token is valid for two hours, stores only a SHA-256 hash on disk, is bound to the
+plan and hardened policy fingerprints, and is atomically consumed before Docker state
+can change. It cannot authorize qualification or publication.
+
+The policy compiler accepts only generated per-service build contexts and explicit
+private bridge networks. It rejects host mounts, Docker sockets, ports, external or
+host networking, host PID/IPC namespaces, privileged/devices, host environment
+interpolation, build secrets/SSH mounts, and capabilities other than `NET_ADMIN` and
+`NET_RAW`. The compiler overwrites images and labels with the session identity and
+forces read-only roots, dropped capabilities, PID/CPU/memory/tmpfs
+limits, build network isolation, build/runtime/step timeouts, a monitored build-disk
+budget, a bounded command-output budget, and a total generated-image-size budget.
+Every Dockerfile base image must already exist locally; external `COPY --from` images
+and variable `FROM` references are rejected, so build cannot pull an untracked image.
+
+Shell is never launched on the host: every lifecycle step is exactly a
+`docker compose exec ... /bin/sh -lc ...` into an approved service. Direct Docker
+cleanup operates only on IDs resolved from the current Compose project label and on
+the unique generated image names. The executor always captures commands, stdout,
+stderr, Compose logs, image IDs/digests/sizes, runtime isolation snapshots, cleanup
+evidence, and a signed final result. It runs Compose down in `finally`, then performs a
+label-scoped fallback cleanup and verifies that no scenario containers, networks, or
+images remain.
+
+Every output is permanently marked `unsafe_generated=true`,
+`qualification_status=forbidden`, `publication_status=forbidden`, and
+`promotion_eligible=false`. It cannot enter automatic promotion or release paths.
+
+The unsafe implementation is split as follows:
+
+| File | Responsibility |
+|---|---|
+| `unsafe_models.py` | Strict provider schema, budgets, files, lifecycle steps, and canonical plan fingerprint |
+| `unsafe_provider.py` | Versioned unsafe prompt and deterministic offline provider fixture |
+| `unsafe_policy.py` | Compose/Dockerfile validation, deterministic hardening, risk report, and policy fingerprint |
+| `unsafe_session.py` | Plan evidence, independent approval, container-only execution, capture, and forced cleanup |
+
+Run the unsafe regression with the normal NL checks:
+
+```bash
+python3 tests/test_unsafe_natural_language_generator.py
+```

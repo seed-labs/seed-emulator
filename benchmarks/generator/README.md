@@ -13,6 +13,52 @@ Bundle、质量门禁、晋级和生产调度。所有入口都必须保持可�
 > README；若公共接口、CLI、数据流或跨层约束发生变化，还必须同步更新本 README。
 > 完成前运行 `python3 tests/test_generator_readmes.py`。
 
+## Generator 工作流程图
+
+```mermaid
+flowchart TB
+    A["输入"] --> B{"入口类型"}
+
+    B -->|"GenerationJob"| S1["Suite planner + audited templates"]
+    S1 --> S2["SuiteManifest"]
+    S2 --> S3["BaseScenario runtime adapter"]
+
+    B -->|"BenchmarkRequest v1"| P1["Topology capability manifest"]
+    P1 --> P2["九 Worker DAG"]
+    P2 --> P3["CompiledBenchmarkBundle"]
+
+    B -->|"自然语言：受控能力"| N1["输入安全检查 + capability snapshot"]
+    N1 --> N2["LLMProvider：仅结构化意图翻译"]
+    N2 --> N3["JSON Schema + BenchmarkIntent v1"]
+    N3 --> N4["歧义、能力、资源与安全检查"]
+    N4 -->|"信息不足"| NC["澄清或扩展提案；不执行"]
+    N4 -->|"已知且完整"| N5["确定性编译 TopologyRequest + BenchmarkRequest"]
+    N5 --> P1
+
+    B -->|"自然语言：任意场景"| U1["UnsafePlan 严格 Schema"]
+    U1 --> U2["Compose / Dockerfile / Shell 静态策略编译"]
+    U2 -->|"越权或超预算"| UR["fail closed；无 token、无 Docker"]
+    U2 -->|"通过"| U3["完整预览：Compose、Dockerfile、Shell、预算、风险"]
+    U3 --> U4["独立一次性高风险审批 + arbitrary-code acknowledgement"]
+    U4 --> U5["session-label Compose 隔离执行"]
+    U5 --> U6["stdout / stderr / 镜像摘要 / 运行时快照"]
+    U6 --> U7["finally 清理 + label-scoped 兜底清理 + 无残留核验"]
+    U7 --> UX["unsafe_generated=true；禁止晋级与发布"]
+
+    P3 --> G["质量 / 安全 / 规模门禁"]
+    S3 --> G
+    G -->|"plan-only"| PV["计划、预算、影响与审计证据"]
+    G -->|"显式一次性审批"| L["无 AI 盲测生命周期"]
+    L --> L1["基线 → 注入 → 观测 → 修复 → 恢复"]
+    L1 --> E["证据、评分与清理核验"]
+    E --> Q{"正式资格门禁"}
+    Q -->|"通过"| PUB["晋级 / 可选发布"]
+    Q -->|"失败或污染"| FAIL["fail closed；保留证据，不发布"]
+```
+
+普通路径中 LLM 只负责把语言转换成受约束意图，确定性编译器和九 Worker 才生成场景；真实验证阶段保持
+`ai_invoked=false`。任意场景路径与正式晋级路径永久分离，即使执行和测试全部通过也只能保留实验性证据。
+
 ## 目录结构
 
 | 路径 | 职责 |
@@ -156,6 +202,21 @@ python3 tests/test_natural_language_generator.py
 GENERATOR_README_DIFF_BASE=<base-commit> \
   python3 tests/test_generator_readmes.py
 ```
+
+## Isolated arbitrary scenario mode
+
+`generator/nl/` also provides an explicitly unsafe-generated path for natural-language
+requests that need arbitrary declarative Compose topology, Dockerfiles, and in-container
+shell. `nl-unsafe-plan` is plan-only and displays the complete generated artifacts and
+risk report. `nl-unsafe-generate` requires a separate one-time high-risk token plus
+`--acknowledge-arbitrary-code`.
+
+This mode remains bounded: private bridge networks only, generated build contexts only,
+no host mounts/socket/ports/namespaces/privilege/devices, strict CPU/memory/PID/disk/
+container/time budgets, session labels, runtime verification, evidence capture, and
+forced label-scoped cleanup. Its artifacts always carry `unsafe_generated=true` and
+are forbidden from qualification, promotion, and publication. See `nl/README.md` for
+the full command and evidence contract.
 
 ## 修改检查表
 

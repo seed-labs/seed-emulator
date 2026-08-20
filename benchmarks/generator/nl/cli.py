@@ -1,4 +1,4 @@
-"""CLI for safe natural-language planning and explicitly approved generation."""
+"""CLI for safe and explicitly isolated unsafe natural-language generation."""
 
 from __future__ import annotations
 
@@ -11,6 +11,10 @@ from generator.nl.provider import (
     DeterministicLLMProvider, MiMoProvider, OpenAICompatibleProvider,
 )
 from generator.nl.session import NaturalLanguageExecutor, NaturalLanguagePlanner
+from generator.nl.unsafe_provider import DeterministicUnsafeProvider
+from generator.nl.unsafe_session import (
+    UnsafeNaturalLanguageExecutor, UnsafeNaturalLanguagePlanner,
+)
 
 
 BENCHMARKS_DIR = Path(__file__).resolve().parents[2]
@@ -45,12 +49,46 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--intent", type=Path, required=True)
     generate.add_argument("--approval-token", required=True)
     generate.add_argument("--release-version", default="1.0.0")
+    unsafe_plan = commands.add_parser(
+        "nl-unsafe-plan",
+        help="generate a container-scoped arbitrary-code plan without Docker changes",
+    )
+    unsafe_plan.add_argument("--text", required=True)
+    unsafe_plan.add_argument("--seed", default="unsafe-natural-language-v1")
+    unsafe_plan.add_argument(
+        "--provider", choices=("deterministic", "openai-compatible", "mimo"),
+        default="deterministic",
+    )
+    unsafe_plan.add_argument("--model")
+    unsafe_plan.add_argument("--base-url")
+    unsafe_plan.add_argument("--api-key-env")
+    unsafe_plan.add_argument("--timeout", type=int, default=120)
+    unsafe_plan.add_argument("--session-id")
+    unsafe_plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
+    unsafe_plan.add_argument(
+        "--unsafe-base-image", default="debian:bookworm-slim",
+        help="base image used only by the deterministic unsafe fixture provider",
+    )
+    unsafe_generate = commands.add_parser(
+        "nl-unsafe-generate",
+        help="execute an approved unsafe plan in its isolated Compose project",
+    )
+    unsafe_generate.add_argument("--plan", type=Path, required=True)
+    unsafe_generate.add_argument("--approval-token", required=True)
+    unsafe_generate.add_argument(
+        "--acknowledge-arbitrary-code", action="store_true", required=True,
+    )
     commands.add_parser("catalog", help="print the current capability snapshot")
     return parser
 
 
-def _provider(args):
+def _provider(args, *, unsafe: bool = False):
     if args.provider == "deterministic":
+        if unsafe:
+            return DeterministicUnsafeProvider(
+                args.model or "deterministic-unsafe-v1",
+                args.unsafe_base_image,
+            )
         return DeterministicLLMProvider(args.model or "deterministic-nl-v1")
     if args.provider == "mimo":
         return MiMoProvider(
@@ -89,6 +127,33 @@ def main(argv=None) -> int:
                 "blocked": 3,
                 "provider_error": 4,
             }[result["status"]]
+        if args.command == "nl-unsafe-plan":
+            root = _under_session_root(args.session_root)
+            result = UnsafeNaturalLanguagePlanner(BENCHMARKS_DIR, root).plan(
+                args.text,
+                provider=_provider(args, unsafe=True),
+                seed=args.seed,
+                session_id=args.session_id,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return {
+                "ready": 0,
+                "blocked": 3,
+                "provider_error": 4,
+                "policy_rejected": 6,
+                "schema_rejected": 6,
+            }[result["status"]]
+        if args.command == "nl-unsafe-generate":
+            plan = _under_session_root(args.plan)
+            result = UnsafeNaturalLanguageExecutor(
+                BENCHMARKS_DIR, DEFAULT_SESSION_ROOT
+            ).execute(
+                plan,
+                args.approval_token,
+                acknowledge_arbitrary_code=args.acknowledge_arbitrary_code,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return 0 if result["status"] == "complete" else 5
         intent = _under_session_root(args.intent)
         result = NaturalLanguageExecutor(BENCHMARKS_DIR, DEFAULT_SESSION_ROOT).execute(
             intent, args.approval_token, release_version=args.release_version
