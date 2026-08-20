@@ -43,7 +43,9 @@ def _read(path: Path) -> Dict[str, Any]:
 
 
 def _scene_session_id(text: str, seed: str) -> str:
-    stamp = _utcnow().strftime("%Y%m%dT%H%M%SZ")
+    # Session identities are also directory names and must satisfy the same
+    # lowercase allow-list as explicitly supplied --session-id values.
+    stamp = _utcnow().strftime("%Y%m%dt%H%M%Sz").lower()
     suffix = hashlib.sha256(f"{text}\0{seed}".encode("utf-8")).hexdigest()[:12]
     return f"scene_{stamp}_{suffix}"
 

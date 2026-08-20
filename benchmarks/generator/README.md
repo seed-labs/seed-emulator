@@ -84,6 +84,10 @@ flowchart TB
 | `topology/examples/` | 声明式拓扑请求示例 |
 | `nl/` | 自然语言意图、LLMProvider、澄清、安全、审批和 NL CLI |
 
+自然语言 CLI 的自动 session ID 使用小写白名单格式，可直接用于审计目录；显式 session ID 同样按该
+规则 fail closed。内置确定性 Provider 支持中文“个/台主机”数量分类词；外部 Provider 仍必须输出同一
+严格 Schema。Provider/prompt 版本属于缓存键，解析语义更新时必须提升版本以淘汰旧缓存。
+
 详细说明分别见各目录的 `README.md`。
 
 ## 两条生成路径

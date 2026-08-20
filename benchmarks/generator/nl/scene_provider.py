@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Mapping
 from generator.nl.provider import LLMProvider, ProviderResponse
 
 
-SCENE_PROMPT_VERSION = "benchmark-scene-v1.0.0"
+SCENE_PROMPT_VERSION = "benchmark-scene-v1.0.1"
 SCENE_SUPPORTED_FAULTS = {
     "container.stopped", "dns.nameserver", "network.acl.scoped",
     "network.netem", "routing.bird.wrong_asn",
@@ -65,7 +65,7 @@ class DeterministicSceneProvider(LLMProvider):
 
     provider_id = "deterministic_scene"
 
-    def __init__(self, model_id: str = "deterministic-scene-v1"):
+    def __init__(self, model_id: str = "deterministic-scene-v2"):
         self.model_id = model_id
 
     def complete_structured(self, messages, output_schema, *, seed):
@@ -78,7 +78,7 @@ class DeterministicSceneProvider(LLMProvider):
         assumptions = []
         as_match = re.search(r"(?<!\d)(\d{1,3})\s*(?:个\s*)?(?:as|自治系统)", lowered)
         host_match = re.search(
-            r"(?:每(?:个)?\s*(?:as|自治系统)\s*)(\d{1,3})\s*(?:个\s*)?(?:hosts?|主机|节点)",
+            r"(?:每(?:个)?\s*(?:as|自治系统)\s*)(\d{1,3})\s*(?:(?:个|台)\s*)?(?:hosts?|主机|节点)",
             lowered,
         )
         as_count = int(as_match.group(1)) if as_match else 3

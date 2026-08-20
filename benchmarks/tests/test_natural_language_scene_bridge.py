@@ -69,6 +69,23 @@ same_intent = BenchmarkSceneIntent.from_provider_output(
 assert intent.to_dict() == same_intent.to_dict()
 assert intent.fingerprint == same_intent.fingerprint
 
+classifier_phrase = provider.complete_structured(
+    [{"role": "user", "content": (
+        "生成一个包含3个AS、每个AS 6台主机的全连接拓扑，在两个不同节点部署"
+        "nginx和bind9，设置网络延迟和容器停止故障"
+    )}],
+    BENCHMARK_SCENE_OUTPUT_SCHEMA,
+    seed="chinese-host-classifier",
+)
+assert classifier_phrase.output["topology"]["hosts_per_as"] == 6
+assert classifier_phrase.output["topology"]["edge_policy"] == "mesh"
+assert [item["template_id"] for item in classifier_phrase.output["application_placements"]] == [
+    "nginx", "bind9",
+]
+assert classifier_phrase.output["fault_types"] == [
+    "network.netem", "container.stopped",
+]
+
 catalog = build_capability_catalog(BENCHMARKS_DIR)
 assert analyze_scene_requirements(intent, catalog).status == "ready"
 bridge = compile_scene_intent(intent, catalog)
@@ -209,6 +226,14 @@ class MustNotRunProvider(LLMProvider):
 with tempfile.TemporaryDirectory(prefix="scene-bridge-test-") as temporary:
     sessions = Path(temporary) / "sessions"
     planner = NaturalLanguageScenePlanner(BENCHMARKS_DIR, sessions)
+    automatic = planner.plan(
+        TEXT,
+        provider=provider,
+        seed="automatic-scene-session-id",
+    )
+    assert automatic["status"] == "ready"
+    assert Path(automatic["session"]).name.startswith("scene_")
+    assert Path(automatic["session"]).name == Path(automatic["session"]).name.lower()
     with patch(
         "generator.nl.scene_session.compile_topology",
         side_effect=AssertionError("plan-only invoked topology compilation"),

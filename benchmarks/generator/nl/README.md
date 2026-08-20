@@ -252,6 +252,11 @@ python3 -m generator.nl.cli nl-scene-plan \
   --text "生成一个包含3个AS、每个AS 2个主机的环形网络，部署nginx和网络观测，注入延迟故障，难度hard"
 ```
 
+未提供 `--session-id` 时，CLI 会自动生成符合目录白名单的小写 session ID；也可以显式提供仅含
+小写字母、数字、点、下划线或连字符的 ID。
+确定性中文解析器同时识别“每个 AS 6 个主机”和“每个 AS 6 台主机”等常用数量表达。
+解析语义变化会同步提升 prompt/provider 版本，使旧 provider cache 自动失效，避免继续复用旧规模结果。
+
 成功后会展示确定分配的边、资源估算、应用 capability、FaultDriver 绑定、安全报告和
 `Topology capability manifest` 接入目标，并产生只显示一次的审批 token。显式交付命令为：
 
