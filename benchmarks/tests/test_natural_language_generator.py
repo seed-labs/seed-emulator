@@ -189,9 +189,12 @@ class FakeHTTPResponse:
     def __exit__(self, *args):
         return False
 
-    def read(self):
+    def read(self, size=-1):
         return json.dumps({
-            "choices": [{"message": {"content": json.dumps(first.output)}}],
+            "choices": [{
+                "finish_reason": "stop",
+                "message": {"content": json.dumps(first.output)},
+            }],
             "usage": {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18},
         }).encode("utf-8")
 
@@ -218,6 +221,101 @@ assert captured["payload"]["response_format"] == {"type": "json_object"}
 assert captured["payload"]["thinking"] == {"type": "disabled"}
 assert captured["payload"]["max_completion_tokens"] == 4096
 assert "seed" not in captured["payload"]
+assert mimo_response.validation_attempts == 1
+assert mimo_response.validation_failures == ()
+
+
+class StructuredHTTPResponse(FakeHTTPResponse):
+    def __init__(self, content, *, message_extra=None, finish_reason="stop"):
+        self.content = content
+        self.message_extra = message_extra or {}
+        self.finish_reason = finish_reason
+
+    def read(self, size=-1):
+        message = {"content": self.content, **self.message_extra}
+        return json.dumps({
+            "choices": [{"finish_reason": self.finish_reason, "message": message}],
+            "usage": {},
+        }).encode("utf-8")
+
+
+os.environ["MIMO_TEST_KEY"] = "temporary-test-value"
+with patch(
+    "generator.nl.provider.urlopen",
+    lambda request, timeout: StructuredHTTPResponse(
+        "\n  " + json.dumps(first.output) + "\r\n"
+    ),
+):
+    whitespace_response = mimo.complete_structured(
+        messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed="legal-json-whitespace"
+    )
+assert whitespace_response.output == first.output
+os.environ.pop("MIMO_TEST_KEY")
+
+
+invalid_schema = {**first.output, "shell": "id"}
+retry_responses = iter([
+    StructuredHTTPResponse(json.dumps(invalid_schema)),
+    StructuredHTTPResponse(json.dumps(first.output)),
+])
+retry_payloads = []
+
+
+def retry_urlopen(request, timeout):
+    retry_payloads.append(json.loads(request.data.decode("utf-8")))
+    return next(retry_responses)
+
+
+os.environ["MIMO_TEST_KEY"] = "temporary-test-value"
+with patch("generator.nl.provider.urlopen", retry_urlopen):
+    retried = mimo.complete_structured(
+        messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed="mimo-schema-retry"
+    )
+assert retried.validation_attempts == 2
+assert len(retried.validation_failures) == 1
+assert "local JSON Schema" in retried.validation_failures[0]
+assert len(retry_payloads) == 2
+assert "previous answer was rejected" in retry_payloads[1]["messages"][-1]["content"].lower()
+
+
+strict_once = OpenAICompatibleProvider(
+    model_id="test-model", base_url="https://example.invalid/v1",
+    api_key_env="MIMO_TEST_KEY", response_format_mode="json_object",
+    max_validation_attempts=1,
+)
+bad_contents = (
+    '```json\n{"schema_version": 1}\n```',
+    '{"schema_version":1,"schema_version":1}',
+    '[{"schema_version":1}]',
+    '{"schema_version":NaN}',
+    '{"nested":' + '[' * 40 + '0' + ']' * 40 + '}',
+    json.dumps(invalid_schema),
+)
+for bad_content in bad_contents:
+    with patch(
+        "generator.nl.provider.urlopen",
+        lambda request, timeout, bad_content=bad_content: StructuredHTTPResponse(bad_content),
+    ):
+        expect_error(
+            lambda: strict_once.complete_structured(
+                messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed="strict-json-attack"
+            ),
+            ValueError,
+        )
+
+with patch(
+    "generator.nl.provider.urlopen",
+    lambda request, timeout: StructuredHTTPResponse(
+        json.dumps(first.output), message_extra={"tool_calls": [{"id": "escape"}]},
+    ),
+):
+    expect_error(
+        lambda: strict_once.complete_structured(
+            messages, BENCHMARK_INTENT_OUTPUT_SCHEMA, seed="tool-call-attack"
+        ),
+        ValueError,
+    )
+os.environ.pop("MIMO_TEST_KEY")
 assert "Return exactly one JSON object" in captured["payload"]["messages"][-1]["content"]
 
 print("natural_language_generator_tests=passed")

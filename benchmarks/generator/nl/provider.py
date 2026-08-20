@@ -9,9 +9,16 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, Mapping, Sequence
+from typing import Any, Dict, Mapping, Sequence, Tuple
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+from jsonschema import Draft202012Validator
+
+
+MAX_HTTP_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_STRUCTURED_CONTENT_BYTES = 512 * 1024
+MAX_JSON_DEPTH = 32
 
 
 @dataclass(frozen=True)
@@ -22,6 +29,8 @@ class ProviderResponse:
     usage: Dict[str, int]
     latency_ms: int
     response_fingerprint: str
+    validation_attempts: int = 1
+    validation_failures: Tuple[str, ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -46,6 +55,82 @@ def _fingerprint(value: Mapping[str, Any]) -> str:
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+
+
+def _strict_pairs(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"structured JSON contains duplicate key: {key}")
+        value[key] = item
+    return value
+
+
+def _reject_json_constant(value: str):
+    raise ValueError(f"structured JSON contains invalid constant: {value}")
+
+
+def _json_depth(value: Any) -> int:
+    if isinstance(value, Mapping):
+        return 1 + max((_json_depth(item) for item in value.values()), default=0)
+    if isinstance(value, list):
+        return 1 + max((_json_depth(item) for item in value), default=0)
+    return 0
+
+
+def _strict_json_object(value: str | bytes) -> Dict[str, Any]:
+    if isinstance(value, bytes):
+        if len(value) > MAX_STRUCTURED_CONTENT_BYTES:
+            raise ValueError("structured JSON exceeds the response-size limit")
+        try:
+            text = value.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise ValueError("structured JSON is not valid UTF-8") from exc
+    elif isinstance(value, str):
+        if len(value.encode("utf-8")) > MAX_STRUCTURED_CONTENT_BYTES:
+            raise ValueError("structured JSON exceeds the response-size limit")
+        text = value
+    else:
+        raise ValueError("provider content must be a JSON string")
+    candidate = text.strip()
+    if not candidate:
+        raise ValueError("provider content is empty")
+    decoder = json.JSONDecoder(
+        object_pairs_hook=_strict_pairs,
+        parse_constant=_reject_json_constant,
+    )
+    try:
+        output, end = decoder.raw_decode(candidate)
+    except (json.JSONDecodeError, ValueError, RecursionError) as exc:
+        raise ValueError("provider content is not strict JSON") from exc
+    if candidate[end:].strip():
+        raise ValueError("provider content contains data outside the JSON object")
+    if not isinstance(output, dict):
+        raise ValueError("provider output must be exactly one JSON object")
+    try:
+        if _json_depth(output) > MAX_JSON_DEPTH:
+            raise ValueError("provider JSON exceeds the nesting-depth limit")
+    except RecursionError as exc:
+        raise ValueError("provider JSON exceeds the nesting-depth limit") from exc
+    return output
+
+
+def _validate_structured_output(
+    output: Mapping[str, Any], output_schema: Mapping[str, Any],
+) -> None:
+    errors = sorted(
+        Draft202012Validator(output_schema).iter_errors(output),
+        key=lambda item: tuple(str(part) for part in item.absolute_path),
+    )
+    if errors:
+        details = [
+            {
+                "path": "/".join(str(part) for part in error.absolute_path),
+                "message": error.message,
+            }
+            for error in errors[:8]
+        ]
+        raise ValueError(f"provider output failed local JSON Schema: {details}")
 
 
 class DeterministicLLMProvider(LLMProvider):
@@ -156,6 +241,7 @@ class OpenAICompatibleProvider(LLMProvider):
         disable_thinking: bool = False,
         max_completion_tokens: int | None = None,
         send_seed: bool = True,
+        max_validation_attempts: int = 2,
     ):
         parsed = urlparse(base_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username:
@@ -168,6 +254,8 @@ class OpenAICompatibleProvider(LLMProvider):
             raise ValueError("unsupported structured-output mode")
         if max_completion_tokens is not None and not 128 <= max_completion_tokens <= 131072:
             raise ValueError("LLM completion-token budget is out of range")
+        if not 1 <= max_validation_attempts <= 3:
+            raise ValueError("LLM validation-attempt limit is out of range")
         self.model_id = model_id
         self.base_url = base_url.rstrip("/")
         self.api_key_env = api_key_env
@@ -176,6 +264,7 @@ class OpenAICompatibleProvider(LLMProvider):
         self.disable_thinking = disable_thinking
         self.max_completion_tokens = max_completion_tokens
         self.send_seed = send_seed
+        self.max_validation_attempts = max_validation_attempts
 
     def complete_structured(self, messages, output_schema, *, seed):
         api_key = os.environ.get(self.api_key_env)
@@ -204,32 +293,76 @@ class OpenAICompatibleProvider(LLMProvider):
             if self.response_format_mode == "json_schema"
             else {"type": "json_object"}
         )
-        payload = {
+        base_payload = {
             "model": self.model_id,
             "messages": request_messages,
             "temperature": 0,
             "response_format": response_format,
         }
         if self.send_seed:
-            payload["seed"] = numeric_seed
+            base_payload["seed"] = numeric_seed
         if self.disable_thinking:
-            payload["thinking"] = {"type": "disabled"}
+            base_payload["thinking"] = {"type": "disabled"}
         if self.max_completion_tokens is not None:
-            payload["max_completion_tokens"] = self.max_completion_tokens
-        request = Request(
-            f"{self.base_url}/chat/completions",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            method="POST",
-        )
+            base_payload["max_completion_tokens"] = self.max_completion_tokens
         started = time.monotonic()
-        with urlopen(request, timeout=self.timeout_seconds) as response:
-            raw = json.loads(response.read().decode("utf-8"))
-        try:
-            content = raw["choices"][0]["message"]["content"]
-            output = content if isinstance(content, dict) else json.loads(content)
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-            raise ValueError("LLM response does not contain structured JSON") from exc
+        failures = []
+        raw = None
+        output = None
+        for attempt in range(1, self.max_validation_attempts + 1):
+            payload = dict(base_payload)
+            payload["messages"] = list(request_messages)
+            if failures:
+                payload["messages"].append({
+                    "role": "system",
+                    "content": (
+                        "The previous answer was rejected by the local validator. "
+                        "Return a complete JSON object matching "
+                        "the original schema exactly. Do not add fields or commentary."
+                    ),
+                })
+            request = Request(
+                f"{self.base_url}/chat/completions",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                body = response.read(MAX_HTTP_RESPONSE_BYTES + 1)
+            if len(body) > MAX_HTTP_RESPONSE_BYTES:
+                raise ValueError("LLM HTTP response exceeds the size limit")
+            try:
+                envelope = _strict_json_object(body)
+                choices = envelope.get("choices")
+                if not isinstance(choices, list) or not choices:
+                    raise ValueError("LLM response has no choices")
+                choice = choices[0]
+                if not isinstance(choice, Mapping):
+                    raise ValueError("LLM choice is malformed")
+                if choice.get("finish_reason") not in (None, "stop"):
+                    raise ValueError("LLM response is incomplete or filtered")
+                message = choice.get("message")
+                if not isinstance(message, Mapping):
+                    raise ValueError("LLM response message is malformed")
+                if message.get("tool_calls") or message.get("function_call"):
+                    raise ValueError("LLM response attempted a tool call")
+                if message.get("refusal"):
+                    raise ValueError("LLM refused the structured-output request")
+                output = _strict_json_object(message.get("content"))
+                _validate_structured_output(output, output_schema)
+                raw = envelope
+                break
+            except ValueError as exc:
+                failures.append(str(exc))
+                if attempt == self.max_validation_attempts:
+                    raise ValueError(
+                        "LLM failed strict structured-output validation after "
+                        f"{attempt} attempts: {failures[-1]}"
+                    ) from exc
+        assert raw is not None and output is not None
         usage = raw.get("usage") or {}
         normalized_usage = {
             "input_tokens": int(usage.get("prompt_tokens", 0)),
@@ -243,6 +376,8 @@ class OpenAICompatibleProvider(LLMProvider):
             usage=normalized_usage,
             latency_ms=round((time.monotonic() - started) * 1000),
             response_fingerprint=_fingerprint(output),
+            validation_attempts=len(failures) + 1,
+            validation_failures=tuple(failures),
         )
 
 

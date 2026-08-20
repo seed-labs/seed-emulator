@@ -87,6 +87,10 @@ flowchart TB
 自然语言 CLI 的自动 session ID 使用小写白名单格式，可直接用于审计目录；显式 session ID 同样按该
 规则 fail closed。内置确定性 Provider 支持中文“个/台主机”数量分类词；外部 Provider 仍必须输出同一
 严格 Schema。Provider/prompt 版本属于缓存键，解析语义更新时必须提升版本以淘汰旧缓存。
+外部响应还受大小、UTF-8、单对象、重复键、嵌套深度、tool-call 禁止和本地 Draft 2020-12 Schema
+门禁约束；有限修复重试始终复用原 Schema，不能放宽安全策略。
+场景 prompt 提供与拓扑规划器一致的资源估算公式；外部模型低估的预算仍由本地规划器 fail closed，
+不会在验证后被静默修改。
 
 详细说明分别见各目录的 `README.md`。
 

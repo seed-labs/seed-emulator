@@ -117,7 +117,7 @@ def _provider(args, *, unsafe: bool = False, scene: bool = False):
             )
         if scene:
             return DeterministicSceneProvider(
-                args.model or "deterministic-scene-v1"
+                args.model or "deterministic-scene-v2"
             )
         return DeterministicLLMProvider(args.model or "deterministic-nl-v1")
     if args.provider == "mimo":

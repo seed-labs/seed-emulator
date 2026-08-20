@@ -27,6 +27,7 @@ from generator.nl.scene_models import (  # noqa: E402
     validate_scene_provider_output,
 )
 from generator.nl.scene_provider import DeterministicSceneProvider  # noqa: E402
+from generator.nl.scene_provider import build_scene_messages  # noqa: E402
 from generator.nl.scene_session import (  # noqa: E402
     NaturalLanguageSceneDeliverer,
     NaturalLanguageScenePlanner,
@@ -87,6 +88,9 @@ assert classifier_phrase.output["fault_types"] == [
 ]
 
 catalog = build_capability_catalog(BENCHMARKS_DIR)
+scene_prompt = build_scene_messages(TEXT, catalog.snapshot)[0]["content"]
+assert "containers=as_count*(hosts_per_as+1)+2" in scene_prompt
+assert "observer_required must be true" in scene_prompt
 assert analyze_scene_requirements(intent, catalog).status == "ready"
 bridge = compile_scene_intent(intent, catalog)
 same_bridge = compile_scene_intent(same_intent, catalog)

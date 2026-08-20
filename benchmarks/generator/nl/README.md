@@ -87,6 +87,13 @@ MiMo 默认端点为 `https://api.xiaomimimo.com/v1`，默认关闭 thinking，�
 Schema 追加到系统消息；官方 Chat API 未声明支持 wire-level seed，因此 seed 只进入本地
 缓存键、request ID 和 Intent 指纹。响应仍必须通过本地 Schema、能力、安全和资源门禁。
 
+所有外部 Provider 响应均按不可信数据处理：HTTP body 最大 2 MiB，结构化内容最大 512 KiB、嵌套
+最多 32 层；除 JSON 标准允许的前后空白外，必须是 UTF-8 的单个 JSON object；重复键、
+`NaN/Infinity`、Markdown、尾随文本、数组、
+截断响应、refusal 和 tool/function call 全部拒绝。返回对象会再次通过本地 Draft 2020-12 Schema；
+校验失败最多按原 Schema 修复重试一次，绝不删除未知字段、降低预算或放宽约束。响应证据记录尝试次数
+和失败原因，但不保存 Authorization header 或 API Key。
+
 ## 澄清和未知能力
 
 缺少应用、难度或故障时，返回 `needs_clarification`（退出码 2），不会产生审批 token。
@@ -256,6 +263,8 @@ python3 -m generator.nl.cli nl-scene-plan \
 小写字母、数字、点、下划线或连字符的 ID。
 确定性中文解析器同时识别“每个 AS 6 个主机”和“每个 AS 6 台主机”等常用数量表达。
 解析语义变化会同步提升 prompt/provider 版本，使旧 provider cache 自动失效，避免继续复用旧规模结果。
+外部场景 prompt 明确给出容器、链路、网络、内存和 CPU 的确定性估算公式；模型提供的是不低于估算值
+且不超过系统上限的资源预留。模型低估预算不会被本地自动抬高，而会被策略门禁拒绝。
 
 成功后会展示确定分配的边、资源估算、应用 capability、FaultDriver 绑定、安全报告和
 `Topology capability manifest` 接入目标，并产生只显示一次的审批 token。显式交付命令为：
