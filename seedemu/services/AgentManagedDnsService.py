@@ -235,11 +235,11 @@ class AgentManagedDnsServer(Server):
         assert self.__role is not None, "managed DNS role is not configured"
         root = "/var/lib/seedemu-managed-dns"
         node.addSoftware("bind9 bind9-utils bind9-dnsutils python3")
-        node.setFile("/etc/bind/managed-update.key", _UPDATE_KEY)
         node.setFile("/etc/bind/managed-transfer.key", _TRANSFER_KEY)
         node.setFile("/etc/bind/named.conf", 'include "/etc/bind/named.conf.options";\ninclude "/etc/bind/named.conf.local";\n')
         node.setFile("/etc/bind/named.conf.options", 'options { directory "/var/cache/bind"; recursion no; dnssec-validation no; allow-query { any; }; };\n')
         if self.__role == "master":
+            node.setFile("/etc/bind/managed-update.key", _UPDATE_KEY)
             node.setFile("/etc/bind/named.conf.local", 'include "/etc/bind/managed-update.key";\ninclude "/etc/bind/managed-transfer.key";\ninclude "/var/lib/seedemu-managed-dns/provider.conf";\ninclude "/var/lib/seedemu-managed-dns/managed-zones.conf";\n')
             node.setFile(root + "/managed-zones.conf", "")
             node.setFile(root + "/provider.conf", 'zone "seedemu-dns.net" { type master; file "/var/lib/seedemu-managed-dns/zones/db.seedemu-dns.net"; notify yes; also-notify { %s; }; allow-transfer { key "managed-transfer"; }; };\n' % self.__secondary)
@@ -249,13 +249,13 @@ class AgentManagedDnsServer(Server):
             node.appendStartCommand("service named start")
             node.appendStartCommand("python3 {0}/api.py --root {0} --master 127.0.0.1 --secondary {1} --key-file /etc/bind/managed-update.key --role master".format(root, self.__secondary), fork=True)
         else:
-            node.setFile("/etc/bind/named.conf.local", 'include "/etc/bind/managed-update.key";\ninclude "/etc/bind/managed-transfer.key";\ninclude "/var/lib/seedemu-managed-dns/provider.conf";\ninclude "/var/lib/seedemu-managed-dns/managed-zones.conf";\n')
+            node.setFile("/etc/bind/named.conf.local", 'include "/etc/bind/managed-transfer.key";\ninclude "/var/lib/seedemu-managed-dns/provider.conf";\ninclude "/var/lib/seedemu-managed-dns/managed-zones.conf";\n')
             node.setFile(root + "/managed-zones.conf", "")
             node.setFile(root + "/provider.conf", 'zone "seedemu-dns.net" { type slave; masters { %s key "managed-transfer"; }; file "/var/lib/seedemu-managed-dns/zones/db.seedemu-dns.net"; };\n' % self.__master)
             node.setFile(root + "/api.py", _MANAGED_DNS_API)
             node.appendStartCommand("mkdir -p {} && chown -R bind:bind {}".format(root, root))
             node.appendStartCommand("service named start")
-            node.appendStartCommand("python3 {0}/api.py --root {0} --master {1} --secondary 127.0.0.1 --key-file /etc/bind/managed-update.key --role secondary".format(root, self.__master), fork=True)
+            node.appendStartCommand("python3 {0}/api.py --root {0} --master {1} --secondary 127.0.0.1 --key-file /dev/null --role secondary".format(root, self.__master), fork=True)
 
     def print(self, indent: int) -> str:
         return " " * indent + "AgentManagedDnsServer({})\n".format(self.__role)

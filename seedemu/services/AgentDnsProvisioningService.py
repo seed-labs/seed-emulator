@@ -8,6 +8,7 @@ from seedemu.core import Node, Server, Service
 
 _PROVISIONER_API = r'''#!/usr/bin/env python3
 import argparse
+import ipaddress
 import json
 import re
 import subprocess
@@ -48,14 +49,34 @@ def parse_request(payload, parent_zone):
     if not isinstance(raw_nameservers, list) or len(raw_nameservers) < 2:
         raise ApiError(400, 'invalid_delegation_request', 'at least two nameservers are required')
     nameservers = []
+    glue = []
     for item in raw_nameservers:
         value = item.get('name') if isinstance(item, dict) else item
         name = normalize_name(value, 'nameserver')
         if name not in nameservers:
             nameservers.append(name)
+        address_value = item.get('address') if isinstance(item, dict) else None
+        in_bailiwick = name.endswith('.' + domain)
+        if in_bailiwick and not address_value:
+            raise ApiError(
+                400, 'invalid_delegation_request',
+                'in-bailiwick nameserver {} requires a glue address'.format(name),
+            )
+        if address_value is not None:
+            try:
+                address = ipaddress.ip_address(address_value)
+            except ValueError as error:
+                raise ApiError(
+                    400, 'invalid_delegation_request',
+                    'nameserver {} has an invalid glue address'.format(name),
+                ) from error
+            if in_bailiwick:
+                entry = (name, 'A' if address.version == 4 else 'AAAA', str(address))
+                if entry not in glue:
+                    glue.append(entry)
     if len(nameservers) < 2:
         raise ApiError(400, 'invalid_delegation_request', 'at least two unique nameservers are required')
-    return domain, nameservers
+    return domain, nameservers, glue
 
 
 def run_command(command, input_text=None, timeout=10):
@@ -86,6 +107,27 @@ def query_records(server, name, record_type):
         fields = line.split()
         if (
             len(fields) >= 5
+            and fields[2].upper() == 'IN'
+            and fields[3].upper() == record_type.upper()
+        ):
+            records.append(' '.join(fields[4:]).lower())
+    return sorted(records)
+
+
+def query_delegation_glue(server, domain, name, record_type):
+    output = run_command(
+        [
+            'dig', '+norecurse', '+noall', '+additional', '+time=1', '+tries=1',
+            '@' + server, domain, 'NS',
+        ],
+        timeout=3,
+    )
+    records = []
+    for line in output.splitlines():
+        fields = line.split()
+        if (
+            len(fields) >= 5
+            and fields[0].lower() == name.lower()
             and fields[2].upper() == 'IN'
             and fields[3].upper() == record_type.upper()
         ):
@@ -127,9 +169,31 @@ class ParentDelegationProvisioner:
             raise RuntimeError('managed DNS {} is unreachable: {}'.format(server, error.reason)) from error
 
     def provision(self, payload):
-        domain, nameservers = parse_request(payload, self.parent_zone)
+        domain, nameservers, glue = parse_request(payload, self.parent_zone)
         expected = sorted(nameservers)
-        changed = query_records(self.master, domain, 'NS') != expected
+        glue_expected = {}
+        for name, record_type, address in glue:
+            glue_expected.setdefault((name, record_type), []).append(address)
+        glue_expected = {
+            key: sorted(values) for key, values in glue_expected.items()
+        }
+        glue_names = sorted({name for name, _, _ in glue})
+        for name in glue_names:
+            glue_expected.setdefault((name, 'A'), [])
+            glue_expected.setdefault((name, 'AAAA'), [])
+        previous_nameservers = query_records(self.master, domain, 'NS')
+        previous_glue_names = sorted(
+            name for name in previous_nameservers if name.endswith('.' + domain)
+        )
+        changed = (
+            previous_nameservers != expected
+            or any(
+                query_delegation_glue(
+                    self.master, domain, name, record_type
+                ) != addresses
+                for (name, record_type), addresses in glue_expected.items()
+            )
+        )
         if changed:
             commands = [
                 'server {}'.format(self.master),
@@ -139,6 +203,13 @@ class ParentDelegationProvisioner:
             commands.extend(
                 'update add {} 300 NS {}'.format(domain, nameserver)
                 for nameserver in nameservers
+            )
+            for name in sorted(set(previous_glue_names + glue_names)):
+                commands.append('update delete {} A'.format(name))
+                commands.append('update delete {} AAAA'.format(name))
+            commands.extend(
+                'update add {} 300 {} {}'.format(name, record_type, address)
+                for name, record_type, address in glue
             )
             commands.append('send')
             run_command(['nsupdate', '-k', self.parent_key], '\n'.join(commands) + '\n')
@@ -151,7 +222,32 @@ class ParentDelegationProvisioner:
                 server: query_records(server, domain, 'NS')
                 for server in self.secondaries
             }
-            if master_records == expected and all(
+            glue_converged = all(
+                query_delegation_glue(
+                    self.master, domain, name, record_type
+                ) == addresses
+                and all(
+                    query_delegation_glue(
+                        server, domain, name, record_type
+                    ) == addresses
+                    for server in self.secondaries
+                )
+                for (name, record_type), addresses in glue_expected.items()
+            )
+            removed_glue_converged = all(
+                not query_delegation_glue(
+                    self.master, domain, name, record_type
+                )
+                and all(
+                    not query_delegation_glue(
+                        server, domain, name, record_type
+                    )
+                    for server in self.secondaries
+                )
+                for name in set(previous_glue_names) - set(glue_names)
+                for record_type in ('A', 'AAAA')
+            )
+            if master_records == expected and glue_converged and removed_glue_converged and all(
                 records == expected for records in secondary_records.values()
             ):
                 master_soa = query_records(self.master, self.parent_zone, 'SOA')
@@ -167,6 +263,10 @@ class ParentDelegationProvisioner:
                         'status': 'delegated',
                         'changed': changed,
                         'nameservers': nameservers,
+                        'glue': [
+                            {'name': name, 'record_type': record_type, 'address': address}
+                            for name, record_type, address in glue
+                        ],
                         'master': self.master,
                         'secondaries': self.secondaries,
                         'soa': master_soa[0],
@@ -179,10 +279,13 @@ class ParentDelegationProvisioner:
         )
 
     def provision_zone(self, payload):
-        domain, _ = parse_request(payload, self.parent_zone)
+        domain, _, _ = parse_request(payload, self.parent_zone)
+        # Create the master first so a newly configured secondary can perform
+        # its initial AXFR immediately. Configuring the secondary first races
+        # with the master's initial NOTIFY and can defer transfer until refresh.
+        master_result = self.request(self.managed_master, 'POST', '/v1/zones', payload)
         for server in self.managed_secondaries:
             self.request(server, 'POST', '/v1/zones', payload)
-        master_result = self.request(self.managed_master, 'POST', '/v1/zones', payload)
         delegation = self.provision(payload)
         self.verify_managed(domain)
         return {'domain': domain.rstrip('.'), 'status': 'active',

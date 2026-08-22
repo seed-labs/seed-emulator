@@ -523,7 +523,7 @@ class Registrar:
         )
 
 
-def request_json(method, url, payload, timeout=5):
+def request_json(method, url, payload, timeout=75):
     body = json.dumps(payload, separators=(',', ':')).encode()
     request = Request(url, data=body, method=method, headers={'Content-Type': 'application/json'})
     try:
@@ -814,6 +814,7 @@ class AgentDomainRegistrarServer(Server):
         self.__provisioner_url: Optional[str] = None
         self.__worker_interval = 1.0
         self.__max_provision_attempts = 5
+        self.__dns_provisioner: Optional[Server] = None
 
     def setPort(self, port: int) -> AgentDomainRegistrarServer:
         assert 1 <= port <= 65535, "invalid registrar API port"
@@ -850,6 +851,11 @@ class AgentDomainRegistrarServer(Server):
         self.__max_provision_attempts = attempts
         return self
 
+    def setDnsProvisioner(self, provisioner: Server) -> AgentDomainRegistrarServer:
+        """Install a DNS provisioning sidecar on this same virtual node."""
+        self.__dns_provisioner = provisioner
+        return self
+
     def install(self, node: Node):
         app_dir = "/opt/seedemu-agent-registrar"
         policy_path = f"{app_dir}/policy.json"
@@ -873,6 +879,8 @@ class AgentDomainRegistrarServer(Server):
         if self.__provisioner_url is not None:
             command += " --provisioner-url {}".format(self.__provisioner_url)
         node.appendStartCommand(command, fork=True)
+        if self.__dns_provisioner is not None:
+            self.__dns_provisioner.install(node)
 
     def print(self, indent: int) -> str:
         return " " * indent + "AgentDomainRegistrarServer\n"

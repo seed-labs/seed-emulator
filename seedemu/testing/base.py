@@ -574,11 +574,10 @@ class TestRunner:
 
     @staticmethod
     def docker_env() -> Dict[str, str]:
-        env = TestRunner.merged_env({})
-        env.setdefault("DOCKER_BUILDKIT", "0")
-        env.setdefault("COMPOSE_BAKE", "false")
-        env.setdefault("COMPOSE_PARALLEL_LIMIT", "1")
-        return env
+        # Use the caller's normal Docker/Compose configuration. In particular,
+        # do not force serial service operations or disable BuildKit/Bake: that
+        # makes test builds much slower than the equivalent interactive command.
+        return TestRunner.merged_env({})
 
     @staticmethod
     def parse_compose_ps_output(output: str) -> List[Dict[str, Any]]:

@@ -20,7 +20,7 @@ from seedemu.compiler import Docker, Platform
 from seedemu.core import Binding, Emulator, Filter
 from seedemu.layers import Base
 from seedemu.services import DomainNameService
-from seedemu.services.AgentDnsProvisioningService import AgentDnsProvisioningService
+from seedemu.services.AgentDnsProvisioningService import AgentDnsProvisioningServer
 from seedemu.services.AgentDomainRegistrarService import AgentDomainRegistrarService
 from seedemu.services.AgentManagedDnsService import AgentManagedDnsService
 
@@ -97,13 +97,12 @@ def build_emulator() -> Emulator:
     registrar_server = registrar_service.install("agent-registrar-api")
     registrar_server.setPolicy(registrar_policy()).setProvisionerUrl("http://127.0.0.1:8053")
 
-    # Stage 2 step 3 provisions and verifies delegation in the inherited com.
-    # parent zone. It remains separate from the registrar outbox until managed
-    # zone creation and secondary synchronization are implemented.
-    provisioner_service = AgentDnsProvisioningService()
-    provisioner_service.install("dns-provisioner").setParentServers(
+    # Provision and verify the managed zone and its inherited com. delegation.
+    # Both control-plane services share the same virtual and physical node.
+    provisioner = AgentDnsProvisioningServer().setParentServers(
         "10.151.0.71", ["10.152.0.71"]
     ).setManagedServers("10.161.0.53", ["10.162.0.53"])
+    registrar_server.setDnsProvisioner(provisioner)
 
     managed_dns = AgentManagedDnsService()
     managed_dns.install("managed-dns-master").setMaster("10.162.0.53")
@@ -144,17 +143,9 @@ def build_emulator() -> Emulator:
             ),
         )
     )
-    emu.addBinding(
-        Binding(
-            "dns-provisioner",
-            filter=Filter(asn=150, nodeName="registrar", allowBound=True),
-        )
-    )
-
     # The registrar service is a new service layer. DomainNameService already
     # belongs to the inherited B02 emulator and therefore is not added again.
     emu.addLayer(registrar_service)
-    emu.addLayer(provisioner_service)
     emu.addLayer(managed_dns)
 
     return emu

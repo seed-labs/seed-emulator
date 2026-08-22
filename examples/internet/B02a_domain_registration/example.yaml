@@ -99,4 +99,4 @@ runtime:
 test_programs:
   - name: B02a dynamic registration validation
     script: test_runtime.py
-    timeout: 240
+    timeout: 360
