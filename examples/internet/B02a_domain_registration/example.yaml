@@ -1,0 +1,102 @@
+id: internet-b02a-domain-registration
+name: Mini Internet With Dynamic Domain Registration
+description: A B02 DNS deployment with registrar control and managed authoritative DNS nodes.
+runner: internet
+script: domain_registration.py
+platform: amd
+features:
+  - ipv4-default
+  - mini-internet
+  - dns-component
+  - dns-cache
+  - domain-registration
+  - dynamic-domain-registration
+  - managed-authoritative-dns
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 900
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B02a registrar, managed DNS nodes, and client are running
+      type: compose-ps
+      services:
+        - hnode_150_registrar
+        - hnode_161_managed-dns-master
+        - hnode_162_managed-dns-secondary
+        - hnode_150_host_0
+        - hnode_153_local-dns-2
+      retries: 40
+      interval: 3
+
+    - name: AS153 local DNS cache is ready
+      type: exec
+      service: hnode_153_local-dns-2
+      command: "pgrep named >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+    - name: Agent registrar API is ready
+      type: exec
+      service: hnode_150_registrar
+      command: "curl -fsS http://127.0.0.1:8080/health | grep -q '\"status\":\"ok\"'"
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: Parent delegation provisioner is ready
+      type: exec
+      service: hnode_150_registrar
+      command: "curl -fsS http://127.0.0.1:8053/health | grep -q '\"status\":\"ok\"'"
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: Managed DNS master is ready
+      type: exec
+      service: hnode_161_managed-dns-master
+      command: "pgrep named >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+    - name: Managed DNS master provisioning API is ready
+      type: exec
+      service: hnode_161_managed-dns-master
+      command: "curl -fsS http://127.0.0.1:8054/health | grep -q '\"status\":\"ok\"'"
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: Managed DNS secondary provisioning API is ready
+      type: exec
+      service: hnode_162_managed-dns-secondary
+      command: "curl -fsS http://127.0.0.1:8054/health | grep -q '\"status\":\"ok\"'"
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: Managed DNS secondary is ready
+      type: exec
+      service: hnode_162_managed-dns-secondary
+      command: "pgrep named >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+test_programs:
+  - name: B02a dynamic registration validation
+    script: test_runtime.py
+    timeout: 240
