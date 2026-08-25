@@ -19,11 +19,10 @@ REQUIRED = (
     BENCHMARKS / "topologies",
     BENCHMARKS / "topology_specs",
     BENCHMARKS / "reports",
-    BENCHMARKS / "meeting_reports",
 )
 MARKER = "README_SYNC_REQUIRED"
 SYNC_SUFFIXES = {".py", ".json", ".sh"}
-RUNTIME_LAYERS = {"reports", "meeting_reports"}
+RUNTIME_LAYERS = {"reports"}
 
 
 def git_paths(*args: str) -> set[Path]:

@@ -5,6 +5,8 @@
 统一任意 benchmark 入口由 `test_unified_natural_language_generator.py` 覆盖；隔离策略、
 响应硬化和旧 Unsafe 兼容性由 `test_unsafe_natural_language_generator.py` 覆盖。真实 Docker
 验收必须检查完整 phase coverage、证据指纹、评分准备文件以及容器/网络/镜像零残留。
+`meeting_reports/` 是完全忽略的本地证据归档，因此不属于 `test_benchmark_readmes.py` 的
+Git README 覆盖集合。
 
 该目录覆盖 benchmark CLI、场景安全边界、生成器、自然语言桥接、bundle 和真实 Docker 生命周期。
 

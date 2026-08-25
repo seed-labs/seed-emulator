@@ -17,9 +17,9 @@
 | `topologies/` | 可执行拓扑入口包装器 |
 | `topology_specs/` | 声明式拓扑请求及其确定性编译计划 |
 | `reports/` | 本地运行证据、NL 会话、缓存和发布记录 |
-| `meeting_reports/` | 按时间归档的组会复现材料（本地保留） |
+| `meeting_reports/` | 按时间归档的组会复现材料；整个目录只在本地保留并由 Git 忽略 |
 
-`generated/`、`logs/`、`backups/` 和 `__pycache__/` 是运行时或缓存目录，不属于需要 README 的长期维护层。
+`generated/`、`logs/`、`backups/`、`meeting_reports/` 和 `__pycache__/` 是运行时、报告归档或缓存目录，不属于 Git 中需要 README 覆盖检查的长期维护层。
 
 ## 常用入口
 
