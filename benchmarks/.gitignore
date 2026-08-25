@@ -2,6 +2,7 @@
 /generated/
 /logs/
 /backups/
+/meeting_reports/
 __pycache__/
 *.py[cod]
 *.bak
