@@ -10,6 +10,7 @@ __pycache__/
 # Reports are runtime evidence. Keep only the generator pilot reports that
 # document the feature's checked-in validation evidence.
 /reports/*
+!/reports/README.md
 !/reports/GENERATOR_B00_GENERATOR_PILOT_LIFECYCLE_BATCH_0019.md
 !/reports/GENERATOR_PILOT_AI_BLIND_20260809.md
 !/reports/GENERATOR_PILOT_LIFECYCLE_20260809.md

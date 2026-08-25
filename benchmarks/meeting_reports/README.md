@@ -1,3 +1,5 @@
+<!-- README_SYNC_REQUIRED -->
+
 # Generator 组会报告归档
 
 `meeting_reports/` 用于按时间保存 Benchmark Generator 的组会汇报材料与可复核证据。
@@ -16,4 +18,4 @@ plan-only；只有真实运行且能够核验原始回执的结果才能标记�
 正式晋级。
 
 修改 Generator 代码的 Agent 在准备组会材料时，应新增时间目录，不得修改旧报告来
-重写历史证据。
+重写历史证据。修改归档约定时必须同步更新本 README。
