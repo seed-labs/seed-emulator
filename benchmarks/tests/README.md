@@ -10,6 +10,8 @@ Git README 覆盖集合。
 `test_generator_readmes.py` 不再只检查同目录 README：任何 `.py` 或声明式 `.json` 变化
 都必须同步本目录 README，并逐级同步到 `generator/README.md`；可通过
 `GENERATOR_README_DIFF_BASE=<commit>` 对完整提交区间执行联级审计。
+该测试还强制 `generator/README.md` 同时包含可渲染的 Mermaid flowchart 与
+sequenceDiagram，并检查两张图覆盖统一入口、受控 Bundle、隔离任意代码、证据和评分准备。
 
 该目录覆盖 benchmark CLI、场景安全边界、生成器、自然语言桥接、bundle 和真实 Docker 生命周期。
 

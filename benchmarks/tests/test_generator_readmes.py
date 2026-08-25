@@ -68,6 +68,22 @@ def validate_readme_inventory() -> None:
         raise AssertionError(f"generator README inventory is stale: {undocumented}")
 
 
+def validate_root_diagrams() -> None:
+    content = (GENERATOR_DIR / "README.md").read_text(encoding="utf-8")
+    requirements = {
+        "mermaid fences": content.count("```mermaid") >= 2,
+        "generator flowchart": "flowchart TB" in content,
+        "generator sequence": "sequenceDiagram" in content,
+        "unified plan entry": "generator.nl.cli plan" in content,
+        "controlled lifecycle": "CompiledBenchmarkBundle" in content,
+        "arbitrary lifecycle": "isolated_arbitrary_code" in content,
+        "evidence/scoring": "provisional scoring preparation" in content,
+    }
+    missing = [name for name, present in requirements.items() if not present]
+    if missing:
+        raise AssertionError(f"generator root README diagrams are incomplete: {missing}")
+
+
 def git_paths(arguments: Iterable[str]) -> Set[str]:
     result = subprocess.run(
         ["git", "-C", str(REPO_ROOT), *arguments],
@@ -159,6 +175,7 @@ def validate_cascade_contract() -> None:
 def main() -> int:
     validate_readme_coverage()
     validate_readme_inventory()
+    validate_root_diagrams()
     validate_cascade_contract()
     validate_changed_directories()
     directories = sorted(
@@ -169,6 +186,7 @@ def main() -> int:
         print(f"covered={directory}/README.md")
     print("generator_readme_cascade_sync=passed")
     print("generator_readme_inventory=passed")
+    print("generator_readme_diagrams=passed")
     return 0
 
 

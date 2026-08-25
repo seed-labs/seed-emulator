@@ -30,6 +30,9 @@
    GENERATOR_README_DIFF_BASE=<base-commit> \
      python3 tests/test_generator_readmes.py
    ```
+8. `generator/README.md` 必须同时保留 Mermaid `flowchart` 和 `sequenceDiagram`。任何入口、
+   分支、编译边界、生命周期、安全门禁、证据或晋级流程变化，都必须在同一变更中同步更新
+   两张图；不得只修改正文，也不得把图降级为指向外部报告的链接。
 
 ## 代码与文档完成定义
 

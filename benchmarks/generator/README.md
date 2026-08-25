@@ -25,6 +25,99 @@ Suite 路径继续作为内部层或兼容入口存在。
 
 ## 推荐工作流
 
+### Generator 流程图
+
+```mermaid
+flowchart TB
+    U["用户自然语言：拓扑、软件、故障、测试"] --> PLAN["统一入口：generator.nl.cli plan"]
+    PLAN --> PROVIDER["LLMProvider / MCP Gateway"]
+    PROVIDER --> IR["严格结构化 Benchmark IR"]
+    IR --> HARD["响应硬化：单 JSON、Schema、大小、深度、重复键"]
+    HARD --> POLICY["安全分析：能力、预算、Compose、Dockerfile、Shell、逃逸"]
+    POLICY -->|"拒绝或信息不足"| STOP["fail closed / 澄清；Docker 不变"]
+    POLICY -->|"通过"| PREVIEW["完整计划预览、风险、指纹和一次性审批"]
+
+    PREVIEW --> CLASS{"内部可信等级"}
+    CLASS -->|"已注册 capability"| CONTROLLED["TopologyRequest + BenchmarkRequest"]
+    CONTROLLED --> TOPO["Topology planner / SEED compiler"]
+    TOPO --> MANIFEST["Topology capability manifest"]
+    MANIFEST --> WORKERS["九 Worker Artifact DAG"]
+    WORKERS --> BUNDLE["CompiledBenchmarkBundle"]
+    BUNDLE --> FCOMP["FaultCompiler + 通用组合器"]
+    FCOMP --> BISO["BundleRunIsolator"]
+    BISO --> BLIFE["baseline → inject → blind → reverse recovery → convergence"]
+    BLIFE --> QUAL["evidence → score → qualification → promotion/publish"]
+
+    CLASS -->|"任意容器代码"| ARBITRARY["isolated_arbitrary_code plan"]
+    ARBITRARY --> APPROVE["generate + 高风险确认"]
+    APPROVE --> AISO["独立 Compose project / session label / 资源限制"]
+    AISO --> ALIFE["baseline → inject → observe → recover → verify"]
+    ALIFE --> CLEAN["强制清理和零残留检查"]
+    CLEAN --> SCORE["evidence manifest + provisional scoring preparation"]
+    SCORE --> NOPROMO["promotion_eligible=false"]
+
+    subgraph COMPAT["兼容与开发期工作流"]
+        SCENE["nl-scene-* → capability manifest"]
+        OLD["nl-plan / nl-unsafe-* 兼容入口"]
+        GJ["GenerationJob → SuiteManifest → BaseScenario"]
+    end
+    PLAN -.-> SCENE
+    PLAN -.-> OLD
+    GJ -.-> LEGACY["benchmark_cli.py / 原 AI Agent"]
+    style COMPAT stroke-dasharray:8 5,fill:#fff8e1,stroke:#d97706
+```
+
+### Generator 执行时序图
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant CLI as NL CLI
+    participant LLM as LLM/MCP Provider
+    participant Guard as Schema/Policy Guard
+    participant Compiler as Topology/Bundle Compiler
+    participant Runtime as Isolated Runtime
+    participant Fault as FaultCompiler/Drivers
+    participant Probe as Independent Tests
+    participant Evidence as Evidence/Scoring
+
+    User->>CLI: plan --text 描述任意 benchmark
+    CLI->>Guard: 检查自然语言与 capability/policy snapshot
+    Guard-->>CLI: allowed
+    CLI->>LLM: messages + strict output schema + seed
+    LLM-->>CLI: topology + software + faults + tests
+    CLI->>Guard: 响应硬化、预算、逃逸和生命周期顺序检查
+    alt 拒绝或信息不足
+        Guard-->>User: blocked / clarification；不改变 Docker
+    else 计划通过
+        Guard-->>CLI: normalized IR + policy fingerprint
+        CLI-->>User: 完整预览 + plan fingerprint + one-time token
+        User->>CLI: generate + token + risk acknowledgement
+        CLI->>Guard: 校验 token、时效、计划/策略指纹和一次性 claim
+        alt 受控 capability 路径
+            CLI->>Compiler: TopologyRequest + BenchmarkRequest
+            Compiler-->>Runtime: compiled bundle + capability manifest
+        else 隔离任意代码路径
+            CLI->>Runtime: sanitized Compose + Dockerfiles + shell steps
+        end
+        Runtime->>Runtime: build/up + inspect 隔离与资源限制
+        Runtime->>Probe: baseline
+        Probe-->>Evidence: 健康基线
+        Runtime->>Fault: inject
+        Fault-->>Evidence: journal + active snapshot
+        Runtime->>Probe: blind/observe
+        Probe-->>Evidence: 故障效果
+        Runtime->>Fault: reverse recovery / recover
+        Fault-->>Evidence: recovery snapshot
+        Runtime->>Probe: verify + bounded convergence
+        Probe-->>Evidence: 语义恢复结果
+        Runtime->>Runtime: down + volumes/images cleanup
+        Runtime-->>Evidence: zero-residue proof + stdout/stderr + image digests
+        Evidence-->>User: score/qualification 或 provisional score
+    end
+```
+
 ```text
 用户自然语言
   → generator.nl.cli plan
