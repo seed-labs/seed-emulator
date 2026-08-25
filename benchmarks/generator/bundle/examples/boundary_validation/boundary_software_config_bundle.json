@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "request_id": "boundary_software_config_bundle",
+  "objective": "Validate generic software configuration replacement and recovery",
+  "topology_id": "bundle_boundary_validation",
+  "topology_spec": "topology_specs/bundle_boundary_validation/request.json",
+  "applications": ["bind9"],
+  "observer_template": "network_observer",
+  "fault_types": ["software.config.replace"],
+  "fault_count": 1,
+  "difficulty": "medium",
+  "resource_class": "small",
+  "scale": 8,
+  "seed": "boundary-software-config-v1",
+  "prepare_topology": false,
+  "execute_lifecycle": true,
+  "qualification_runs": 2,
+  "publish": false
+}

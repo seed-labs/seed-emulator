@@ -18,13 +18,25 @@ def validate_bundle_scales(
     *, base_capabilities: Mapping[str, object] | None = None,
 ) -> Dict[str, object]:
     results = []
+    requested_sizes = tuple(int(item) for item in sizes)
+    if base_capabilities is not None:
+        baseline = len(base_capabilities.get("assets", ()))
+        if not 1 <= baseline <= 10000:
+            raise ValueError("real capability baseline must contain 1-10000 assets")
+        # A real topology cannot be projected down without inventing a second
+        # topology. Preserve the caller's larger tiers and explicitly include
+        # the real baseline instead of rejecting the entire validation matrix.
+        floor = max(5, baseline)
+        requested_sizes = tuple(sorted({floor, *(
+            item for item in requested_sizes if item >= floor
+        )}))
     private = bundle.private_bundle
     selectors = [
         *(ServiceSpec.from_dict(x).selector for x in private["services"]),
         *(WorkloadSpec.from_dict(x).source for x in private["workloads"]),
         *(TestSpec.from_dict(x).selector for x in private["tests"]),
     ]
-    for size in sizes:
+    for size in requested_sizes:
         if not 5 <= int(size) <= 10000:
             raise ValueError("scale must be between 5 and 10000")
         if base_capabilities is None:

@@ -8,8 +8,11 @@ from typing import Any, Dict, Mapping, Sequence, Tuple
 from generator.bundle.artifacts import AgentArtifact
 from generator.bundle.compiler import resolve_assets
 from generator.bundle.coordinator import AgentTask, BenchmarkCoordinator, TaskHandler
+from generator.bundle.fault_profiles import (
+    build_bundle_fault_candidate, supported_bundle_faults,
+)
 from generator.bundle.request import BenchmarkRequest
-from generator.bundle.quality import select_fault_combination
+from generator.bundle.composer import compose_fault_candidates
 from generator.bundle.templates import (
     ApplicationTemplate, ApplicationTemplateRegistry, builtin_template_registry,
 )
@@ -66,24 +69,44 @@ class WorkerContext:
         )[0]
 
 
-def _selected_faults(context: WorkerContext) -> Tuple[Mapping[str, Any], ...]:
-    request, candidates = context.request, []
+def _fault_composition(context: WorkerContext):
+    request, candidates, errors = context.request, [], []
+    supported = set(supported_bundle_faults())
+    if request.fault_types:
+        missing = set(request.fault_types) - supported
+        if missing:
+            raise ValueError(
+                f"faults have no formal Bundle profiles: {sorted(missing)}; "
+                f"supported={sorted(supported)}"
+            )
+    protected = (str(context.asset(request.observer_template)["container"]),)
     for index, template_id in enumerate(request.applications):
         template, target = context.template(template_id), context.asset(template_id)
-        allowed = tuple(
-            item for item in (request.fault_types or template.suggested_faults)
-            if item in {"container.stopped", "network.netem"}
+        allowed = tuple(request.fault_types or template.suggested_faults)
+        for offset, fault_type in enumerate(allowed):
+            try:
+                candidates.append(build_bundle_fault_candidate(
+                    fault_type=fault_type, template_id=template_id,
+                    preferred_container=str(target["container"]),
+                    sequence=index + offset, seed=request.seed,
+                    manifest=context.capabilities, protected_assets=protected,
+                ))
+            except ValueError as exc:
+                errors.append(str(exc))
+    if len(candidates) < request.fault_count:
+        detail = "; ".join(sorted(set(errors))) or "no compatible capability binding"
+        raise ValueError(
+            f"only {len(candidates)}/{request.fault_count} safely automated "
+            f"Bundle faults are available: {detail}"
         )
-        if not allowed:
-            raise ValueError(f"no safely automated fault for template={template_id}")
-        fault_type = allowed[index % len(allowed)]
-        candidates.append({
-            "candidate_id": f"{template_id}.{fault_type}",
-            "template_id": template_id, "fault_type": fault_type,
-            "asset": target["container"],
-            "must_break": [f"{template_id}_availability"],
-        })
-    return select_fault_combination(candidates, request.fault_count)
+    return compose_fault_candidates(
+        candidates, request, context.capabilities,
+        protected_asset=protected[0],
+    )
+
+
+def _selected_faults(context: WorkerContext) -> Tuple[Mapping[str, Any], ...]:
+    return _fault_composition(context).candidates
 
 
 class TopologyAgentWorker:
@@ -164,37 +187,11 @@ class FaultAgentWorker:
 
     def __call__(self, task, inputs):
         request = self.context.request
-        protected = str(self.context.asset(request.observer_template)["container"])
-        faults = []
-        for index, candidate in enumerate(_selected_faults(self.context)):
-            template_id = str(candidate["template_id"])
-            template, target = self.context.template(template_id), self.context.asset(template_id)
-            fault_type = str(candidate["fault_type"])
-            parameters = (
-                {"interface": "lan0", "loss_percent": 100}
-                if fault_type == "network.netem" else {}
-            )
-            expectation = f"{template_id}_availability"
-            faults.append({
-                "schema_version": 1,
-                "fault_id": f"fault_{index + 1:02d}_{template_id}",
-                "fault_type": fault_type,
-                "selector": {"container": target["container"]},
-                "parameters": parameters,
-                "expectations": {
-                    "must_break": [expectation],
-                    "must_preserve": ["observer_availability"],
-                },
-                "safety": {
-                    "max_affected_assets": request.fault_count,
-                    "max_affected_asns": request.fault_count,
-                    "protected_assets": [protected], "require_recovery": True,
-                },
-                "seed": f"{request.seed}:{template_id}:{index}",
-                "schedule": {"at_seconds": 0, "duration_seconds": 0},
-            })
-        relationship = "single" if len(faults) == 1 else "independent"
-        return _artifact(task, inputs, {"relationship": relationship, "faults": faults})
+        composition = _fault_composition(self.context)
+        return _artifact(task, inputs, {
+            "relationship": composition.relationship,
+            "faults": [item.to_dict() for item in composition.specs],
+        })
 
 
 class TestAgentWorker:
@@ -225,7 +222,11 @@ class TestAgentWorker:
 
     def __call__(self, task, inputs):
         request = self.context.request
-        faulted = {str(item["template_id"]) for item in _selected_faults(self.context)}
+        selected = _selected_faults(self.context)
+        faulted = {
+            str(item["template_id"]) for item in selected
+            if item.get("breaks_application")
+        }
         tests = [
             self._protocol_test(item, "baseline") for item in request.applications
         ]
@@ -240,7 +241,32 @@ class TestAgentWorker:
             "parameters": {}, "assertion": {"kind": "equals", "value": "true"},
             "expectation_id": "observer_availability",
         })
-        tests.extend(self._protocol_test(item, "recovery") for item in faulted)
+        # Recovery is semantic only if every declared application is healthy;
+        # testing only directly faulted applications misses routing pollution.
+        tests.extend(
+            self._protocol_test(item, "recovery")
+            for item in request.applications
+        )
+        for index, candidate in enumerate(selected):
+            probe = candidate.get("probe")
+            if not probe:
+                continue
+            identity = f"fault_{index + 1:02d}_{candidate['template_id']}"
+            expectation = str(candidate["must_break"][0])
+            for phase in ("baseline", "active", "recovery"):
+                tests.append({
+                    "schema_version": 1,
+                    "test_id": f"{phase}_{identity}",
+                    "phase": phase,
+                    "driver": probe["driver"],
+                    "selector": dict(probe["selector"]),
+                    "parameters": dict(probe["parameters"]),
+                    "assertion": dict(probe[f"{phase}_assertion"]),
+                    "expectation_id": (
+                        f"{identity}_healthy" if phase == "baseline" else expectation
+                    ),
+                    "retries": 5 if phase == "recovery" else 1,
+                })
         return _artifact(task, inputs, {"tests": tests})
 
 
@@ -250,12 +276,9 @@ class OracleAgentWorker:
     def __init__(self, context): self.context = context
 
     def __call__(self, task, inputs):
-        faulted = tuple(
-            str(item["template_id"]) for item in _selected_faults(self.context)
-        )
-        active = [f"active_{item}" for item in self.context.request.applications]
-        active.append("active_observer")
-        recovery = [f"recovery_{item}" for item in faulted]
+        tests = TestAgentWorker(self.context)(task, ()).payload["tests"]
+        active = [item["test_id"] for item in tests if item["phase"] == "active"]
+        recovery = [item["test_id"] for item in tests if item["phase"] == "recovery"]
         required = active + recovery
         return _artifact(task, inputs, {"oracles": [{
             "schema_version": 1, "oracle_id": "generated_oracle_v1",
@@ -270,14 +293,13 @@ class ScoringAgentWorker:
     def __init__(self, context): self.context = context
 
     def __call__(self, task, inputs):
-        faulted = tuple(
-            str(item["template_id"]) for item in _selected_faults(self.context)
-        )
-        weights = {f"active_{item}": 2.0 for item in faulted}
-        weights.update({f"recovery_{item}": 2.0 for item in faulted})
-        weights["active_observer"] = 1.0
-        for item in (x for x in self.context.request.applications if x not in faulted):
-            weights[f"active_{item}"] = 1.0
+        selected = _selected_faults(self.context)
+        must_break = {value for item in selected for value in item["must_break"]}
+        tests = TestAgentWorker(self.context)(task, ()).payload["tests"]
+        weights = {
+            item["test_id"]: (2.0 if item["expectation_id"] in must_break else 1.0)
+            for item in tests if item["phase"] in {"active", "recovery"}
+        }
         return _artifact(task, inputs, {"scoring": [{
             "schema_version": 1, "scoring_id": "generated_weighted_v1",
             "weights": weights, "pass_threshold": 1.0,

@@ -1,6 +1,7 @@
 """Contract, recovery, coverage and scale tests for FaultSpec v1."""
 
 import json
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
@@ -144,6 +145,50 @@ same_b = spec("stop_same_b", "container.stopped", "node1")
 try:
     compile_fault_set((same_a, same_b), capabilities())
     raise AssertionError("conflicting resource locks were accepted")
+except ValueError as exc:
+    assert "conflict" in str(exc)
+
+# Dependencies may be declared out of order; the compiler topologically sorts
+# injection and guarantees exact reverse recovery. Cycles and container-wide
+# exclusive mutations fail closed.
+dependency_root = spec("dependency_root", "container.stopped", "node1")
+dependency_child = replace(
+    spec("dependency_child", "container.stopped", "node3"),
+    depends_on=("dependency_root",),
+)
+dependency_plan = compile_fault_set(
+    (dependency_child, dependency_root), capabilities(),
+    relationship="cascading",
+)
+assert dependency_plan.fault_ids == ("dependency_root", "dependency_child")
+assert dependency_plan.impact["recovery_order"] == list(reversed(
+    dependency_plan.impact["injection_order"]
+))
+mixed_independent = spec("mixed_independent", "container.stopped", "node5")
+mixed_plan = compile_fault_set(
+    (dependency_child, mixed_independent, dependency_root),
+    capabilities(), relationship="mixed",
+)
+assert len(mixed_plan.impact["dependency_edges"]) == 1
+assert mixed_plan.relationship == "mixed"
+try:
+    compile_fault_set((
+        replace(dependency_root, depends_on=("dependency_child",)),
+        dependency_child,
+    ), capabilities(), relationship="cascading")
+    raise AssertionError("cyclic fault dependencies were accepted")
+except ValueError as exc:
+    assert "cycle" in str(exc)
+
+exclusive = spec("exclusive_node1", "container.stopped", "node1")
+same_container_netem = spec(
+    "netem_node1", "network.netem", "node1",
+    {"interface": "lan0", "delay_ms": 100, "jitter_ms": 10,
+     "loss_percent": 1, "rate_kbit": 0},
+)
+try:
+    compile_fault_set((exclusive, same_container_netem), capabilities())
+    raise AssertionError("container-exclusive compound fault was accepted")
 except ValueError as exc:
     assert "conflict" in str(exc)
 

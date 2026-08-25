@@ -18,6 +18,11 @@ SUPPORTED_COMPONENTS = (
     "scoped_acl",
     "netem",
     "bird_wrong_asn_scoped_acl",
+    "ipv6_connected_route",
+    "bird_ospf_wrong_area",
+    "docker_network_disconnected",
+    "software_config_replace",
+    "software_executable_disabled",
 )
 TEMPLATE_COMPONENTS = {
     "container_stopped": "container_stopped",
@@ -26,6 +31,7 @@ TEMPLATE_COMPONENTS = {
     "random_complex_transit_acl": "scoped_acl",
     "random_complex_dual_bgp_acl": "bird_wrong_asn_scoped_acl",
     "netem_impairment": "netem",
+    "ipv6_connected_route": "ipv6_connected_route",
 }
 
 
@@ -68,6 +74,36 @@ def bind_fault_component(
             # SEED/BIRD protocol prefix is ``x_`` (commercial peers use p_).
             "peer_protocol": f"x_as{acl['destination_asn']}",
         }
+    if component_id in {
+        "ipv6_connected_route", "docker_network_disconnected",
+    }:
+        candidates = list(bindings.get(component_id) or [])
+        if not candidates:
+            raise ValueError(f"topology has no {component_id} binding")
+        return dict(candidates[(sequence + seed) % len(candidates)])
+    if component_id == "bird_ospf_wrong_area":
+        candidates = list(bindings.get(component_id) or [])
+        if not candidates:
+            raise ValueError("topology has no BIRD OSPF binding")
+        selected = dict(candidates[(sequence + seed) % len(candidates)])
+        bad_area = 1 + ((sequence + seed) % 65534)
+        if bad_area == int(selected["correct_area"]):
+            bad_area += 1
+        return {**selected, "bad_area": bad_area}
+    if component_id in {
+        "software_config_replace", "software_executable_disabled",
+    }:
+        fault_type = {
+            "software_config_replace": "software.config.replace",
+            "software_executable_disabled": "software.executable.disabled",
+        }[component_id]
+        candidates = [
+            item for item in bindings.get("software_fault_profiles") or ()
+            if item.get("fault_type") == fault_type
+        ]
+        if not candidates:
+            raise ValueError(f"topology has no {fault_type} profile binding")
+        return dict(candidates[(sequence + seed) % len(candidates)])
     if component_id == "container_stopped":
         candidates = list(bindings.get(component_id) or [])
         if not candidates:
@@ -193,6 +229,63 @@ def validate_fault_binding(
             or parameters.get("peer_protocol") != f"x_as{parameters['destination_asn']}"
         ):
             raise ValueError("compound BIRD/ACL binding differs from capabilities")
+        return
+    if component_id == "ipv6_connected_route":
+        candidates = list(bindings.get(component_id) or ())
+        if dict(parameters) not in candidates:
+            raise ValueError("IPv6 route binding differs from compiled topology")
+        address = ipaddress.ip_interface(str(parameters.get("address")))
+        prefix = ipaddress.ip_network(str(parameters.get("prefix")))
+        if (
+            address.version != 6 or prefix.version != 6
+            or address.network != prefix
+            or parameters.get("interface") != "benchmark6"
+        ):
+            raise ValueError("invalid IPv6 connected-route binding")
+        return
+    if component_id == "bird_ospf_wrong_area":
+        if set(parameters) != {"container", "correct_area", "bad_area"}:
+            raise ValueError("invalid BIRD OSPF binding keys")
+        expected = {
+            item["container"]: int(item["correct_area"])
+            for item in bindings.get(component_id) or ()
+        }
+        correct = int(parameters.get("correct_area", -1))
+        bad = int(parameters.get("bad_area", -1))
+        if expected.get(parameters.get("container")) != correct or bad < 0 or bad == correct:
+            raise ValueError("BIRD OSPF binding differs from compiled topology")
+        return
+    if component_id == "docker_network_disconnected":
+        candidates = list(bindings.get(component_id) or ())
+        if dict(parameters) not in candidates:
+            raise ValueError("Docker network binding differs from compiled topology")
+        ipaddress.ip_address(str(parameters.get("target_ip")))
+        ipaddress.ip_address(str(parameters.get("peer_ip")))
+        by_container = {item["container"]: item for item in assets}
+        if parameters.get("peer_container") not in by_container:
+            raise ValueError("Docker network semantic peer is outside topology")
+        project = str(
+            (manifest.get("runtime_session") or {}).get("compose_project")
+            or manifest.get("compose_project", "")
+        )
+        if not project or not str(parameters.get("docker_network", "")).startswith(
+            f"{project}_"
+        ):
+            raise ValueError("Docker network binding lacks scoped project identity")
+        return
+    if component_id in {
+        "software_config_replace", "software_executable_disabled",
+    }:
+        fault_type = {
+            "software_config_replace": "software.config.replace",
+            "software_executable_disabled": "software.executable.disabled",
+        }[component_id]
+        candidates = [
+            dict(item) for item in bindings.get("software_fault_profiles") or ()
+            if item.get("fault_type") == fault_type
+        ]
+        if dict(parameters) not in candidates:
+            raise ValueError("software profile binding differs from compiled topology")
         return
     if component_id == "container_stopped":
         if set(parameters) != {"container"} or parameters.get("container") not in (

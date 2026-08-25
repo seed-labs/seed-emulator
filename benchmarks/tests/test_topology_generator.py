@@ -202,6 +202,7 @@ emulator = build_emulator(first)
 assert emulator is not None
 
 fake_manifest = {
+    "compose_project": "decl_unit",
     "assets": [
         {
             "container": "as64512brd-router0-10.0.0.1",
@@ -226,6 +227,14 @@ fake_manifest = {
             "asn": 64512,
             "role": "Host",
             "interfaces": [{"name": "lan0", "address": "10.0.0.2/24"}],
+            "software": [{
+                "software_id": "fixture", "fault_profiles": [{
+                    "profile_id": "wrong_mode",
+                    "fault_type": "software.config.replace",
+                    "parameters": {"path": "/etc/fixture.conf",
+                                   "healthy_value": "ok", "faulty_value": "bad"},
+                }],
+            }],
         },
     ],
     "fault_component_bindings": {
@@ -244,6 +253,28 @@ fake_manifest = {
         "netem": [
             {"container": "as64512h-host0-10.0.0.2", "asn": 64512,
              "interface": "lan0"}
+        ],
+        "ipv6_connected_route": [
+            {"container": "as64512brd-router0-10.0.0.1",
+             "interface": "benchmark6", "address": "2001:db8:0::1/64",
+             "prefix": "2001:db8:0::/64"},
+        ],
+        "bird_ospf_wrong_area": [
+            {"container": "as64512brd-router0-10.0.0.1", "correct_area": 0},
+        ],
+        "docker_network_disconnected": [
+            {"container": "as64512h-host0-10.0.0.2",
+             "docker_network": "decl_unit_net_64512_lan0", "interface": "lan0",
+             "target_ip": "10.0.0.2",
+             "peer_container": "as64512brd-router0-10.0.0.1",
+             "peer_ip": "10.0.0.1", "remove_interface": False,
+             "bird_reconfigure": False},
+        ],
+        "software_fault_profiles": [
+            {"container": "as64512h-host0-10.0.0.2", "software_id": "fixture",
+             "profile_id": "wrong_mode", "fault_type": "software.config.replace",
+             "parameters": {"path": "/etc/fixture.conf",
+                            "healthy_value": "ok", "faulty_value": "bad"}},
         ],
     },
 }
@@ -270,6 +301,12 @@ assert netem["container"] == "as64512h-host0-10.0.0.2"
 assert netem["interface"] == "lan0"
 assert netem["delay_ms"] == 80 and netem["jitter_ms"] == 30
 validate_fault_binding(fake_manifest, "netem", netem)
+for component in (
+    "ipv6_connected_route", "bird_ospf_wrong_area",
+    "docker_network_disconnected", "software_config_replace",
+):
+    bound = bind_fault_component(fake_manifest, component, 0, "x")
+    validate_fault_binding(fake_manifest, component, bound)
 compound = bind_fault_component(
     fake_manifest, "bird_wrong_asn_scoped_acl", 0, "x"
 )

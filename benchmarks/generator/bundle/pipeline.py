@@ -14,6 +14,7 @@ from generator.bundle.artifacts import AgentArtifact, ArtifactStore
 from generator.bundle.compiler import BundleCompiler
 from generator.bundle.coordinator import BenchmarkCoordinator
 from generator.bundle.lifecycle import BundleLifecycleExecutor, DockerLifecycleRunner
+from generator.bundle.isolation import BundleRunIsolator
 from generator.bundle.publishing import ReleaseRegistry, publish_bundle
 from generator.bundle.qualification import qualify_bundle
 from generator.bundle.quality import QualityIndex, assess_bundle
@@ -71,6 +72,42 @@ class ProductionGenerator:
         *, capabilities: Mapping[str, Any] | None = None,
         release_version: str = "1.0.0",
         templates: ApplicationTemplateRegistry | None = None,
+    ) -> Dict[str, Any]:
+        """Generate one Bundle, owning Docker state when execution is requested."""
+        workspace = workspace.resolve(); workspace.mkdir(parents=True, exist_ok=True)
+        base_capabilities = dict(capabilities or self._prepare_topology(request))
+        if not request.execute_lifecycle:
+            return self._generate_bound(
+                request, workspace, capabilities=base_capabilities,
+                release_version=release_version, templates=templates,
+            )
+        isolator = BundleRunIsolator(
+            self.benchmarks_dir, request.topology_id, request.request_id, workspace
+        )
+        with isolator:
+            runtime_capabilities = isolator.capabilities(base_capabilities)
+            result = self._generate_bound(
+                request, workspace, capabilities=runtime_capabilities,
+                release_version=release_version, templates=templates,
+                isolator=isolator,
+            )
+        isolation = json.loads(isolator.report_path.read_text(encoding="utf-8"))
+        result["isolation_status"] = isolation["status"]
+        result["isolation_session_id"] = isolation["session_id"]
+        result["isolation_cleanup_verified"] = isolation["cleanup_verified"]
+        result.pop("summary_fingerprint", None)
+        result["summary_fingerprint"] = hashlib.sha256(
+            json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        _atomic_json(workspace / "summary.json", result)
+        return result
+
+    def _generate_bound(
+        self, request: BenchmarkRequest, workspace: Path,
+        *, capabilities: Mapping[str, Any] | None = None,
+        release_version: str = "1.0.0",
+        templates: ApplicationTemplateRegistry | None = None,
+        isolator: BundleRunIsolator | None = None,
     ) -> Dict[str, Any]:
         workspace = workspace.resolve(); workspace.mkdir(parents=True, exist_ok=True)
         capabilities = dict(capabilities or self._prepare_topology(request))
@@ -154,6 +191,10 @@ class ProductionGenerator:
         if request.publish:
             if not qualification:
                 raise ValueError("formal release requires qualification")
+            if isolator is not None:
+                # Publication is allowed only after session-scoped Docker state
+                # has been removed and independently inventoried as empty.
+                isolator.stop()
             release = publish_bundle(
                 bundle, version=release_version,
                 public_root=workspace.parent / "releases_public",

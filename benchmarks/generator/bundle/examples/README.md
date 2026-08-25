@@ -65,3 +65,24 @@ python3 tests/run_group_meeting_generator_demo.py --mode real
 4. 再进行真实无 AI 生命周期，至少取得两个独立回执。
 5. 更新本 README 的文件表和行为说明。
 6. 运行 `python3 tests/test_generator_readmes.py`。
+
+## Remaining-boundary validation fixtures
+
+`boundary_validation/` contains real no-AI lifecycle requests for the IPv6
+connected-route, BIRD OSPF-area, scoped Docker-network, generic software
+configuration, and generic software executable boundaries. See
+`boundary_validation/README.md` for the request-to-driver mapping and run
+command. These fixtures require the compiled `bundle_boundary_validation`
+Compose topology and keep publishing disabled.
+## 组合与隔离字段（2026-08-26）
+
+`fault_count` 可大于 `applications` 数量，但仍受 1–64 上限、能力清单、资源锁
+和安全影响预算约束。`fault_relationship` 可设置为 `independent`、
+`cascading` 或 `mixed`；`mixed` 至少需要三个故障。执行
+`execute_lifecycle=true` 时，生产入口会自行创建唯一 Compose session，不应
+预先手动启动同一拓扑。运行结果在 workspace 的 `isolation.json` 和
+`lifecycle_round_*.json` 中记录隔离、收敛、恢复和清理证据。
+
+同一个已编译 `topology_id` 的多个请求可以并行执行。每个请求派生独立 Compose
+文档和 project，并以 manifest 的稳定 service 名发现运行时容器；请求文件
+不得声明或猜测 session 容器名。

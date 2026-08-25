@@ -51,6 +51,19 @@ def pilot_capabilities(asset_count: int = 4) -> Dict[str, object]:
             {"software_id": item[1], "capabilities": [item[2]]}
             for item in applications
         ],
+        "fault_component_bindings": {
+            "container_stopped": [item["container"] for item in assets],
+            "dns_nameserver": [],
+            "bird_wrong_asn": [],
+            "scoped_acl": [],
+            "netem": [
+                {
+                    "container": item["container"], "asn": item["asn"],
+                    "interface": "lan0",
+                }
+                for item in assets
+            ],
+        },
     }
 
 

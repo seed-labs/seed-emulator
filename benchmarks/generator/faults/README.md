@@ -92,3 +92,14 @@ python3 tests/test_fault_injection_platform.py
 python3 tests/test_benchmark_generator.py
 python3 tests/test_generator_readmes.py
 ```
+## 通用组合语义（2026-08-26）
+
+故障编译器接受任意声明顺序的 `depends_on`，先进行稳定拓扑排序，再产生注入
+顺序；恢复顺序始终是该顺序的严格逆序。未知依赖、自依赖、依赖环、关系类型
+与依赖图不一致，以及同一容器的 `exclusive` 故障和其他突变组合都会失败
+关闭。编译计划的 `impact` 现在显式记录 `dependency_edges`、
+`injection_order` 和 `recovery_order`，用于执行日志、盲测与晋级审计。
+
+`independent` 不允许依赖边；`cascading` 必须只有一个根且其余故障均有依赖；
+`mixed` 必须同时存在至少两个独立根和一个依赖节点。FaultExecutor 按已编译
+顺序注入，并按 `cleanup_order` 逆序恢复，因此崩溃恢复仍使用同一确定性计划。

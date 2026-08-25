@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "request_id": "boundary_ospf_bundle",
+  "objective": "Validate injection and recovery of a wrong BIRD OSPF area",
+  "topology_id": "bundle_boundary_validation",
+  "topology_spec": "topology_specs/bundle_boundary_validation/request.json",
+  "applications": ["bind9"],
+  "observer_template": "network_observer",
+  "fault_types": ["routing.bird.ospf_wrong_area"],
+  "fault_count": 1,
+  "difficulty": "medium",
+  "resource_class": "small",
+  "scale": 8,
+  "seed": "boundary-ospf-v1",
+  "prepare_topology": false,
+  "execute_lifecycle": true,
+  "qualification_runs": 2,
+  "publish": false
+}

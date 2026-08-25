@@ -17,6 +17,7 @@ REQUEST_SCHEMA_VERSION = 1
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]{2,95}$")
 DIFFICULTIES = {"easy", "medium", "hard", "expert"}
 RESOURCE_CLASSES = {"small", "medium", "large", "xlarge"}
+FAULT_RELATIONSHIPS = {"independent", "cascading", "mixed"}
 
 
 def _strict(value: Mapping[str, Any], required, optional=()) -> Dict[str, Any]:
@@ -44,6 +45,7 @@ class BenchmarkRequest:
     scale: int = 5
     fault_count: int = 1
     fault_types: Tuple[str, ...] = ()
+    fault_relationship: str = "independent"
     observer_template: str = "network_observer"
     topology_spec: str = ""
     prepare_topology: bool = False
@@ -70,6 +72,7 @@ class BenchmarkRequest:
         objective, seed = str(data["objective"]).strip(), str(data["seed"]).strip()
         difficulty = str(data.get("difficulty", "medium"))
         resource_class = str(data.get("resource_class", "small"))
+        fault_relationship = str(data.get("fault_relationship", "independent"))
         scale, fault_count = int(data.get("scale", 5)), int(data.get("fault_count", 1))
         qualification_runs = int(data.get("qualification_runs", 2))
         topology_spec = str(data.get("topology_spec", ""))
@@ -85,8 +88,10 @@ class BenchmarkRequest:
             raise ValueError("unsupported difficulty or resource class")
         if not 1 <= scale <= 10000 or not 1 <= fault_count <= 64:
             raise ValueError("request scale or fault_count is out of range")
-        if fault_count > len(applications):
-            raise ValueError("fault_count cannot exceed selected applications")
+        if fault_relationship not in FAULT_RELATIONSHIPS:
+            raise ValueError("unsupported fault relationship")
+        if fault_relationship == "mixed" and fault_count < 3:
+            raise ValueError("mixed fault relationship requires at least 3 faults")
         if not 2 <= qualification_runs <= 10:
             raise ValueError("qualification_runs must be between 2 and 10")
         if topology_spec:
@@ -102,6 +107,7 @@ class BenchmarkRequest:
             request_id=request_id, objective=objective, topology_id=topology_id,
             applications=applications, seed=seed, difficulty=difficulty,
             scale=scale, fault_count=fault_count, fault_types=fault_types,
+            fault_relationship=fault_relationship,
             observer_template=str(data.get("observer_template", "network_observer")),
             topology_spec=topology_spec,
             prepare_topology=bool(data.get("prepare_topology", False)),

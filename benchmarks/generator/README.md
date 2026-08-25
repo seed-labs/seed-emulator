@@ -2,6 +2,33 @@
 
 # Benchmark Generator
 
+## Parallel lifecycle boundary
+
+Production Bundle isolation clones the whole generated topology context per
+session, rebinds every static topology subnet under a process-safe allocator,
+and discovers containers by stable Compose service labels. This makes two
+lifecycles from one compiled topology concurrent: their containers, Compose
+networks, IP addresses, build files, and fault targets are disjoint. The three
+runtime-boundary modules `bundle/isolation.py`, `bundle/composer.py`, and
+`bundle/fault_profiles.py` are included in the generator contract fingerprint.
+
+## Bundle fault qualification bridge
+
+The production Bundle path now consumes the topology capability manifest
+through `bundle/fault_profiles.py`. DNS resolver corruption, container stop,
+BIRD wrong-ASN, scoped ACL and deterministic netem outage faults can be
+selected by the nine Worker DAG and receive fault-specific baseline, active
+and recovery probes before no-AI qualification. Merely registering a new
+FaultDriver does not grant formal execution authority: a capability-bound
+Bundle profile, safety validation and an independent oracle are still
+required. This preserves fail-closed behavior while removing duplicated
+hard-coded Worker allow-lists.
+
+The bridge also covers IPv6 connected routes, BIRD OSPF areas, project-scoped
+Compose network attachments, and both validated SoftwareSpec fault profiles.
+Their targets are emitted by the topology compiler and cannot be invented by
+LLM or Worker output.
+
 本目录实现 SEED Emulator benchmark 的确定性生成、声明式拓扑、故障平台、多 Agent
 Bundle、质量门禁、晋级和生产调度。所有入口都必须保持可审计、可复现、可恢复，并且只在
 `benchmarks/` 范围内产生受控状态。
@@ -258,3 +285,26 @@ the full command and evidence contract.
 3. 更新对应示例、schema 和测试。
 4. 运行相关单元测试、无 AI 生命周期和必要的规模验证。
 5. 检查 `git diff --check -- benchmarks`，不得修改 `benchmarks/` 外文件。
+## 隔离执行与组合恢复（2026-08-26）
+
+生产 Bundle 的真实执行链现在是：
+
+```text
+BenchmarkRequest
+  → 冲突感知的通用故障组合
+  → 确定性 FaultSpec/依赖图编译
+  → session Compose 派生与 service→runtime container capability 重绑定
+  → 基线 → 顺序注入 → 盲测 → 逆序恢复
+  → 有界收敛等待 → 全应用探针 → 全工作负载复测
+  → Compose 强制清理与零残留证明
+  → 资格与发布
+```
+
+执行模式保持 `ai_invoked=false`。LLM/MCP 只能翻译自然语言意图，不能控制
+Compose project、资源锁、依赖顺序、恢复门禁或清理策略。修改隔离器、组合器、
+生命周期或 topology binding 时，必须同步更新本 README 及对应子层 README。
+
+同拓扑并行隔离不依赖静态 `container_name`。拓扑 manifest 的 `asset.service`
+是稳定身份，隔离器通过 Compose service 标签发现每个 session 的真实容器，
+然后在进入九 Worker 和 FaultCompiler 前一次性重绑定全部容器引用。LLM 无法
+提供或覆盖该映射。

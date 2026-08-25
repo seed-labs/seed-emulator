@@ -190,12 +190,18 @@ with tempfile.TemporaryDirectory() as temporary:
 
 
 for invalid in (
-    request_value(fault_count=4),
+    request_value(fault_count=65),
     request_value(topology_spec="../escape.json"),
     request_value(difficulty="impossible"),
+    request_value(fault_relationship="unknown"),
+    request_value(fault_count=2, fault_relationship="mixed"),
 ):
     try:
         BenchmarkRequest.from_dict(invalid)
         raise AssertionError("invalid BenchmarkRequest was accepted")
     except ValueError:
         pass
+
+assert BenchmarkRequest.from_dict(
+    request_value(fault_count=4, fault_relationship="cascading")
+).fault_count == 4

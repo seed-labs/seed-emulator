@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
 from pathlib import Path
 import shlex
@@ -48,7 +49,7 @@ def _apply_software(node, plan: TopologyPlan, *, role: str, asn: int, node_name:
 def build_emulator(plan: TopologyPlan):
     validate_topology_plan(plan)
     from seedemu.core import Emulator
-    from seedemu.layers import Base, Ebgp, PeerRelationship, Routing
+    from seedemu.layers import Base, Ebgp, Ospf, PeerRelationship, Routing
 
     emulator, base, ebgp = Emulator(), Base(), Ebgp()
     for link in plan.external_links:
@@ -64,6 +65,18 @@ def build_emulator(plan: TopologyPlan):
         router = autonomous_system.createRouter("router0")
         router.setLoopbackAddress(item.loopback_address)
         router.joinNetwork("lan0", item.router_address)
+        # A deterministic, documentation-prefix IPv6 connected route is a
+        # bounded topology fixture for the audited route-removal FaultDriver.
+        # It is not attached to a Docker network and cannot reach the host.
+        ipv6_address = f"2001:db8:{item.index:x}::1/64"
+        router.appendStartCommand(
+            "ip link show benchmark6 >/dev/null 2>&1 || "
+            "ip link add benchmark6 type dummy"
+        )
+        router.appendStartCommand("ip link set benchmark6 up")
+        router.appendStartCommand(
+            f"ip -6 addr replace {ipv6_address} dev benchmark6"
+        )
         _apply_software(
             router, plan, role="router", asn=item.asn, node_name="router0"
         )
@@ -94,7 +107,10 @@ def build_emulator(plan: TopologyPlan):
             aRouter="router0",
             bRouter="router0",
         )
-    for layer in (base, Routing(), ebgp):
+    # OSPF emits a real BIRD `area 0` contract. Even a single-router AS gets a
+    # passive LAN stanza, which is enough for deterministic config mutation
+    # without fabricating runtime capabilities in the Bundle layer.
+    for layer in (base, Routing(), Ospf(), ebgp):
         emulator.addLayer(layer)
     return emulator
 
@@ -169,12 +185,87 @@ def _capability_manifest(plan: TopologyPlan, compose_file: Path) -> Dict[str, ob
             for item in assets
             if any(iface["name"] == "lan0" for iface in item["interfaces"])
         ],
+        "ipv6_connected_route": [
+            {
+                "container": item["container"],
+                "interface": "benchmark6",
+                "address": f"2001:db8:{index:x}::1/64",
+                "prefix": str(ipaddress.ip_network(
+                    f"2001:db8:{index:x}::1/64", strict=False
+                )),
+            }
+            for index, item in enumerate(routers)
+        ],
+        "bird_ospf_wrong_area": [
+            {"container": item["container"], "correct_area": 0}
+            for item in routers
+        ],
+        "docker_network_disconnected": [],
+        "software_fault_profiles": [],
     }
+    project = str(compose.get("name", f"decl_{plan.topology_id}"))
+    by_service = {
+        str(item["service"]): item for item in assets
+    }
+    for service_name, service in sorted((compose.get("services") or {}).items()):
+        asset = by_service.get(str(service_name))
+        if not asset:
+            continue
+        for network_key, attachment in sorted((service.get("networks") or {}).items()):
+            attachment = attachment or {}
+            target_ip = str(attachment.get("ipv4_address", ""))
+            interface = next((
+                item["name"] for item in asset["interfaces"]
+                if str(item["address"]).split("/")[0] == target_ip
+            ), "")
+            if not interface or not target_ip:
+                continue
+            target_interface = ipaddress.ip_interface(next(
+                item["address"] for item in asset["interfaces"]
+                if item["name"] == interface
+            ))
+            peers = []
+            for candidate in assets:
+                if candidate["container"] == asset["container"]:
+                    continue
+                for candidate_interface in candidate["interfaces"]:
+                    if candidate_interface["name"] != interface:
+                        continue
+                    parsed = ipaddress.ip_interface(candidate_interface["address"])
+                    if parsed.network == target_interface.network:
+                        peers.append((candidate, str(parsed.ip)))
+            if not peers:
+                continue
+            peers.sort(key=lambda item: (
+                item[0]["asn"] == asset["asn"], item[0]["container"]
+            ))
+            peer, peer_ip = peers[0]
+            bindings["docker_network_disconnected"].append({
+                "container": asset["container"],
+                "docker_network": f"{project}_{network_key}",
+                "interface": interface,
+                "target_ip": target_ip,
+                "peer_container": peer["container"],
+                "peer_ip": peer_ip,
+                "remove_interface": False,
+                "bird_reconfigure": "Router" in str(asset["role"]),
+            })
+    for asset in assets:
+        for software in asset.get("software") or ():
+            for profile in software.get("fault_profiles") or ():
+                bindings["software_fault_profiles"].append({
+                    "container": asset["container"],
+                    "software_id": software["software_id"],
+                    "profile_id": profile["profile_id"],
+                    "fault_type": profile["fault_type"],
+                    "parameters": dict(profile["parameters"]),
+                })
     return {
         "schema_version": 1,
         "software_capability_schema_version": SOFTWARE_SPEC_VERSION,
         "topology_id": plan.topology_id,
         "topology_name": plan.topology_name,
+        "compose_project": project,
         "topology_fingerprint": plan.fingerprint,
         "resource_estimate": plan.resource_estimate.__dict__,
         "actual_compose_services": len(compose.get("services", {})),
@@ -257,6 +348,12 @@ def validate_compiled_output(
         raise ValueError("compiled topology exposes no router fault bindings")
     if not manifest["fault_component_bindings"]["container_stopped"]:
         raise ValueError("compiled topology exposes no host fault bindings")
+    for component in (
+        "ipv6_connected_route", "bird_ospf_wrong_area",
+        "docker_network_disconnected",
+    ):
+        if not manifest["fault_component_bindings"].get(component):
+            raise ValueError(f"compiled topology exposes no {component} bindings")
     if "software_catalog" in manifest:
         expected_catalog = [
             capability_entry(

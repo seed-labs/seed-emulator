@@ -13,6 +13,19 @@ from generator.faults.models import CompiledFaultPlan, FaultAction, FaultSpec, c
 FAULT_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]{2,95}$")
 
 
+def _locks_conflict(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    left_parts, right_parts = left.split(":"), right.split(":")
+    if len(left_parts) < 3 or len(right_parts) < 3:
+        return False
+    if left_parts[:2] != right_parts[:2]:
+        return False
+    if "exclusive" in {left_parts[2], right_parts[2]}:
+        return True
+    return False
+
+
 def _assets(capabilities: Mapping[str, Any]) -> List[Mapping[str, Any]]:
     assets = capabilities.get("assets")
     if not isinstance(assets, list) or not assets:
@@ -118,16 +131,48 @@ def compile_fault_set(
     ids = [item.fault_id for item in specs]
     if len(ids) != len(set(ids)):
         raise ValueError("fault ids must be unique")
+    by_id = {item.fault_id: item for item in specs}
+    for spec in specs:
+        unknown = set(spec.depends_on) - set(by_id)
+        if unknown:
+            raise ValueError(f"unknown dependencies={sorted(unknown)}")
+        if spec.fault_id in spec.depends_on:
+            raise ValueError("fault cannot depend on itself")
+    original_order = {item.fault_id: index for index, item in enumerate(specs)}
+    pending = dict(by_id); ordered_specs = []
+    emitted = set()
+    while pending:
+        ready = sorted(
+            (
+                item for item in pending.values()
+                if set(item.depends_on) <= emitted
+            ),
+            key=lambda item: original_order[item.fault_id],
+        )
+        if not ready:
+            raise ValueError("fault dependency graph contains a cycle")
+        for item in ready:
+            ordered_specs.append(item); emitted.add(item.fault_id)
+            pending.pop(item.fault_id)
+    roots = [item for item in ordered_specs if not item.depends_on]
+    dependent_count = sum(bool(item.depends_on) for item in ordered_specs)
+    if relationship == "independent" and dependent_count:
+        raise ValueError("independent fault set cannot contain dependencies")
+    if relationship == "cascading" and (
+        len(roots) != 1 or dependent_count != len(ordered_specs) - 1
+    ):
+        raise ValueError("cascading fault set requires one dependency root")
+    if relationship == "mixed" and (
+        dependent_count == 0 or len(roots) < 2
+    ):
+        raise ValueError("mixed fault set requires dependent and independent roots")
     actions: List[FaultAction] = []
     action_ids_by_fault: Dict[str, Tuple[str, ...]] = {}
     asset_by_container = {
         str(item.get("container")): item for item in _assets(capabilities)
     }
-    for index, spec in enumerate(specs):
+    for index, spec in enumerate(ordered_specs):
         _validate_fault_spec(spec)
-        unknown_dependencies = set(spec.depends_on) - set(ids[:index])
-        if unknown_dependencies:
-            raise ValueError(f"unknown or forward dependencies={sorted(unknown_dependencies)}")
         driver = get_driver(spec.fault_type)
         discovered = driver.discover(spec, capabilities)
         scoped_capabilities = dict(capabilities)
@@ -173,8 +218,8 @@ def compile_fault_set(
         int(asset_by_container[x]["asn"])
         for x in affected_assets if x in asset_by_container and "asn" in asset_by_container[x]
     }))
-    max_assets = min(int(s.safety.get("max_affected_assets", 1)) for s in specs)
-    max_asns = min(int(s.safety.get("max_affected_asns", max_assets)) for s in specs)
+    max_assets = min(int(s.safety.get("max_affected_assets", 1)) for s in ordered_specs)
+    max_asns = min(int(s.safety.get("max_affected_asns", max_assets)) for s in ordered_specs)
     if len(affected_assets) > max_assets or len(affected_asns) > max_asns:
         raise ValueError(
             f"impact exceeds budget: assets={len(affected_assets)}/{max_assets}, "
@@ -183,21 +228,34 @@ def compile_fault_set(
     lock_owner: Dict[str, str] = {}
     for action in actions:
         for lock in action.resource_locks:
-            if lock in lock_owner:
+            conflict = next(
+                (known for known in lock_owner if _locks_conflict(lock, known)),
+                None,
+            )
+            if conflict is not None:
                 raise ValueError(
-                    f"fault conflict on {lock}: {lock_owner[lock]} and {action.action_id}"
+                    f"fault conflict on {lock}: "
+                    f"{lock_owner[conflict]} and {action.action_id}"
                 )
             lock_owner[lock] = action.action_id
     impact = {
         "affected_asset_count": len(affected_assets),
         "affected_asn_count": len(affected_asns),
         "resource_locks": sorted(lock_owner),
-        "must_break": [x for s in specs for x in s.expectations.get("must_break", [])],
-        "must_preserve": [x for s in specs for x in s.expectations.get("must_preserve", [])],
+        "must_break": [x for s in ordered_specs for x in s.expectations.get("must_break", [])],
+        "must_preserve": [x for s in ordered_specs for x in s.expectations.get("must_preserve", [])],
+        "dependency_edges": sorted(
+            [dependency, spec.fault_id]
+            for spec in ordered_specs for dependency in spec.depends_on
+        ),
+        "injection_order": [item.action_id for item in actions],
+        "recovery_order": [
+            item.action_id for item in sorted(actions, key=lambda x: x.cleanup_order)
+        ],
     }
     topology_fingerprint = str(capabilities.get("topology_fingerprint", ""))
     unsigned = {
-        "fault_ids": ids,
+        "fault_ids": [item.fault_id for item in ordered_specs],
         "topology_fingerprint": topology_fingerprint,
         "actions": [item.to_dict() for item in actions],
         "affected_assets": list(affected_assets),
@@ -206,7 +264,7 @@ def compile_fault_set(
         "impact": impact,
     }
     return CompiledFaultPlan(
-        fault_ids=tuple(ids), topology_fingerprint=topology_fingerprint,
+        fault_ids=tuple(item.fault_id for item in ordered_specs), topology_fingerprint=topology_fingerprint,
         actions=tuple(actions), affected_assets=affected_assets,
         affected_asns=affected_asns, relationship=relationship,
         plan_fingerprint=canonical_sha256(unsigned), impact=impact,

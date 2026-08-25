@@ -1,5 +1,15 @@
 <!-- README_SYNC_REQUIRED -->
 
+## Formal fault capability fixtures
+
+Compiled manifests expose capability-bound targets for IPv6 connected-route
+removal, BIRD OSPF area mutation, Compose network disconnection and declared
+SoftwareSpec fault profiles. The compiler creates a bounded `benchmark6`
+dummy interface under `2001:db8::/32`, enables the real SEED OSPF layer, maps
+Compose attachments to project-scoped runtime network names, and copies only
+validated software profile metadata. Bundle still performs independent target,
+impact and recovery checks.
+
 # 声明式拓扑生成层
 
 本层负责把 `TopologyRequest` 转换为经过预算、地址、ASN 和连通性检查的确定性
@@ -125,3 +135,23 @@ Worker 在后续独立阶段消费，桥接命令本身不运行 Worker 或生�
 capability manifest。
 进入本层前，桥接编译器会把应用空选择器确定性解析为单个 ASN/节点，并拒绝业务应用与受保护
 `network_observer` 的资产交集；因此 manifest 中供盲测使用的观测资产不会同时成为业务故障目标。
+## 运行时隔离与网络语义绑定（2026-08-26）
+
+拓扑 capability manifest 现在发布 `compose_project`。每个
+`docker_network_disconnected` 绑定除网络、接口和本机地址外，还包含同一二层
+网络内的 `peer_container` 与 `peer_ip`。Bundle 隔离器把基础 project、
+容器和静态 IPv4 地址重绑定到本次 session；接口和对端拓扑关系保持不变，
+IP 的主机位在新的非重叠子网中保持一致。
+
+该对端绑定用于 `probe.docker_network_path`：恢复时必须同时证明 Docker
+attachment 存在、声明接口持有正确地址，并能从目标容器到达编译期选择的
+对端。它把拓扑级能力清单与数据面语义恢复连接起来。
+
+`assets[].service` 是并行运行时的稳定间接标识；`assets[].container` 仅代表
+基础编译产物中的容器名。Bundle 隔离器启动 session 后根据 Compose service
+标签替换后者，并同步替换 fault binding 中的所有容器与对端引用。拓扑编译器
+不接受由请求或 LLM 提供的运行时容器名。
+
+容器控制目标继续使用发现到的真实运行时名称，容器内 hostname 探针通过
+`runtime_session.container_services` 使用短 service 别名。由此既保持绑定
+检查的资产归属语义，也避免长 Compose project 名超过 DNS label 限制。

@@ -101,6 +101,11 @@ with tempfile.TemporaryDirectory() as temporary:
         assert value["ai_invoked"] is False
         assert value["blind_mode"] is True
         assert value["topology_tainted"] is False
+        assert value["convergence"]["passed"] is True
+        assert len(value["convergence"]["attempts"]) >= 2
+        assert any(
+            item.get("phase") == "recovery" for item in value["workloads"]
+        )
         receipts.append(receipt)
     qualification = qualify_bundle(
         first, receipts, root / "qualification.json",
@@ -112,6 +117,10 @@ with tempfile.TemporaryDirectory() as temporary:
     assert scale["passed"] is True
     assert [item["asset_count"] for item in scale["results"]] == [5, 20, 100, 1000, 10000]
     assert scale["results"][-1]["execution_mode"] == "plan_only_no_container_launch"
+    real_baseline_scale = validate_bundle_scales(
+        first, (5, 20, 100), base_capabilities=pilot_capabilities(18),
+    )
+    assert [item["asset_count"] for item in real_baseline_scale["results"]] == [18, 20, 100]
 
     # Coordinator persists leases, exact inputs and output fingerprints.
     coordinator_store = ArtifactStore(root / "coordinator-artifacts")
