@@ -12,6 +12,7 @@ Git README 覆盖集合。
 `GENERATOR_README_DIFF_BASE=<commit>` 对完整提交区间执行联级审计。
 该测试还强制 `generator/README.md` 同时包含可渲染的 Mermaid flowchart 与
 sequenceDiagram，并检查两张图覆盖统一入口、受控 Bundle、隔离任意代码、证据和评分准备。
+流程图节点使用短标签和 `<br/>` 换行，防止桌面端 Mermaid 渲染时中文或长标识被裁切。
 
 该目录覆盖 benchmark CLI、场景安全边界、生成器、自然语言桥接、bundle 和真实 Docker 生命周期。
 

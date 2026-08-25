@@ -77,7 +77,8 @@ def validate_root_diagrams() -> None:
         "unified plan entry": "generator.nl.cli plan" in content,
         "controlled lifecycle": "CompiledBenchmarkBundle" in content,
         "arbitrary lifecycle": "isolated_arbitrary_code" in content,
-        "evidence/scoring": "provisional scoring preparation" in content,
+        "evidence/scoring": "临时评分准备" in content,
+        "wrapped flow labels": content.count("<br/>") >= 12,
     }
     missing = [name for name, present in requirements.items() if not present]
     if missing:

@@ -29,43 +29,47 @@ Suite 路径继续作为内部层或兼容入口存在。
 
 ```mermaid
 flowchart TB
-    U["用户自然语言：拓扑、软件、故障、测试"] --> PLAN["统一入口：generator.nl.cli plan"]
-    PLAN --> PROVIDER["LLMProvider / MCP Gateway"]
-    PROVIDER --> IR["严格结构化 Benchmark IR"]
-    IR --> HARD["响应硬化：单 JSON、Schema、大小、深度、重复键"]
-    HARD --> POLICY["安全分析：能力、预算、Compose、Dockerfile、Shell、逃逸"]
-    POLICY -->|"拒绝或信息不足"| STOP["fail closed / 澄清；Docker 不变"]
-    POLICY -->|"通过"| PREVIEW["完整计划预览、风险、指纹和一次性审批"]
+    U["自然语言需求<br/>拓扑・软件・故障・测试"] --> PLAN["统一 plan 入口"]
+    PLAN --> PROVIDER["LLMProvider<br/>MCP Gateway"]
+    PROVIDER --> IR["结构化<br/>Benchmark IR"]
+    IR --> HARD["响应硬化<br/>JSON Schema"]
+    HARD --> POLICY["安全分析<br/>能力・预算・逃逸"]
+    POLICY -->|"拒绝"| STOP["fail closed<br/>Docker 不变"]
+    POLICY -->|"通过"| PREVIEW["计划预览<br/>风险・指纹・审批"]
 
     PREVIEW --> CLASS{"内部可信等级"}
-    CLASS -->|"已注册 capability"| CONTROLLED["TopologyRequest + BenchmarkRequest"]
-    CONTROLLED --> TOPO["Topology planner / SEED compiler"]
-    TOPO --> MANIFEST["Topology capability manifest"]
-    MANIFEST --> WORKERS["九 Worker Artifact DAG"]
-    WORKERS --> BUNDLE["CompiledBenchmarkBundle"]
-    BUNDLE --> FCOMP["FaultCompiler + 通用组合器"]
-    FCOMP --> BISO["BundleRunIsolator"]
-    BISO --> BLIFE["baseline → inject → blind → reverse recovery → convergence"]
-    BLIFE --> QUAL["evidence → score → qualification → promotion/publish"]
+    CLASS -->|"已注册能力"| CONTROLLED["TopologyRequest<br/>BenchmarkRequest"]
+    CONTROLLED --> TOPO["拓扑规划<br/>SEED 编译"]
+    TOPO --> MANIFEST["Topology<br/>capability manifest"]
+    MANIFEST --> WORKERS["九 Worker<br/>Artifact DAG"]
+    WORKERS --> BUNDLE["Compiled<br/>BenchmarkBundle"]
+    BUNDLE --> FCOMP["FaultCompiler<br/>通用组合器"]
+    FCOMP --> BISO["BundleRun<br/>Isolator"]
+    BISO --> BLIFE["baseline → inject → blind<br/>recover → convergence"]
+    BLIFE --> QUAL["证据 → 评分 → 资格<br/>晋级・发布"]
 
-    CLASS -->|"任意容器代码"| ARBITRARY["isolated_arbitrary_code plan"]
-    ARBITRARY --> APPROVE["generate + 高风险确认"]
-    APPROVE --> AISO["独立 Compose project / session label / 资源限制"]
-    AISO --> ALIFE["baseline → inject → observe → recover → verify"]
-    ALIFE --> CLEAN["强制清理和零残留检查"]
-    CLEAN --> SCORE["evidence manifest + provisional scoring preparation"]
-    SCORE --> NOPROMO["promotion_eligible=false"]
+    CLASS -->|"任意容器代码"| ARBITRARY["isolated_<br/>arbitrary_code"]
+    ARBITRARY --> APPROVE["generate<br/>高风险确认"]
+    APPROVE --> AISO["独立 Compose session<br/>资源限制"]
+    AISO --> ALIFE["baseline → inject → observe<br/>recover → verify"]
+    ALIFE --> CLEAN["强制清理<br/>零残留检查"]
+    CLEAN --> SCORE["证据清单<br/>临时评分准备"]
+    SCORE --> NOPROMO["不可自动晋级<br/>promotion_eligible=false"]
 
-    subgraph COMPAT["兼容与开发期工作流"]
-        SCENE["nl-scene-* → capability manifest"]
-        OLD["nl-plan / nl-unsafe-* 兼容入口"]
-        GJ["GenerationJob → SuiteManifest → BaseScenario"]
+    subgraph COMPAT["兼容 / 开发期"]
+        SCENE["nl-scene-*<br/>能力清单"]
+        OLD["旧 NL 兼容入口"]
+        GJ["GenerationJob<br/>Suite / BaseScenario"]
     end
     PLAN -.-> SCENE
     PLAN -.-> OLD
-    GJ -.-> LEGACY["benchmark_cli.py / 原 AI Agent"]
+    GJ -.-> LEGACY["benchmark_cli.py<br/>原 AI Agent"]
     style COMPAT stroke-dasharray:8 5,fill:#fff8e1,stroke:#d97706
 ```
+
+图中“响应硬化”包括单 JSON、大小、深度、重复键和 Schema 检查；“安全分析”包括
+capability、资源预算、Compose、Dockerfile、容器内 Shell 和宿主逃逸检查。框内采用短标签，
+完整接口名称和边界以本 README 后续章节为准。
 
 ### Generator 执行时序图
 
