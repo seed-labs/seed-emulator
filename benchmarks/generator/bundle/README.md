@@ -2,6 +2,20 @@
 
 # Multi-Agent Benchmark Bundle
 
+> [!IMPORTANT]
+> **README_SYNC_REQUIRED（强制联级同步）**：修改本目录 `.py` 时必须更新本 README 和
+> `generator/README.md`；修改 `examples/` JSON 时必须从示例目录逐级更新到本文件及根 README。
+> 接口影响 Fault、Topology 或 NL 时还要更新横向 README。门禁由
+> `tests/test_generator_readmes.py` 检查完整祖先链。
+
+## 当前实现状态（2026-08-26 审计）
+
+本层是**受控、可资格晋级**的生产路径，不是推荐统一 NL arbitrary-code 后端。它消费
+`BenchmarkRequest v1 + topology capability manifest`，运行九 Worker，编译 public/private
+Bundle，经 blind/security review、FaultCompiler 和 BundleRunIsolator 执行无 AI 生命周期，
+最终产生 quality、score、qualification、pilot、调度和可选发布记录。任意 NL 成功产物必须先
+提炼为受控 capability/driver，才能进入本层自动 promotion。
+
 ## Same-topology parallel isolation
 
 Each lifecycle run clones the complete compiled topology build context into
@@ -58,10 +72,6 @@ topology down to the synthetic 5-node tier.
 本层把一个高层 `BenchmarkRequest v1` 编译为完整、可测试、可评分、可发布的
 `CompiledBenchmarkBundle`。生成过程由九类确定性 Worker 组成，既可以内置单进程运行，
 也可以通过角色受限的外部 Worker 和分布式调度运行。
-
-> **强制同步规则（README_SYNC_REQUIRED）**：修改本目录任意 `.py` 文件时，必须在同一
-> 变更中更新本 README。若更改 Bundle 公共接口、生产数据流或 CLI，还必须同步更新
-> `generator/README.md`；修改 `examples/` 时同步更新 `examples/README.md`。
 
 ## 生产数据流
 

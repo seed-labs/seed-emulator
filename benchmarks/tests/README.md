@@ -7,6 +7,9 @@
 验收必须检查完整 phase coverage、证据指纹、评分准备文件以及容器/网络/镜像零残留。
 `meeting_reports/` 是完全忽略的本地证据归档，因此不属于 `test_benchmark_readmes.py` 的
 Git README 覆盖集合。
+`test_generator_readmes.py` 不再只检查同目录 README：任何 `.py` 或声明式 `.json` 变化
+都必须同步本目录 README，并逐级同步到 `generator/README.md`；可通过
+`GENERATOR_README_DIFF_BASE=<commit>` 对完整提交区间执行联级审计。
 
 该目录覆盖 benchmark CLI、场景安全边界、生成器、自然语言桥接、bundle 和真实 Docker 生命周期。
 

@@ -2,6 +2,17 @@
 
 # Remaining-boundary Bundle examples
 
+> [!IMPORTANT]
+> **README_SYNC_REQUIRED — cascading update required:** changing any JSON here
+> requires updating this README, `generator/bundle/examples/README.md`,
+> `generator/bundle/README.md`, and `generator/README.md` in the same change.
+> `tests/test_generator_readmes.py` enforces the complete ancestor chain.
+
+The current six fixtures are IPv6 connected-route removal, BIRD OSPF wrong area,
+Docker network disconnect, software config replacement, software executable disable,
+and a cascading DNS → OSPF → software-config combination. They are qualification
+fixtures for the controlled Bundle path, not arbitrary-code NL examples.
+
 This directory contains executable `BenchmarkRequest v1` fixtures for the
 fault boundaries that were previously available only to scenario-specific
 code. Every request uses the declarative `bundle_boundary_validation`
@@ -28,10 +39,6 @@ python3 -m generator.bundle.cli generate \
 The topology's Compose project must already be running when
 `prepare_topology=false`. Each execution writes lifecycle receipts, quality
 results, scale validation, and formal qualification evidence to its workspace.
-
-> **README_SYNC_REQUIRED:** Any agent changing a request in this directory
-> must update this README and the parent `examples/README.md`,
-> `bundle/README.md`, and `generator/README.md` in the same change.
 
 The cascading fixture intentionally declares one application and three faults.
 It proves that composition is bounded by capabilities and resource conflicts,

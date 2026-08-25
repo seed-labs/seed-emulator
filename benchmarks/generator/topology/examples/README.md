@@ -2,13 +2,21 @@
 
 # 声明式拓扑请求示例
 
+> [!IMPORTANT]
+> **README_SYNC_REQUIRED（强制联级同步）**：修改、新增或删除本目录 JSON 时，必须同步
+> 本 README、`generator/topology/README.md` 和 `generator/README.md`。示例 schema 或
+> capability 影响 NL/Bundle/Fault 时还要更新横向消费者 README。
+
+## 当前示例集合（2026-08-26 审计）
+
+现有示例为 `small_ring.json`、`software_fault_demo.json`、
+`multi_agent_application_pilot.json` 以及 `scale_100/500/1000/10000.json`。scale 名称描述
+规划目标；只有明确的 real/sampled 回执才能声明真实 Docker 验证，`scale_10000.json` 本身不代表
+单机启动了 10,000 个容器。
+
 本目录包含 `TopologyRequest` 示例输入，用于规划、注册和编译不同规模或软件能力的 SEED
 Emulator 拓扑。注册后，对应的规范化 request 和确定性 plan 会写入
 `benchmarks/topology_specs/<topology_id>/`。
-
-> **强制同步规则（README_SYNC_REQUIRED）**：修改、新增或删除本目录任何 JSON 时，必须
-> 在同一变更中更新本 README。字段、规模语义或软件声明变化时，还必须更新
-> `../README.md` 和 `../../README.md`。
 
 ## 示例清单
 

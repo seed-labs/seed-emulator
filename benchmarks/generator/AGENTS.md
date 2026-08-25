@@ -8,9 +8,11 @@
 `README_SYNC_REQUIRED`
 
 1. 修改任意目录中的 `.py` 或声明式 `.json` 时，必须在同一个变更中更新该目录的
-   `README.md`。即使代码行为看似未变，也必须记录本次改动对职责、接口或维护状态的影响。
-2. 改变公共接口、CLI、schema、数据流、输出布局、安全边界或跨层依赖时，还必须同步更新
-   所有受影响的上级 README；至少检查 `generator/README.md`。
+   `README.md`，并逐级更新从该目录到 `generator/README.md` 的每一份上级 README。
+   这是强制联级更新，不以“公共接口没有变化”为例外；README 至少应记录行为未变及验证结果。
+2. 改变公共接口、CLI、schema、数据流、输出布局、安全边界或跨层依赖时，除上述祖先链外，
+   还必须更新所有横向消费者目录的 README，例如 NL schema 影响 `mcp/`、`bundle/` 或
+   `topology/` 时必须同步这些层。
 3. 新增包含 Python 或声明式 JSON 的目录时，必须同时创建带
    `README_SYNC_REQUIRED` 标记的 `README.md`。
 4. 删除或移动代码时，必须同步修正原目录、目标目录和上级 README 的文件索引与数据流。
@@ -31,8 +33,8 @@
 
 ## 代码与文档完成定义
 
-- 同目录 README 已在当前 diff 中更新；
-- 受影响的上级 README 已更新；
+- 同目录 README 及其到 `generator/README.md` 的完整祖先链均已在当前 diff 中更新；
+- 横向消费者和受影响的接口 README 已更新；
 - 新目录 README 覆盖检查通过；
 - README 描述与代码、CLI `--help`、schema 和真实输出一致；
 - 相关功能测试、`py_compile` 和 `git diff --check -- benchmarks` 通过；

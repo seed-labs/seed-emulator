@@ -2,12 +2,22 @@
 
 # FaultSpec 与 FaultDriver 平台
 
+> [!IMPORTANT]
+> **README_SYNC_REQUIRED（强制联级同步）**：修改本目录 `.py` 时必须更新本 README 和
+> `generator/README.md`；若 Driver 被 Bundle、Topology capability 或 NL catalog 消费，还必须
+> 更新对应层 README。门禁检查本层到根层的完整祖先链。
+
+## 当前 Driver 注册表（2026-08-26 审计）
+
+代码当前注册 10 个 Driver：`software.config.replace`、`software.executable.disabled`、
+`container.stopped`、`dns.nameserver`、`routing.bird.wrong_asn`、`network.acl.scoped`、
+`network.netem`、`network.ipv6.connected_route_removed`、`routing.bird.ospf_wrong_area` 和
+`docker.network.disconnected`。以 `drivers.py` 的 `DRIVERS` 为唯一执行事实。
+`network.netem` 通过参数覆盖延迟、丢包、限速和抖动；正式 Bundle 是否可用还取决于
+`bundle/fault_profiles.py` 中的 capability-bound profile，而不是仅凭 Driver 存在。
+
 本层把声明式 `FaultSpec v1` 转换为安全、确定性、可恢复的执行计划，并提供故障插件、
 影响分析、组合覆盖率、崩溃恢复和大规模计划验证。
-
-> **强制同步规则（README_SYNC_REQUIRED）**：修改本目录任意 `.py` 文件时，必须同步更新
-> 本 README。新增或改变 FaultSpec、FaultDriver、CLI 或执行生命周期时，还必须更新
-> `generator/README.md`；若 Bundle 消费方式变化，同时更新 `generator/bundle/README.md`。
 
 ## 数据流
 

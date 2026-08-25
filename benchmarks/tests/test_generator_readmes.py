@@ -47,6 +47,27 @@ def validate_readme_coverage() -> None:
         )
 
 
+def validate_readme_inventory() -> None:
+    """Require each README to name every maintained source/data file it owns."""
+    undocumented = []
+    for directory in sorted(source_directories()):
+        content = (directory / "README.md").read_text(encoding="utf-8")
+        for source in sorted(directory.iterdir()):
+            if (
+                not source.is_file()
+                or source.suffix not in SOURCE_SUFFIXES
+                or source.name == "__init__.py"
+            ):
+                continue
+            if source.name not in content:
+                undocumented.append({
+                    "source": str(source.relative_to(BENCHMARKS_DIR)),
+                    "readme": str((directory / "README.md").relative_to(BENCHMARKS_DIR)),
+                })
+    if undocumented:
+        raise AssertionError(f"generator README inventory is stale: {undocumented}")
+
+
 def git_paths(arguments: Iterable[str]) -> Set[str]:
     result = subprocess.run(
         ["git", "-C", str(REPO_ROOT), *arguments],
@@ -88,6 +109,19 @@ def changed_paths() -> Set[str]:
     return paths
 
 
+def required_readmes(source: Path) -> Set[str]:
+    """Return the source directory README and every ancestor through generator/."""
+    directory = source.parent
+    required = set()
+    generator = Path("benchmarks/generator")
+    while directory == generator or generator in directory.parents:
+        required.add((directory / "README.md").as_posix())
+        if directory == generator:
+            break
+        directory = directory.parent
+    return required
+
+
 def validate_changed_directories() -> None:
     paths = changed_paths()
     changed_readmes = {
@@ -98,18 +132,34 @@ def validate_changed_directories() -> None:
         candidate = Path(path)
         if candidate.suffix not in SOURCE_SUFFIXES or "__pycache__" in candidate.parts:
             continue
-        required = (candidate.parent / "README.md").as_posix()
-        if required not in changed_readmes:
-            missing_updates.append({"source": path, "required": required})
+        for required in sorted(required_readmes(candidate)):
+            if required not in changed_readmes:
+                missing_updates.append({"source": path, "required": required})
     if missing_updates:
         raise AssertionError(
-            "generator code/data changed without same-directory README update: "
+            "generator code/data changed without cascading README updates: "
             f"{missing_updates}"
         )
 
 
+def validate_cascade_contract() -> None:
+    expected = {
+        "benchmarks/generator/bundle/examples/boundary_validation/README.md",
+        "benchmarks/generator/bundle/examples/README.md",
+        "benchmarks/generator/bundle/README.md",
+        "benchmarks/generator/README.md",
+    }
+    actual = required_readmes(Path(
+        "benchmarks/generator/bundle/examples/boundary_validation/example.json"
+    ))
+    if actual != expected:
+        raise AssertionError(f"generator README cascade contract drifted: {sorted(actual)}")
+
+
 def main() -> int:
     validate_readme_coverage()
+    validate_readme_inventory()
+    validate_cascade_contract()
     validate_changed_directories()
     directories = sorted(
         str(path.relative_to(BENCHMARKS_DIR)) for path in source_directories()
@@ -117,7 +167,8 @@ def main() -> int:
     print(f"generator_readme_coverage=passed directories={len(directories)}")
     for directory in directories:
         print(f"covered={directory}/README.md")
-    print("generator_readme_sync=passed")
+    print("generator_readme_cascade_sync=passed")
+    print("generator_readme_inventory=passed")
     return 0
 
 

@@ -2,12 +2,20 @@
 
 # BenchmarkRequest 示例
 
+> [!IMPORTANT]
+> **README_SYNC_REQUIRED（强制联级同步）**：修改、新增或删除本目录 JSON，必须同时更新
+> 本 README、`generator/bundle/README.md` 和 `generator/README.md`；若修改
+> `boundary_validation/`，还必须先更新其 README。联级门禁会逐层检查，不能只改叶子说明。
+
+## 当前示例集合（2026-08-26 审计）
+
+根层包含 `production_application_request.json`（计划/静态路径）和
+`production_application_e2e_request.json`（真实端到端路径）；`boundary_validation/` 包含
+IPv6、OSPF、Docker network、software config、software executable 和 cascading compound
+六类正式故障边界。实际字段以 `BenchmarkRequest.from_dict` 和 CLI 校验为准。
+
 本目录保存可直接交给生产 Bundle 入口的声明式 `BenchmarkRequest v1` 示例。示例本身不含
 任意 shell；所有软件、服务、工作负载、探针和故障语义都由已注册模板与插件解析。
-
-> **强制同步规则（README_SYNC_REQUIRED）**：修改、新增或删除本目录任意 JSON 时，必须
-> 在同一变更中更新本 README，并在请求字段或行为变化时同步更新 `../README.md` 和
-> `../../README.md`。
 
 ## 文件
 

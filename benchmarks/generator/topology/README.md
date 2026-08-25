@@ -12,14 +12,22 @@ impact and recovery checks.
 
 # 声明式拓扑生成层
 
+> [!IMPORTANT]
+> **README_SYNC_REQUIRED（强制联级同步）**：修改本目录 `.py` 时必须更新本 README 和
+> `generator/README.md`；修改 `examples/` JSON 时必须逐级更新示例、本层和根 README。
+> capability manifest、软件或故障绑定变化还要同步 Bundle、Fault 或 NL README。
+
+## 当前实现状态（2026-08-26 审计）
+
+本层当前 CLI 为 `plan/register/compile/validate/smoke/bind/test/preflight/inventory`。支持
+tree、ring、mesh、random_connected 和 explicit 拓扑，确定性分配 ASN、LAN/IX/loopback
+地址，执行资源预算与连通性检查，编译 SEED/Compose 产物，并生成软件、故障、测试可消费的
+capability manifest。`nl-scene-generate` 只交付该 manifest，不启动 Docker；统一任意 NL
+路径则使用独立隔离 Compose IR，不冒充本层受控 capability。
+
 本层负责把 `TopologyRequest` 转换为经过预算、地址、ASN 和连通性检查的确定性
 `TopologyPlan`，再适配 SEED Emulator 编译为 Docker Compose，并发布故障系统可消费的
 capability manifest。
-
-> **强制同步规则（README_SYNC_REQUIRED）**：修改本目录任意 `.py` 文件时，必须同步更新
-> 本 README。改变拓扑 schema、CLI、输出布局或 capability manifest 时，还必须更新
-> `generator/README.md`、受影响的 `examples/README.md`，以及消费该字段的 Bundle/Fault
-> README。
 
 ## 数据流
 
