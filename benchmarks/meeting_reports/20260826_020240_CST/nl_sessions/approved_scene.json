@@ -1,0 +1,55 @@
+{
+  "application_placements": [
+    {
+      "target_asns": [],
+      "target_nodes": [],
+      "target_roles": [
+        "host"
+      ],
+      "template_id": "nginx"
+    },
+    {
+      "target_asns": [],
+      "target_nodes": [],
+      "target_roles": [
+        "host"
+      ],
+      "template_id": "bind9"
+    }
+  ],
+  "assumptions": [
+    "hosts_per_as_defaulted_to_2",
+    "difficulty_defaulted_to_medium"
+  ],
+  "difficulty": "medium",
+  "fault_count": 1,
+  "fault_relationship": "single",
+  "fault_types": [
+    "dns.nameserver"
+  ],
+  "objective": "生成一个包含3个AS、每个AS有2台主机的环形拓扑，在一个节点部署nginx，在另一个节点部署bind9，注入dns.nameserver故障",
+  "observer_required": false,
+  "provider_model": "deterministic_scene:deterministic-scene-v2",
+  "request_id": "nlscene_req_7d3b8b3e4bc857ba",
+  "schema_version": 1,
+  "seed": "meeting-demo-v1",
+  "source_text_sha256": "8439172d01359459eef9168a8d3fcb9da62bb60936d1bccd898bc345380ab191",
+  "topology": {
+    "as_count": 3,
+    "asn_start": 64512,
+    "budget": null,
+    "budget_mode": "auto",
+    "edge_policy": "ring",
+    "explicit_edges": [],
+    "extra_links": 0,
+    "hosts_per_as": 2,
+    "ix_pool": "172.16.0.0/12",
+    "ix_prefixlen": 29,
+    "lan_pool": "10.0.0.0/8",
+    "lan_prefixlen": 24,
+    "loopback_pool": "100.64.0.0/10",
+    "platform": "amd"
+  },
+  "topology_id": "nlscene_7d3b8b3e4bc857ba",
+  "unknown_requirements": []
+}

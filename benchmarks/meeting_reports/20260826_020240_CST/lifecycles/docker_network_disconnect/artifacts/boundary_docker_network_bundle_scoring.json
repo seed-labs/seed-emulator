@@ -1,0 +1,29 @@
+{
+  "artifact_fingerprint": "746c0d7df849f586ce58b7bf7a205e171bcdd606b2b35fb8251b7a9b04eb0292",
+  "artifact_id": "boundary_docker_network_bundle_scoring",
+  "artifact_type": "scoring",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "965eeb220ef06408c5093372f1dab0b13aecbf99a32282135c0bc876a152fd6d",
+    "09f3397c209255065c491bf68df7743d0389bdaf124427ddf6cad6d7b20a90f4"
+  ],
+  "payload": {
+    "scoring": [
+      {
+        "pass_threshold": 1.0,
+        "schema_version": 1,
+        "scoring_id": "generated_weighted_v1",
+        "weights": {
+          "active_bind9": 1.0,
+          "active_fault_01_bind9": 2.0,
+          "active_observer": 1.0,
+          "recovery_bind9": 1.0,
+          "recovery_fault_01_bind9": 2.0
+        }
+      }
+    ]
+  },
+  "producer": "scoring_agent",
+  "schema_version": 1,
+  "warnings": []
+}

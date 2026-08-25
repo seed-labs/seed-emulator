@@ -1,0 +1,136 @@
+{
+  "all_no_ai": true,
+  "all_qualified": true,
+  "runs": [
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-boundary-cascading-compound-bundle-7a2d676dce",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "cascading_compound",
+      "network_rebindings": {
+        "10.32.0.0/24": "10.150.119.0/24",
+        "10.32.1.0/24": "10.176.34.0/24",
+        "172.28.0.0/24": "10.228.254.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "boundary_cascading_compound_bundle",
+      "runtime_containers": 10
+    },
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-boundary-docker-network-bundle-ef33d88c64",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "docker_network_disconnect",
+      "network_rebindings": {
+        "10.32.0.0/24": "10.212.120.0/24",
+        "10.32.1.0/24": "10.151.248.0/24",
+        "172.28.0.0/24": "10.213.98.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "boundary_docker_network_bundle",
+      "runtime_containers": 10
+    },
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-boundary-ipv6-bundle-bfe5bfea4d",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "ipv6_connected_route",
+      "network_rebindings": {
+        "10.32.0.0/24": "10.181.73.0/24",
+        "10.32.1.0/24": "10.179.6.0/24",
+        "172.28.0.0/24": "10.209.111.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "boundary_ipv6_bundle",
+      "runtime_containers": 10
+    },
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-mimo-dns-6as-lifecycle-20260825-0a6128e31a",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "mimo_six_as_dns",
+      "network_rebindings": {
+        "10.0.0.0/24": "10.247.96.0/24",
+        "10.0.1.0/24": "10.167.171.0/24",
+        "10.0.2.0/24": "10.221.60.0/24",
+        "10.0.3.0/24": "10.196.169.0/24",
+        "10.0.4.0/24": "10.179.100.0/24",
+        "10.0.5.0/24": "10.148.28.0/24",
+        "172.16.0.0/24": "10.164.225.0/24",
+        "172.16.1.0/24": "10.186.207.0/24",
+        "172.16.2.0/24": "10.133.105.0/24",
+        "172.16.3.0/24": "10.138.30.0/24",
+        "172.16.4.0/24": "10.214.33.0/24",
+        "172.16.5.0/24": "10.182.158.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "mimo_dns_6as_lifecycle_20260825",
+      "runtime_containers": 20
+    },
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-boundary-ospf-bundle-950f22d74d",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "ospf_wrong_area",
+      "network_rebindings": {
+        "10.32.0.0/24": "10.134.109.0/24",
+        "10.32.1.0/24": "10.159.84.0/24",
+        "172.28.0.0/24": "10.214.52.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "boundary_ospf_bundle",
+      "runtime_containers": 10
+    },
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "software_config_replace",
+      "network_rebindings": {
+        "10.32.0.0/24": "10.146.242.0/24",
+        "10.32.1.0/24": "10.199.2.0/24",
+        "172.28.0.0/24": "10.251.182.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "boundary_software_config_bundle",
+      "runtime_containers": 10
+    },
+    {
+      "ai_invoked": false,
+      "all_rounds_passed": true,
+      "cleanup_verified": true,
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "convergence_passed": true,
+      "lifecycle_rounds": 2,
+      "name": "software_executable_disabled",
+      "network_rebindings": {
+        "10.32.0.0/24": "10.245.3.0/24",
+        "10.32.1.0/24": "10.235.171.0/24",
+        "172.28.0.0/24": "10.188.9.0/24"
+      },
+      "qualification_status": "qualified",
+      "request_id": "boundary_software_executable_bundle",
+      "runtime_containers": 10
+    }
+  ],
+  "schema_version": 1,
+  "zero_docker_residue": true
+}

@@ -1,0 +1,18 @@
+{
+  "artifact_ids": [
+    "boundary_ospf_bundle_topology",
+    "boundary_ospf_bundle_software",
+    "boundary_ospf_bundle_services",
+    "boundary_ospf_bundle_workloads",
+    "boundary_ospf_bundle_faults",
+    "boundary_ospf_bundle_tests",
+    "boundary_ospf_bundle_oracle",
+    "boundary_ospf_bundle_scoring",
+    "boundary_ospf_bundle_blind_policy",
+    "boundary_ospf_bundle_lifecycle"
+  ],
+  "benchmark_id": "boundary_ospf_bundle",
+  "enabled": false,
+  "schema_version": 1,
+  "seed": "boundary-ospf-v1"
+}

@@ -1,0 +1,28 @@
+{
+  "affected_asset_diversity": 2,
+  "benchmark_id": "boundary_cascading_compound_bundle",
+  "bundle_fingerprint": "504e150f83ccd1fbf3d1038423cc783e5a42e5c3216a1c718bb0fe0d84304856",
+  "checks": {
+    "compiler_safety_approved": true,
+    "difficulty_in_requested_band": true,
+    "fault_count_matches_request": true,
+    "must_break_observable": true,
+    "must_break_recoverable": true,
+    "must_preserve_observable": true,
+    "public_private_isolation": true,
+    "root_cause_expectations_unique": true
+  },
+  "difficulty": "hard",
+  "difficulty_band": [
+    0.4,
+    0.85
+  ],
+  "difficulty_score": 0.6997,
+  "fault_driver_diversity": 3,
+  "interaction_count": 2,
+  "passed": true,
+  "quality_fingerprint": "ff1cd028e762f75b860733513254424fa40775d31d899a1fdd73e22c7bcc5dbd",
+  "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+  "scenario_signature": "5b12898b222223ee967633950ca8050c6a94157023be6e519fe2f09af8525a8d",
+  "schema_version": 1
+}

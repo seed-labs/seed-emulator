@@ -1,0 +1,175 @@
+{
+  "ai_invoked": false,
+  "benchmark_id": "boundary_ospf_bundle",
+  "blind_mode": true,
+  "bundle_fingerprint": "5f354647ec973a69b89db0738737c612e6c0278b96479706cd3de28ca864fb16",
+  "cleanup_failures": [],
+  "convergence": {
+    "attempts": [
+      {
+        "attempt": 1,
+        "elapsed_seconds": 1.779,
+        "failed_tests": [],
+        "passed": true,
+        "stable_streak": 1
+      },
+      {
+        "attempt": 2,
+        "elapsed_seconds": 5.662,
+        "failed_tests": [],
+        "passed": true,
+        "stable_streak": 2
+      }
+    ],
+    "elapsed_seconds": 5.662,
+    "passed": true,
+    "stable_samples_required": 2
+  },
+  "execution_backend": "DockerLifecycleRunner",
+  "faults": [
+    {
+      "injection_verified": true,
+      "journal": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/ospf_wrong_area/journals/faults/8b3fe9fa-3a74-4c88-8f37-9848397bc345-0000.json",
+      "plan_fingerprint": "60a59e337ca64d41f928d565a0e8d03068b9d6421c2048ea7960ce86d4b60eab"
+    }
+  ],
+  "finished_at": "2026-08-25T18:13:23.372021+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "mode": "no_ai",
+  "passed": true,
+  "receipt_sha256": "cb00bcf1470519d8bae6dacfe880f9ad668b987814d6da41296fee73732f6ba7",
+  "run_id": "8b3fe9fa-3a74-4c88-8f37-9848397bc345",
+  "schema_version": 1,
+  "services": [
+    {
+      "exit_code": 0,
+      "output": "version: BIND 9.18.39-0ubuntu0.24.04.5-Ubuntu (Extended Support Version) <id:>\nrunning on localhost: Linux x86_64 7.0.0-28-generic #28~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 15:50:57 UTC 2\nboot time: Tue, 25 Aug 2026 18:12:43 GMT\nlast configured: Tue, 25 Aug 2026 18:12:43 GMT\nconfiguration file: /etc/bind/named.conf\nCPUs found: 8\nworker threads: 8\nUDP listeners per interface: 8\nnumber of zones: 103 (98 automatic)\ndebug level: 0\nxfers running: 0\nxfers deferred: 0\nsoa queries in progress: 0\nquery logging is OFF\nrecursive clients: 0/900/1000\ntcp clients: 0/150\nTCP high-water: 0\nserver is up and running\n",
+      "passed": true,
+      "service_id": "bind9_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "version: BIND 9.18.39-0ubuntu0.24.04.5-Ubuntu (Extended Support Version) <id:>\nrunning on localhost: Linux x86_64 7.0.0-28-generic #28~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 15:50:57 UTC 2\nboot time: Tue, 25 Aug 2026 18:12:43 GMT\nlast configured: Tue, 25 Aug 2026 18:12:43 GMT\nconfiguration file: /etc/bind/named.conf\nCPUs found: 8\nworker threads: 8\nUDP listeners per interface: 8\nnumber of zones: 103 (98 automatic)\ndebug level: 0\nxfers running: 0\nxfers deferred: 0\nsoa queries in progress: 0\nquery logging is OFF\nrecursive clients: 0/900/1000\ntcp clients: 0/150\nTCP high-water: 0\nserver is up and running\n",
+      "passed": true,
+      "phase": "recovery",
+      "service_id": "bind9_service"
+    }
+  ],
+  "started_at": "2026-08-25T18:13:04.482581+00:00",
+  "tests": [
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "router id 100.96.0.2;\nipv4 table t_direct;\nprotocol device {\n}\nprotocol kernel {\n    ipv4 {\n        import all;\n        export all;\n    };\n    learn;\n}\nprotocol direct local_nets {\n    ipv4 {\n        table t_direct;\n        import all;\n    };\n\n    interface \"lan0\";\n\n}\nipv4 table t_ospf;\nprotocol ospf ospf1 {\n    ipv4 {\n        table t_ospf;\n        import all;\n        export all;\n    };\n    tick 1;\n    area 0 {\n        interface \"dummy0\" { stub; };\n        interface \"ix1000\" { stub; };\n        interface \"lan0\" { hello 1; dead 4; };\n\n    };\n}\nprotocol pipe {\n    table t_ospf;\n    peer table master4;\n    import none;\n    export all;\n}\ndefine LOCAL_COMM = (64513, 0, 0);\ndefine CUSTOMER_COMM = (64513, 1, 0);\ndefine PEER_COMM = (64513, 2, 0);\ndefine PROVIDER_COMM = (64513, 3, 0);\nipv4 table t_bgp;\nprotocol pipe {\n    table t_bgp;\n    peer table master4;\n    import none;\n    export all;\n}\nprotocol pipe {\n    table t_direct;\n    peer table t_bgp;\n    import none;\n    export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };\n}\nprotocol bgp x_as64512 {    hold time 36000;\n    keepalive time 60;\n    ipv4 {\n        table t_bgp;\n        import filter {\n            bgp_large_community.add(PROVIDER_COMM);\n            bgp_local_pref = 10;\n            accept;\n        };\n        export all;\n        next hop self;\n    };\n    local 10.214.52.3 as 64513;\n    neighbor 10.214.52.2 as 64512;\n}\n\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "fault_01_bind9_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_fault_01_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "true\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "observer_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_observer"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "router id 100.96.0.2;\nipv4 table t_direct;\nprotocol device {\n}\nprotocol kernel {\n    ipv4 {\n        import all;\n        export all;\n    };\n    learn;\n}\nprotocol direct local_nets {\n    ipv4 {\n        table t_direct;\n        import all;\n    };\n\n    interface \"lan0\";\n\n}\nipv4 table t_ospf;\nprotocol ospf ospf1 {\n    ipv4 {\n        table t_ospf;\n        import all;\n        export all;\n    };\n    tick 1;\n    area 39620 {\n        interface \"dummy0\" { stub; };\n        interface \"ix1000\" { stub; };\n        interface \"lan0\" { hello 1; dead 4; };\n\n    };\n}\nprotocol pipe {\n    table t_ospf;\n    peer table master4;\n    import none;\n    export all;\n}\ndefine LOCAL_COMM = (64513, 0, 0);\ndefine CUSTOMER_COMM = (64513, 1, 0);\ndefine PEER_COMM = (64513, 2, 0);\ndefine PROVIDER_COMM = (64513, 3, 0);\nipv4 table t_bgp;\nprotocol pipe {\n    table t_bgp;\n    peer table master4;\n    import none;\n    export all;\n}\nprotocol pipe {\n    table t_direct;\n    peer table t_bgp;\n    import none;\n    export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };\n}\nprotocol bgp x_as64512 {    hold time 36000;\n    keepalive time 60;\n    ipv4 {\n        table t_bgp;\n        import filter {\n            bgp_large_community.add(PROVIDER_COMM);\n            bgp_local_pref = 10;\n            accept;\n        };\n        export all;\n        next hop self;\n    };\n    local 10.214.52.3 as 64513;\n    neighbor 10.214.52.2 as 64512;\n}\n\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_routing_bird_ospf_wrong_area_effect",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_fault_01_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_availability",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "router id 100.96.0.2;\nipv4 table t_direct;\nprotocol device {\n}\nprotocol kernel {\n    ipv4 {\n        import all;\n        export all;\n    };\n    learn;\n}\nprotocol direct local_nets {\n    ipv4 {\n        table t_direct;\n        import all;\n    };\n\n    interface \"lan0\";\n\n}\nipv4 table t_ospf;\nprotocol ospf ospf1 {\n    ipv4 {\n        table t_ospf;\n        import all;\n        export all;\n    };\n    tick 1;\n    area 0 {\n        interface \"dummy0\" { stub; };\n        interface \"ix1000\" { stub; };\n        interface \"lan0\" { hello 1; dead 4; };\n\n    };\n}\nprotocol pipe {\n    table t_ospf;\n    peer table master4;\n    import none;\n    export all;\n}\ndefine LOCAL_COMM = (64513, 0, 0);\ndefine CUSTOMER_COMM = (64513, 1, 0);\ndefine PEER_COMM = (64513, 2, 0);\ndefine PROVIDER_COMM = (64513, 3, 0);\nipv4 table t_bgp;\nprotocol pipe {\n    table t_bgp;\n    peer table master4;\n    import none;\n    export all;\n}\nprotocol pipe {\n    table t_direct;\n    peer table t_bgp;\n    import none;\n    export filter { bgp_large_community.add(LOCAL_COMM); bgp_local_pref = 40; accept; };\n}\nprotocol bgp x_as64512 {    hold time 36000;\n    keepalive time 60;\n    ipv4 {\n        table t_bgp;\n        import filter {\n            bgp_large_community.add(PROVIDER_COMM);\n            bgp_local_pref = 10;\n            accept;\n        };\n        export all;\n        next hop self;\n    };\n    local 10.214.52.3 as 64513;\n    neighbor 10.214.52.2 as 64512;\n}\n\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_routing_bird_ospf_wrong_area_effect",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_fault_01_bind9"
+    }
+  ],
+  "topology_tainted": false,
+  "workloads": [
+    {
+      "exit_code": 0,
+      "output": "",
+      "passed": true,
+      "workload_id": "bind9_workload"
+    },
+    {
+      "exit_code": 0,
+      "output": "",
+      "passed": true,
+      "phase": "recovery",
+      "workload_id": "bind9_workload"
+    }
+  ]
+}

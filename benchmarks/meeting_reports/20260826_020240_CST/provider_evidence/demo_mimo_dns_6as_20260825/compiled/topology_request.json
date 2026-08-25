@@ -1,0 +1,71 @@
+{
+  "as_count": 6,
+  "asn_start": 64512,
+  "budget": {
+    "max_ases": 6,
+    "max_containers": 20,
+    "max_cpu_cores": 1.2,
+    "max_links": 6,
+    "max_memory_mb": 1536,
+    "max_networks": 12
+  },
+  "edge_policy": "ring",
+  "explicit_edges": [],
+  "extra_links": 0,
+  "hosts_per_as": 2,
+  "ix_pool": "172.16.0.0/12",
+  "ix_prefixlen": 24,
+  "lan_pool": "10.0.0.0/8",
+  "lan_prefixlen": 24,
+  "loopback_pool": "100.64.0.0/10",
+  "master_seed": "demo-mimo-dns-6as-v1",
+  "platform": "amd",
+  "software": [
+    {
+      "capabilities": [
+        "dns.bind9.v1"
+      ],
+      "fault_profiles": [],
+      "managed_files": [],
+      "packages": [
+        "bind9",
+        "dnsutils"
+      ],
+      "schema_version": 1,
+      "software_id": "bind9",
+      "target_asns": [
+        64512
+      ],
+      "target_nodes": [
+        "host0"
+      ],
+      "target_roles": [
+        "host"
+      ]
+    },
+    {
+      "capabilities": [
+        "observer.network.v1"
+      ],
+      "fault_profiles": [],
+      "managed_files": [],
+      "packages": [
+        "curl",
+        "dnsutils",
+        "netcat-openbsd"
+      ],
+      "schema_version": 1,
+      "software_id": "curl_tools",
+      "target_asns": [
+        64517
+      ],
+      "target_nodes": [
+        "host1"
+      ],
+      "target_roles": [
+        "host"
+      ]
+    }
+  ],
+  "topology_id": "nlscene_76c53597c4fb8630"
+}

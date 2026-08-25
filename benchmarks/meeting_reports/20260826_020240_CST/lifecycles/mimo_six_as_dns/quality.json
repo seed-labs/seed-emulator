@@ -1,0 +1,28 @@
+{
+  "affected_asset_diversity": 1,
+  "benchmark_id": "mimo_dns_6as_lifecycle_20260825",
+  "bundle_fingerprint": "6755979aeec6cdc98a25eccbb11d09a66f6d4f6bec476d63e05b3ebbe5dee55b",
+  "checks": {
+    "compiler_safety_approved": true,
+    "difficulty_in_requested_band": true,
+    "fault_count_matches_request": true,
+    "must_break_observable": true,
+    "must_break_recoverable": true,
+    "must_preserve_observable": true,
+    "public_private_isolation": true,
+    "root_cause_expectations_unique": true
+  },
+  "difficulty": "medium",
+  "difficulty_band": [
+    0.2,
+    0.65
+  ],
+  "difficulty_score": 0.3513,
+  "fault_driver_diversity": 1,
+  "interaction_count": 0,
+  "passed": true,
+  "quality_fingerprint": "70a5de65da27c173fd273e9d11e42d91ed9c10018e0d913ff6bbce32847d6a03",
+  "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+  "scenario_signature": "82e8055dedf791bf2c0c8337fc94b3706d8833f9d1e86e3b7b63c8093a5c536b",
+  "schema_version": 1
+}

@@ -1,0 +1,29 @@
+{
+  "artifact_fingerprint": "7eb1fe3f5879cf9d238f6a0a7d53a94ae36912752f9bcf0d7fcca76157b8fb18",
+  "artifact_id": "mimo_dns_6as_lifecycle_20260825_scoring",
+  "artifact_type": "scoring",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "efb93e3c66370964c6d7002c9a5d72fbf8e60778fa0b1b56e41865d8b2a3b89d",
+    "ce2dcf45dc6f6bec5cecb397781dc3e288240f7b88f9d025348f4a77d44dd8ba"
+  ],
+  "payload": {
+    "scoring": [
+      {
+        "pass_threshold": 1.0,
+        "schema_version": 1,
+        "scoring_id": "generated_weighted_v1",
+        "weights": {
+          "active_bind9": 1.0,
+          "active_fault_01_bind9": 2.0,
+          "active_observer": 1.0,
+          "recovery_bind9": 1.0,
+          "recovery_fault_01_bind9": 2.0
+        }
+      }
+    ]
+  },
+  "producer": "scoring_agent",
+  "schema_version": 1,
+  "warnings": []
+}

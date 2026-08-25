@@ -1,0 +1,24 @@
+{
+  "artifact_fingerprint": "7bc590727e5c1bc343c829663b69f9fd996888e8568f063a1d2a5353bf314b89",
+  "artifact_id": "boundary_software_executable_bundle_blind_policy",
+  "artifact_type": "blind_policy",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "19ec3a7ca0f2e63baad3fee43a67b34359880ed10c2a10a3c48ba6439846d726",
+    "c5e70d462c00be145e14bc057046787e284eb747814131bfdfc6529b57a78600",
+    "c9121e9420d6f999ef9b639ecfc370583372e23dfb47edf13fc6ef99e6b3ff78",
+    "e443b4c80ea56c14677db15a5635dfb696484cf269ce15c52f614c55fd59bb8d",
+    "bb195757050b30eecdcdd161f3c77940394c1a70d01724a7b06fa55158bd7fc3",
+    "86294d581bedbdb7559ef2d6d85822f3704bad8e800654b9eccf462b59963303",
+    "1741a5faed53b684a3a448a52b117cb954dc2de3308a0550b3cb53f0404df1e8",
+    "8dd4087b25b720c1dcaaac5b91367a9e5564c1549fc7cbabdde846831a50423e"
+  ],
+  "payload": {
+    "policies": [
+      {}
+    ]
+  },
+  "producer": "safety_reviewer_agent",
+  "schema_version": 1,
+  "warnings": []
+}

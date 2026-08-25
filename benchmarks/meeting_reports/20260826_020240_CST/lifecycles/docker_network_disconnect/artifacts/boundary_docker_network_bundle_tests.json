@@ -1,0 +1,154 @@
+{
+  "artifact_fingerprint": "965eeb220ef06408c5093372f1dab0b13aecbf99a32282135c0bc876a152fd6d",
+  "artifact_id": "boundary_docker_network_bundle_tests",
+  "artifact_type": "test",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "85ad8f5aac15e331ca205fd0a2369437cba0d756801e42295568c7dc45adad69",
+    "b563cdbcd3f59daca18cf4eb82fc9a3ccf640bb347a859d7455507b048ace158",
+    "58ba8f8fe5671db87a6e1d7a84f434063018fcdb4cb3b9a2c5f675fc54dc513e",
+    "907e18e154e7cbcc1d1bc75cfa8ab7d8586b4737c09981e300124179bb1ae2fa"
+  ],
+  "payload": {
+    "tests": [
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_healthy",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.212.120.4"
+        },
+        "phase": "baseline",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-hnode_64513_host2-1"
+        },
+        "test_id": "baseline_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.212.120.4"
+        },
+        "phase": "active",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-hnode_64513_host2-1"
+        },
+        "test_id": "active_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "equals",
+          "value": "true"
+        },
+        "driver": "probe.container",
+        "expectation_id": "observer_availability",
+        "parameters": {},
+        "phase": "active",
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-hnode_64513_host2-1"
+        },
+        "test_id": "active_observer"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.212.120.4"
+        },
+        "phase": "recovery",
+        "retries": 5,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-hnode_64513_host2-1"
+        },
+        "test_id": "recovery_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.docker_network_path",
+        "expectation_id": "fault_01_bind9_healthy",
+        "parameters": {
+          "interface": "ix1000",
+          "network": "bndl-boundary-docker-network-bundle-ef33d88c64_net_ix_ix1000",
+          "peer_ip": "10.213.98.3",
+          "target_ip": "10.213.98.2"
+        },
+        "phase": "baseline",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-brdnode_64512_router0-1"
+        },
+        "test_id": "baseline_fault_01_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code_not",
+          "value": 0
+        },
+        "driver": "probe.docker_network_path",
+        "expectation_id": "bind9_docker_network_disconnected_effect",
+        "parameters": {
+          "interface": "ix1000",
+          "network": "bndl-boundary-docker-network-bundle-ef33d88c64_net_ix_ix1000",
+          "peer_ip": "10.213.98.3",
+          "target_ip": "10.213.98.2"
+        },
+        "phase": "active",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-brdnode_64512_router0-1"
+        },
+        "test_id": "active_fault_01_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.docker_network_path",
+        "expectation_id": "bind9_docker_network_disconnected_effect",
+        "parameters": {
+          "interface": "ix1000",
+          "network": "bndl-boundary-docker-network-bundle-ef33d88c64_net_ix_ix1000",
+          "peer_ip": "10.213.98.3",
+          "target_ip": "10.213.98.2"
+        },
+        "phase": "recovery",
+        "retries": 5,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-brdnode_64512_router0-1"
+        },
+        "test_id": "recovery_fault_01_bind9"
+      }
+    ]
+  },
+  "producer": "test_agent",
+  "schema_version": 1,
+  "warnings": []
+}

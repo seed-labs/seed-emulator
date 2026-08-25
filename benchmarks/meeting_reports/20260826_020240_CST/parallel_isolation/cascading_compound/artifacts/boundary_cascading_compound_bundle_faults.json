@@ -1,0 +1,124 @@
+{
+  "artifact_fingerprint": "b33cee58d2721b86b8f20ce2457b76a3c8f7366fa8190688b25f8584ff850412",
+  "artifact_id": "boundary_cascading_compound_bundle_faults",
+  "artifact_type": "fault_set",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "c16a71c2a5a646951c86296797dbd0a929f43dba067e20f060ddec7058b38b73",
+    "e88d213dda654287177fc55a81d58d595e6aab68b229da2b5f774f735c62c296",
+    "56e5d93a9d38e9d1d577ff4c7673592adc23d4e71a9b24120aaca3a979ba58e2"
+  ],
+  "payload": {
+    "faults": [
+      {
+        "depends_on": [],
+        "expectations": {
+          "must_break": [
+            "bind9_dns_nameserver_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_01_bind9",
+        "fault_type": "dns.nameserver",
+        "parameters": {
+          "bad_nameserver": "192.0.2.2",
+          "expected_nameserver": "127.0.0.11"
+        },
+        "safety": {
+          "max_affected_asns": 3,
+          "max_affected_assets": 3,
+          "protected_assets": [
+            "bndl-boundary-cascading-compound-bundle-0b42ef4548-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-cascading-compound-v1:bind9:0",
+        "selector": {
+          "container": "bndl-boundary-cascading-compound-bundle-0b42ef4548-hnode_64512_host0-1"
+        }
+      },
+      {
+        "depends_on": [
+          "fault_01_bind9"
+        ],
+        "expectations": {
+          "must_break": [
+            "bind9_routing_bird_ospf_wrong_area_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_02_bind9",
+        "fault_type": "routing.bird.ospf_wrong_area",
+        "parameters": {
+          "bad_area": 38805,
+          "correct_area": 0
+        },
+        "safety": {
+          "max_affected_asns": 3,
+          "max_affected_assets": 3,
+          "protected_assets": [
+            "bndl-boundary-cascading-compound-bundle-0b42ef4548-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-cascading-compound-v1:bind9:1",
+        "selector": {
+          "container": "bndl-boundary-cascading-compound-bundle-0b42ef4548-brdnode_64512_router0-1"
+        }
+      },
+      {
+        "depends_on": [
+          "fault_02_bind9"
+        ],
+        "expectations": {
+          "must_break": [
+            "bind9_software_config_replace_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_03_bind9",
+        "fault_type": "software.config.replace",
+        "parameters": {},
+        "safety": {
+          "max_affected_asns": 3,
+          "max_affected_assets": 3,
+          "protected_assets": [
+            "bndl-boundary-cascading-compound-bundle-0b42ef4548-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-cascading-compound-v1:bind9:2",
+        "selector": {
+          "choose": 1,
+          "fault_profile": "wrong_mode",
+          "software": "jq_tools"
+        }
+      }
+    ],
+    "relationship": "cascading"
+  },
+  "producer": "fault_agent",
+  "schema_version": 1,
+  "warnings": []
+}

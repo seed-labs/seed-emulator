@@ -1,0 +1,33 @@
+{
+  "artifact_fingerprint": "04488a3f4a46f61f16d9c05731b683a5bdc658e36a367324f08a83ed770b7365",
+  "artifact_id": "boundary_cascading_compound_bundle_scoring",
+  "artifact_type": "scoring",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "c5af2cc34bb7ad2540cedc81256b950516f62d43de26b43b61b64a6e8b72ad90",
+    "5affea54551f68fc1b2e1b4814ac780d9c0c50dbded66d4f6a891c447808d1fe"
+  ],
+  "payload": {
+    "scoring": [
+      {
+        "pass_threshold": 1.0,
+        "schema_version": 1,
+        "scoring_id": "generated_weighted_v1",
+        "weights": {
+          "active_bind9": 1.0,
+          "active_fault_01_bind9": 2.0,
+          "active_fault_02_bind9": 2.0,
+          "active_fault_03_bind9": 2.0,
+          "active_observer": 1.0,
+          "recovery_bind9": 1.0,
+          "recovery_fault_01_bind9": 2.0,
+          "recovery_fault_02_bind9": 2.0,
+          "recovery_fault_03_bind9": 2.0
+        }
+      }
+    ]
+  },
+  "producer": "scoring_agent",
+  "schema_version": 1,
+  "warnings": []
+}

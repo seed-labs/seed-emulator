@@ -1,0 +1,62 @@
+{
+  "application_placements": [
+    {
+      "target_asns": [
+        64512
+      ],
+      "target_nodes": [
+        "host0"
+      ],
+      "target_roles": [
+        "host"
+      ],
+      "template_id": "bind9"
+    },
+    {
+      "target_asns": [
+        64517
+      ],
+      "target_nodes": [
+        "host1"
+      ],
+      "target_roles": [
+        "host"
+      ],
+      "template_id": "network_observer"
+    }
+  ],
+  "assumptions": [
+    "编译器将在所有路由器上自动安装iptables防火墙软件"
+  ],
+  "difficulty": "medium",
+  "fault_count": 1,
+  "fault_relationship": "single",
+  "fault_types": [
+    "dns.nameserver"
+  ],
+  "objective": "生成一个包含6个AS、每个AS 2台主机的环形拓扑；在AS64512的host0部署bind9，在AS64517的host1部署受保护网络观测节点；设置一种DNS nameserver配置错误故障，故障总数为1，故障关系single，难度medium，资源预算自动计算",
+  "observer_required": true,
+  "provider_model": "mcp:mimo:mimo-v2.5-pro",
+  "request_id": "nlscene_req_76c53597c4fb8630",
+  "schema_version": 1,
+  "seed": "demo-mimo-dns-6as-v1",
+  "source_text_sha256": "5f80b96e7332f05b8262884b2378be71d924041f4241643085077a4d21b427ce",
+  "topology": {
+    "as_count": 6,
+    "asn_start": 64512,
+    "budget": null,
+    "budget_mode": "auto",
+    "edge_policy": "ring",
+    "explicit_edges": [],
+    "extra_links": 0,
+    "hosts_per_as": 2,
+    "ix_pool": "172.16.0.0/12",
+    "ix_prefixlen": 24,
+    "lan_pool": "10.0.0.0/8",
+    "lan_prefixlen": 24,
+    "loopback_pool": "100.64.0.0/10",
+    "platform": "amd"
+  },
+  "topology_id": "nlscene_76c53597c4fb8630",
+  "unknown_requirements": []
+}

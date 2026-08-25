@@ -1,0 +1,52 @@
+{
+  "artifact_fingerprint": "935d1da8f1462688d73be10509db95792095e3808925598c481076dd9eb30f17",
+  "artifact_id": "boundary_software_config_bundle_faults",
+  "artifact_type": "fault_set",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "208439fac4c8f018f13910abac0afbc97946a3b186d9396620f7d1dbf1de52fd",
+    "64e72c16d89557e6bc69cbc84518670692fb846bfcfd3120b98b45b61bded8a2",
+    "b4035411785c8caa0a5809f174fbc6269f187ad462b3930d829b637668bc33b8"
+  ],
+  "payload": {
+    "faults": [
+      {
+        "depends_on": [],
+        "expectations": {
+          "must_break": [
+            "bind9_software_config_replace_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_01_bind9",
+        "fault_type": "software.config.replace",
+        "parameters": {},
+        "safety": {
+          "max_affected_asns": 1,
+          "max_affected_assets": 1,
+          "protected_assets": [
+            "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-software-config-v1:bind9:0",
+        "selector": {
+          "choose": 1,
+          "fault_profile": "wrong_mode",
+          "software": "jq_tools"
+        }
+      }
+    ],
+    "relationship": "single"
+  },
+  "producer": "fault_agent",
+  "schema_version": 1,
+  "warnings": []
+}

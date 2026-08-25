@@ -1,0 +1,9 @@
+{
+  "created_at": "2026-08-25T18:05:22.076857+00:00",
+  "docker_state_changed": false,
+  "mode": "arbitrary_declarative_scene_plan_only",
+  "schema_version": 1,
+  "seed": "meeting-demo-v1",
+  "text": "生成一个包含3个AS、每个AS有2台主机的环形拓扑，在一个节点部署nginx，在另一个节点部署bind9，注入dns.nameserver故障",
+  "text_sha256": "8439172d01359459eef9168a8d3fcb9da62bb60936d1bccd898bc345380ab191"
+}

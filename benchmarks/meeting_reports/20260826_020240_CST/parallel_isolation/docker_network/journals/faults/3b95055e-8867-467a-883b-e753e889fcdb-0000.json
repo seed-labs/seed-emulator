@@ -1,0 +1,21 @@
+{
+  "actions": [
+    {
+      "action_id": "fault_01_bind9",
+      "cleanup_exit": 0,
+      "cleanup_output": "BIRD 2.17.2 ready.\nReading configuration from /etc/bird/bird.conf\nReconfigured\n",
+      "expires_at": "",
+      "recovery_check_exit": 1,
+      "recovery_verified": true,
+      "snapshot": "{\"bndl-boundary-docker-network-bundle-30e41ec3fe_net_64512_lan0\":{\"IPAMConfig\":{\"IPv4Address\":\"10.189.95.2\"},\"Links\":null,\"Aliases\":[\"bndl-boundary-docker-network-bundle-30e41ec3fe-brdnode_64512_router0-1\",\"brdnode_64512_router0\",\"as64512brd-router0-10.32.0.2\",\"bndl-boundary-docker-network-bundle-30e41ec3fe-brdnode_64512_router0-1\",\"brdnode_64512_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"792aeb0a06275311007769bd453814a1f0154c15df8c5d1136c992562167406e\",\"EndpointID\":\"ebfb47057f4082cae95432564656e67d38eb7ea32ca9a9b0dab466e9e9b71710\",\"Gateway\":\"10.189.95.1\",\"IPAddress\":\"10.189.95.2\",\"MacAddress\":\"d6:82:c6:40:26:38\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"bndl-boundary-docker-network-bundle-30e41ec3fe-brdnode_64512_router0-1\",\"brdnode_64512_router0\",\"as64512brd-router0-10.32.0.2\",\"15ea36a51d37\"]},\"bndl-boundary-docker-network-bundle-30e41ec3fe_net_ix_ix1000\":{\"IPAMConfig\":{\"IPv4Address\":\"10.138.92.2\"},\"Links\":null,\"Aliases\":[\"bndl-boundary-docker-network-bundle-30e41ec3fe-brdnode_64512_router0-1\",\"brdnode_64512_router0\",\"as64512brd-router0-10.32.0.2\",\"bndl-boundary-docker-network-bundle-30e41ec3fe-brdnode_64512_router0-1\",\"brdnode_64512_router0\"],\"DriverOpts\":null,\"GwPriority\":0,\"NetworkID\":\"fb2bef38d3791e69033a59f427a808f1d49d6c72936b598598a680498ba7b62b\",\"EndpointID\":\"1c3f177bb3ce954ae706ca1ef38e87894565eda1f93d45df73686966ce85fe92\",\"Gateway\":\"10.138.92.1\",\"IPAddress\":\"10.138.92.2\",\"MacAddress\":\"fe:5e:bc:2c:da:44\",\"IPPrefixLen\":24,\"IPv6Gateway\":\"\",\"GlobalIPv6Address\":\"\",\"GlobalIPv6PrefixLen\":0,\"DNSNames\":[\"bndl-boundary-docker-network-bundle-30e41ec3fe-brdnode_64512_router0-1\",\"brdnode_64512_router0\",\"as64512brd-router0-10.32.0.2\",\"15ea36a51d37\"]}}\n",
+      "snapshot_exit": 0,
+      "status": "recovered"
+    }
+  ],
+  "created_at": "2026-08-25T18:26:07.332445+00:00",
+  "execution_id": "3b95055e-8867-467a-883b-e753e889fcdb-0000",
+  "plan_fingerprint": "e58b2315ff51b1bff7263b7518a580e1ba2069cd192e524a26fbb95647c3d173",
+  "schema_version": 1,
+  "status": "recovered",
+  "updated_at": "2026-08-25T18:26:17.566326+00:00"
+}

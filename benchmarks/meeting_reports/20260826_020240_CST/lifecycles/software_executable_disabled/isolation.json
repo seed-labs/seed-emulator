@@ -1,0 +1,354 @@
+{
+  "base_compose_project": "decl_bundle_boundary_validation",
+  "cleanup_verified": true,
+  "commands": [
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "label=com.docker.compose.project=bndl-boundary-software-executable-bundle-5053eafafd",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:15:15.242929+00:00",
+      "output": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "network",
+        "ls",
+        "-q"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:24.548019+00:00",
+      "output": "ac20078ba264\n7acfbe8bc2a0\nf92edec8e181\n6a7218ad53c2\ne32b4b9bfddc\ne7c981c601cd\n5a1caf5c9726\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "network",
+        "inspect",
+        "ac20078ba264",
+        "7acfbe8bc2a0",
+        "f92edec8e181",
+        "6a7218ad53c2",
+        "e32b4b9bfddc",
+        "e7c981c601cd",
+        "5a1caf5c9726"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:25.073756+00:00",
+      "output": "  },\n        \"Containers\": {\n            \"4754d05de7ac0797c669d1fb15250dc9976e2262afe70727c33bda5907f0c3e2\": {\n                \"Name\": \"bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1\",\n                \"EndpointID\": \"024a1f0d98741d6804bc218246bf55f2c087a3f8c2adaa98ae4201dda48db1e8\",\n                \"MacAddress\": \"9a:aa:b8:5c:3e:f6\",\n                \"IPv4Address\": \"10.251.182.2/24\",\n                \"IPv6Address\": \"\"\n            },\n            \"e554ec4f957a1ce4ecb9f877b429deb5ce6c1d796e9919f4a05da6f59a821b77\": {\n                \"Name\": \"bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1\",\n                \"EndpointID\": \"11378384f0aa51d329bc94c8a1d17a14f057950552a5609a9f2f05df87391776\",\n                \"MacAddress\": \"7a:1c:0b:e7:0b:40\",\n                \"IPv4Address\": \"10.251.182.3/24\",\n                \"IPv6Address\": \"\"\n            }\n        },\n        \"Status\": {\n            \"IPAM\": {\n                \"Subnets\": {\n                    \"10.251.182.0/24\": {\n                        \"IPsInUse\": 5,\n                        \"DynamicIPsAvailable\": 251\n                    }\n                }\n            }\n        }\n    },\n    {\n        \"Name\": \"bridge\",\n        \"Id\": \"e32b4b9bfddca5eda8bb9be59b8dec1c3aae84fe99ac8d87a1a404b3319f1646\",\n        \"Created\": \"2026-08-15T17:08:56.41+08:00\",\n        \"Scope\": \"local\",\n        \"Driver\": \"bridge\",\n        \"EnableIPv4\": true,\n        \"EnableIPv6\": false,\n        \"IPAM\": {\n            \"Driver\": \"default\",\n            \"Options\": null,\n            \"Config\": [\n                {\n                    \"Subnet\": \"172.17.0.0/16\",\n                    \"Gateway\": \"172.17.0.1\"\n                }\n            ]\n        },\n        \"Internal\": false,\n        \"Attachable\": false,\n        \"Ingress\": false,\n        \"ConfigFrom\": {\n            \"Network\": \"\"\n        },\n        \"ConfigOnly\": false,\n        \"Options\": {\n            \"com.docker.network.bridge.default_bridge\": \"true\",\n            \"com.docker.network.bridge.enable_icc\": \"true\",\n            \"com.docker.network.bridge.enable_ip_masquerade\": \"true\",\n            \"com.docker.network.bridge.host_binding_ipv4\": \"0.0.0.0\",\n            \"com.docker.network.bridge.name\": \"docker0\",\n            \"com.docker.network.driver.mtu\": \"1500\"\n        },\n        \"Labels\": {},\n        \"Containers\": {},\n        \"Status\": {\n            \"IPAM\": {\n                \"Subnets\": {\n                    \"172.17.0.0/16\": {\n                        \"IPsInUse\": 3,\n                        \"DynamicIPsAvailable\": 65533\n                    }\n                }\n            }\n        }\n    },\n    {\n        \"Name\": \"host\",\n        \"Id\": \"e7c981c601cd1bd07332e40e5cfa8eb3532e77303a7f781dc394f77b1adaa1fc\",\n        \"Created\": \"2026-07-07T03:09:05.76631682+08:00\",\n        \"Scope\": \"local\",\n        \"Driver\": \"host\",\n        \"EnableIPv4\": true,\n        \"EnableIPv6\": false,\n        \"IPAM\": {\n            \"Driver\": \"default\",\n            \"Options\": null,\n            \"Config\": null\n        },\n        \"Internal\": false,\n        \"Attachable\": false,\n        \"Ingress\": false,\n        \"ConfigFrom\": {\n            \"Network\": \"\"\n        },\n        \"ConfigOnly\": false,\n        \"Options\": {},\n        \"Labels\": {},\n        \"Containers\": {},\n        \"Status\": {\n            \"IPAM\": {}\n        }\n    },\n    {\n        \"Name\": \"none\",\n        \"Id\": \"5a1caf5c9726e057ed397cb2e0d63a4c5da1e49ec3ef8d35f4653d49fa57baac\",\n        \"Created\": \"2026-07-07T03:09:05.757962418+08:00\",\n        \"Scope\": \"local\",\n        \"Driver\": \"null\",\n        \"EnableIPv4\": true,\n        \"EnableIPv6\": false,\n        \"IPAM\": {\n            \"Driver\": \"default\",\n            \"Options\": null,\n            \"Config\": null\n        },\n        \"Internal\": false,\n        \"Attachable\": false,\n        \"Ingress\": false,\n        \"ConfigFrom\": {\n            \"Network\": \"\"\n        },\n        \"ConfigOnly\": false,\n        \"Options\": {},\n        \"Labels\": {},\n        \"Containers\": {},\n        \"Status\": {\n            \"IPAM\": {}\n        }\n    }\n]\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "--project-name",
+        "bndl-boundary-software-executable-bundle-5053eafafd",
+        "--file",
+        "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_executable_disabled/runtime_context/docker-compose.yml",
+        "up",
+        "-d",
+        "--build",
+        "--remove-orphans"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:40.055246+00:00",
+      "output": "software-executable-bundle-5053eafafd_net_64513_lan0 Creating \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_64513_lan0 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Creating \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Created \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Starting \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Started \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Started \n"
+    },
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "label=com.docker.compose.project=bndl-boundary-software-executable-bundle-5053eafafd",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:40.663942+00:00",
+      "output": "3c68d3c91f92\nc5d8d3860aaa\n911816b256d0\n297f98b3e06e\n7a7510ba9d96\nae5b89241031\nc8796741f3cd\n7d25eefc561f\n86fdac0f0922\n26910b3d2808\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "3c68d3c91f92"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:40.899824+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1|sha256:1d4fe9cebbfd043d9fc7c09482d75b7676add3f07eb22cc0ee463bbf4dd19fc8|bndl-boundary-software-executable-bundle-5053eafafd|brdnode_64512_router0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "c5d8d3860aaa"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:41.123712+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1|sha256:548b598f620c4eeb353d3982151a25544c87fc0a954d90bc0ce9c2f1aa104ab0|bndl-boundary-software-executable-bundle-5053eafafd|brdnode_64513_router0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "911816b256d0"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:41.364591+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1|sha256:bd679d6ffa2c0bfe2822c3b647e88c0f5c8812c4c457698340a1eb3b0c3c6e57|bndl-boundary-software-executable-bundle-5053eafafd|hnode_64512_host0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "297f98b3e06e"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:41.737405+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1|sha256:45d091e53f259f5b8414d5ce04a200bc676466132ed17e38f7a9275809015849|bndl-boundary-software-executable-bundle-5053eafafd|hnode_64513_host0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "7a7510ba9d96"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:42.299124+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1|sha256:e5819a829e7d5ed2b8f27096c54c10d75aaf5869ee67917595845558e518775e|bndl-boundary-software-executable-bundle-5053eafafd|hnode_64512_host2\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "ae5b89241031"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:42.618964+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1|sha256:47d09bdc2176e1dd5c3df2090a967c4b04f16a1f87229c6a92a03a953f44d5de|bndl-boundary-software-executable-bundle-5053eafafd|hnode_64512_host1\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "c8796741f3cd"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:42.862842+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1|sha256:bbc9a71fabfddc6894accb4d75b1039ae61ab7b6b914070e202e914b7459a468|bndl-boundary-software-executable-bundle-5053eafafd|hnode_64513_host1\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "7d25eefc561f"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:43.128709+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1|sha256:bcb1e227f92b8e0d060e220907433c1e321cd128dcbcfeed43b34dfa9985bfff|bndl-boundary-software-executable-bundle-5053eafafd|hnode_64513_host2\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "86fdac0f0922"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:43.393576+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1|sha256:00d07c2f4d9b7e0af92fbe3b885147d6b0ef50801677eb961e6cb7b8141d6380|bndl-boundary-software-executable-bundle-5053eafafd|072d7840db6a44d06e5c5fd4d7ea8a7d\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "26910b3d2808"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:44.076235+00:00",
+      "output": "/bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1|sha256:3e817659f7bd5e89ec97e355608f0f62912ca5f1f0fc8ca27244af8a15ccaf27|bndl-boundary-software-executable-bundle-5053eafafd|ad739b7b201eccafa592110d2bf214a7\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "--project-name",
+        "bndl-boundary-software-executable-bundle-5053eafafd",
+        "--file",
+        "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_executable_disabled/runtime_context/docker-compose.yml",
+        "down",
+        "--remove-orphans",
+        "--volumes"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:18:38.105307+00:00",
+      "output": "ndle-5053eafafd-hnode_64512_host1-1 Stopping \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Stopping \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Stopping \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Stopping \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Stopping \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Stopped \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Removing \n Container bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Removed \n Container bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1 Removed \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_ix_ix1000 Removing \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_64512_lan0 Removing \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_64513_lan0 Removing \n Network bndl-boundary-software-executable-bundle-5053eafafd_default Removing \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_ix_ix1000 Removed \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_64512_lan0 Removed \n Network bndl-boundary-software-executable-bundle-5053eafafd_default Removed \n Network bndl-boundary-software-executable-bundle-5053eafafd_net_64513_lan0 Removed \n"
+    },
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "label=com.docker.compose.project=bndl-boundary-software-executable-bundle-5053eafafd",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:18:38.567538+00:00",
+      "output": ""
+    }
+  ],
+  "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+  "compose_sha256": "3c58756e33980e6b4c4a93863393d2575b02bc617459aa90fa1bc0aac6ca4d4f",
+  "container_rebindings": {
+    "as64512brd-router0-10.32.0.2": "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1",
+    "as64512h-host0-10.32.0.3": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1",
+    "as64512h-host1-10.32.0.4": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1",
+    "as64512h-host2-10.32.0.5": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1",
+    "as64513brd-router0-10.32.1.2": "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1",
+    "as64513h-host0-10.32.1.3": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1",
+    "as64513h-host1-10.32.1.4": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1",
+    "as64513h-host2-10.32.1.5": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1"
+  },
+  "containers": [
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "3c68d3c91f92",
+      "image_digest": "sha256:1d4fe9cebbfd043d9fc7c09482d75b7676add3f07eb22cc0ee463bbf4dd19fc8",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1",
+      "service": "brdnode_64512_router0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "c5d8d3860aaa",
+      "image_digest": "sha256:548b598f620c4eeb353d3982151a25544c87fc0a954d90bc0ce9c2f1aa104ab0",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1",
+      "service": "brdnode_64513_router0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "911816b256d0",
+      "image_digest": "sha256:bd679d6ffa2c0bfe2822c3b647e88c0f5c8812c4c457698340a1eb3b0c3c6e57",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1",
+      "service": "hnode_64512_host0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "297f98b3e06e",
+      "image_digest": "sha256:45d091e53f259f5b8414d5ce04a200bc676466132ed17e38f7a9275809015849",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1",
+      "service": "hnode_64513_host0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "7a7510ba9d96",
+      "image_digest": "sha256:e5819a829e7d5ed2b8f27096c54c10d75aaf5869ee67917595845558e518775e",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1",
+      "service": "hnode_64512_host2"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "ae5b89241031",
+      "image_digest": "sha256:47d09bdc2176e1dd5c3df2090a967c4b04f16a1f87229c6a92a03a953f44d5de",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1",
+      "service": "hnode_64512_host1"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "c8796741f3cd",
+      "image_digest": "sha256:bbc9a71fabfddc6894accb4d75b1039ae61ab7b6b914070e202e914b7459a468",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1",
+      "service": "hnode_64513_host1"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "7d25eefc561f",
+      "image_digest": "sha256:bcb1e227f92b8e0d060e220907433c1e321cd128dcbcfeed43b34dfa9985bfff",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1",
+      "service": "hnode_64513_host2"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "86fdac0f0922",
+      "image_digest": "sha256:00d07c2f4d9b7e0af92fbe3b885147d6b0ef50801677eb961e6cb7b8141d6380",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1",
+      "service": "072d7840db6a44d06e5c5fd4d7ea8a7d"
+    },
+    {
+      "compose_project": "bndl-boundary-software-executable-bundle-5053eafafd",
+      "id": "26910b3d2808",
+      "image_digest": "sha256:3e817659f7bd5e89ec97e355608f0f62912ca5f1f0fc8ca27244af8a15ccaf27",
+      "name": "bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1",
+      "service": "ad739b7b201eccafa592110d2bf214a7"
+    }
+  ],
+  "finished_at": "2026-08-25T18:18:38.573541+00:00",
+  "fixed_container_names_removed": 8,
+  "network_rebindings": {
+    "10.32.0.0/24": "10.245.3.0/24",
+    "10.32.1.0/24": "10.235.171.0/24",
+    "172.28.0.0/24": "10.188.9.0/24"
+  },
+  "peer_service_rebindings": {
+    "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1": "brdnode_64512_router0",
+    "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1": "brdnode_64513_router0",
+    "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1": "hnode_64512_host0",
+    "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1": "hnode_64512_host1",
+    "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1": "hnode_64512_host2",
+    "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1": "hnode_64513_host0",
+    "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1": "hnode_64513_host1",
+    "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1": "hnode_64513_host2"
+  },
+  "remaining_container_ids": [],
+  "request_id": "boundary_software_executable_bundle",
+  "running_at": "2026-08-25T18:17:44.081232+00:00",
+  "runtime_compose_file": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_executable_disabled/runtime_context/docker-compose.yml",
+  "runtime_compose_removed": true,
+  "runtime_compose_sha256": "3092919f7c6153e2939562bc22230eb610f09d96de2e61ca913aee44df6e3956",
+  "runtime_context_removed": true,
+  "schema_version": 1,
+  "service_containers": {
+    "072d7840db6a44d06e5c5fd4d7ea8a7d": "bndl-boundary-software-executable-bundle-5053eafafd-072d7840db6a44d06e5c5fd4d7ea8a7d-1",
+    "ad739b7b201eccafa592110d2bf214a7": "bndl-boundary-software-executable-bundle-5053eafafd-ad739b7b201eccafa592110d2bf214a7-1",
+    "brdnode_64512_router0": "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64512_router0-1",
+    "brdnode_64513_router0": "bndl-boundary-software-executable-bundle-5053eafafd-brdnode_64513_router0-1",
+    "hnode_64512_host0": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host0-1",
+    "hnode_64512_host1": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host1-1",
+    "hnode_64512_host2": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64512_host2-1",
+    "hnode_64513_host0": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host0-1",
+    "hnode_64513_host1": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host1-1",
+    "hnode_64513_host2": "bndl-boundary-software-executable-bundle-5053eafafd-hnode_64513_host2-1"
+  },
+  "session_id": "5053eafafd",
+  "started_at": "2026-08-25T18:15:14.610613+00:00",
+  "status": "cleaned",
+  "topology_id": "bundle_boundary_validation"
+}

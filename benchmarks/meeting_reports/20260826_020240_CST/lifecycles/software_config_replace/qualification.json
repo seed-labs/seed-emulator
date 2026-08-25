@@ -1,0 +1,23 @@
+{
+  "benchmark_id": "boundary_software_config_bundle",
+  "bundle_fingerprint": "155fab655ca93b5d4a5a8eb49f77c975401c8521d560a99302b7dbc89a8afe4a",
+  "created_at": "2026-08-25T18:17:10.544009+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "minimum_independent_runs": 2,
+  "qualification_level": "formal",
+  "qualification_sha256": "95fdfeefc9c07faba75037d28f0fd62a7c63cf3ed62cee5e6e7b3eb05a5eaea1",
+  "receipts": [
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_config_replace/lifecycle_round_01.json",
+      "run_id": "2877787b-3b1b-44ce-9bc4-7e0317fa9941",
+      "sha256": "2f215f79ea10839e76022d6defec51ada142d3b9a308c78a4bb4b741855fd4c3"
+    },
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_config_replace/lifecycle_round_02.json",
+      "run_id": "1ff508ff-1abc-47d1-b6ac-4c7d54613a7e",
+      "sha256": "2ed1abe093c62866d1abe070feaaff132da80279483356d700506f4e96afa0fe"
+    }
+  ],
+  "schema_version": 1,
+  "status": "qualified"
+}

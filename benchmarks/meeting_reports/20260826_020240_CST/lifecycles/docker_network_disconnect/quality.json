@@ -1,0 +1,28 @@
+{
+  "affected_asset_diversity": 1,
+  "benchmark_id": "boundary_docker_network_bundle",
+  "bundle_fingerprint": "5a5db3f13bf196fabce0ba2bec70ee4abdb0db5f7c8eb9ebb5cfe38ea7f295d4",
+  "checks": {
+    "compiler_safety_approved": true,
+    "difficulty_in_requested_band": true,
+    "fault_count_matches_request": true,
+    "must_break_observable": true,
+    "must_break_recoverable": true,
+    "must_preserve_observable": true,
+    "public_private_isolation": true,
+    "root_cause_expectations_unique": true
+  },
+  "difficulty": "medium",
+  "difficulty_band": [
+    0.2,
+    0.65
+  ],
+  "difficulty_score": 0.3413,
+  "fault_driver_diversity": 1,
+  "interaction_count": 0,
+  "passed": true,
+  "quality_fingerprint": "ead850d7c2c0e8d43e1399ec64bb40481d90dccbe0c98450a8921ea2c67fd64a",
+  "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+  "scenario_signature": "2ecc58bfdcd26ff3e941e69aa464f8a56fb9405146f36432081a84a5917330be",
+  "schema_version": 1
+}

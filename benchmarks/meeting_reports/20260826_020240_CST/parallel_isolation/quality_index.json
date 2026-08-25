@@ -1,0 +1,27 @@
+{
+  "entries": {
+    "59d63fbe513bbd3c91db398ace2f282c716f05357a21a00fb4e9393a0d9ee3a7": {
+      "benchmark_id": "boundary_docker_network_bundle",
+      "latest_bundle_fingerprint": "c5320af57c660b7316597147d7419b4388dfeea72d636b31a9b54bd86ceda67b",
+      "revisions": [
+        {
+          "bundle_fingerprint": "c5320af57c660b7316597147d7419b4388dfeea72d636b31a9b54bd86ceda67b",
+          "quality_fingerprint": "8d2d018871dcbc9b63bfdfaf524b525ee6a4c4933cf8556c2628de04bfa96f15",
+          "registered_at": "2026-08-25T18:26:00.381922+00:00"
+        }
+      ]
+    },
+    "d2dd8179d0b568738256058420b233eb951b95dae5b3425dcaa8d3e54ac26f78": {
+      "benchmark_id": "boundary_cascading_compound_bundle",
+      "latest_bundle_fingerprint": "7b8fa236a2463db5ec30deea57f2995172e811f42020762d132488ae21c87f37",
+      "revisions": [
+        {
+          "bundle_fingerprint": "7b8fa236a2463db5ec30deea57f2995172e811f42020762d132488ae21c87f37",
+          "quality_fingerprint": "f11eaa483538c2586077a2d3ad881c6fa50f2715ddeb1cff90488d2438477c57",
+          "registered_at": "2026-08-25T18:27:08.169012+00:00"
+        }
+      ]
+    }
+  },
+  "schema_version": 1
+}

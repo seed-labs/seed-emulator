@@ -1,0 +1,7 @@
+{
+  "benchmark_request_fingerprint": "d8116234fbc29568b7687ab8ff253785fddc3859a272e0c62dd8ca2eaed0d445",
+  "nine_worker_handoff_ready": true,
+  "reason": "scene bridge delivery boundary is the topology capability manifest",
+  "schema_version": 1,
+  "status": "not_requested"
+}

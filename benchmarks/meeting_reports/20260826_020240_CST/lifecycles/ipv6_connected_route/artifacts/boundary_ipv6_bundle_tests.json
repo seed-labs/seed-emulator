@@ -1,0 +1,145 @@
+{
+  "artifact_fingerprint": "debabd2eab4d65b68c33ad9692f9f420495833d8f5124d1acd202212143a41c2",
+  "artifact_id": "boundary_ipv6_bundle_tests",
+  "artifact_type": "test",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "1e9299f543eff1918c8064cb766f983311dd0261095aacc459e864683713d5bc",
+    "066eea09e9979339e00cd0fde0483f93de0a4d311df42259ff8c6a5cf7050f8b",
+    "1c00cc23905e426fb2384a1c66cb8e4c74bc6925a22407faddbb10ccd2106b06",
+    "b5211f58910ef336baedca5faaf2b9a077d79a20858a71e4d76cff7882c95daf"
+  ],
+  "payload": {
+    "tests": [
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_healthy",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.181.73.4"
+        },
+        "phase": "baseline",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-hnode_64513_host2-1"
+        },
+        "test_id": "baseline_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.181.73.4"
+        },
+        "phase": "active",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-hnode_64513_host2-1"
+        },
+        "test_id": "active_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "equals",
+          "value": "true"
+        },
+        "driver": "probe.container",
+        "expectation_id": "observer_availability",
+        "parameters": {},
+        "phase": "active",
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-hnode_64513_host2-1"
+        },
+        "test_id": "active_observer"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.181.73.4"
+        },
+        "phase": "recovery",
+        "retries": 5,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-hnode_64513_host2-1"
+        },
+        "test_id": "recovery_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "contains",
+          "value": "2001:db8::/64"
+        },
+        "driver": "probe.ipv6_route",
+        "expectation_id": "fault_01_bind9_healthy",
+        "parameters": {
+          "prefix": "2001:db8::/64"
+        },
+        "phase": "baseline",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-brdnode_64512_router0-1"
+        },
+        "test_id": "baseline_fault_01_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "not_contains",
+          "value": "2001:db8::/64"
+        },
+        "driver": "probe.ipv6_route",
+        "expectation_id": "bind9_network_ipv6_connected_route_removed_effect",
+        "parameters": {
+          "prefix": "2001:db8::/64"
+        },
+        "phase": "active",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-brdnode_64512_router0-1"
+        },
+        "test_id": "active_fault_01_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "contains",
+          "value": "2001:db8::/64"
+        },
+        "driver": "probe.ipv6_route",
+        "expectation_id": "bind9_network_ipv6_connected_route_removed_effect",
+        "parameters": {
+          "prefix": "2001:db8::/64"
+        },
+        "phase": "recovery",
+        "retries": 5,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-brdnode_64512_router0-1"
+        },
+        "test_id": "recovery_fault_01_bind9"
+      }
+    ]
+  },
+  "producer": "test_agent",
+  "schema_version": 1,
+  "warnings": []
+}

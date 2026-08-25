@@ -1,0 +1,18 @@
+{
+  "artifact_ids": [
+    "mimo_dns_6as_lifecycle_20260825_topology",
+    "mimo_dns_6as_lifecycle_20260825_software",
+    "mimo_dns_6as_lifecycle_20260825_services",
+    "mimo_dns_6as_lifecycle_20260825_workloads",
+    "mimo_dns_6as_lifecycle_20260825_faults",
+    "mimo_dns_6as_lifecycle_20260825_tests",
+    "mimo_dns_6as_lifecycle_20260825_oracle",
+    "mimo_dns_6as_lifecycle_20260825_scoring",
+    "mimo_dns_6as_lifecycle_20260825_blind_policy",
+    "mimo_dns_6as_lifecycle_20260825_lifecycle"
+  ],
+  "benchmark_id": "mimo_dns_6as_lifecycle_20260825",
+  "enabled": false,
+  "schema_version": 1,
+  "seed": "demo-mimo-dns-6as-v1"
+}

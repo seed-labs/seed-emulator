@@ -1,0 +1,28 @@
+{
+  "affected_asset_diversity": 1,
+  "benchmark_id": "boundary_ospf_bundle",
+  "bundle_fingerprint": "5f354647ec973a69b89db0738737c612e6c0278b96479706cd3de28ca864fb16",
+  "checks": {
+    "compiler_safety_approved": true,
+    "difficulty_in_requested_band": true,
+    "fault_count_matches_request": true,
+    "must_break_observable": true,
+    "must_break_recoverable": true,
+    "must_preserve_observable": true,
+    "public_private_isolation": true,
+    "root_cause_expectations_unique": true
+  },
+  "difficulty": "medium",
+  "difficulty_band": [
+    0.2,
+    0.65
+  ],
+  "difficulty_score": 0.3413,
+  "fault_driver_diversity": 1,
+  "interaction_count": 0,
+  "passed": true,
+  "quality_fingerprint": "c7fdb5ad5a8881d2ad384adcc5c22bde7a4dd3b7600e8a21563bb1a1261c7321",
+  "request_fingerprint": "1183e7175ad4619777aa64a4c0ea07aa7b9b9d4a6e721980070ab7b2c9299a24",
+  "scenario_signature": "1609c0e6f1278141ae0764a9dbc63f0a3cfdcec065454242b5a2a0a0442c52da",
+  "schema_version": 1
+}

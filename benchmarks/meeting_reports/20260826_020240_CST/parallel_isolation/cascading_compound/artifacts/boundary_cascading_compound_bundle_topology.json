@@ -1,0 +1,13 @@
+{
+  "artifact_fingerprint": "c16a71c2a5a646951c86296797dbd0a929f43dba067e20f060ddec7058b38b73",
+  "artifact_id": "boundary_cascading_compound_bundle_topology",
+  "artifact_type": "topology_ref",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "topology_id": "bundle_boundary_validation"
+  },
+  "producer": "topology_agent",
+  "schema_version": 1,
+  "warnings": []
+}

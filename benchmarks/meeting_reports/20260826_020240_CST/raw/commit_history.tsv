@@ -1,0 +1,13 @@
+BASE c62cc4944e11bf150fad2f10046c7bc8479a5f21
+HEAD 7f2f03445c32474ce89cd4022af76abf7e33082e
+c64bb58fb6a6152c2ce54dce65199492d8b17285	2026-08-20T18:25:47+08:00	docs(generator): mark GenerationJob as temporary
+838a52f385a2aefee824ed4071824c7417c91193	2026-08-20T18:41:32+08:00	docs(generator): show arbitrary NL topology target
+bc1b5a1c57acfbed15ac47a7488dffda82e0830d	2026-08-20T19:07:29+08:00	feat(benchmarks): bridge arbitrary NL scenes to topology manifests
+e43068fe4d89e973abd84e2c8f5ed6133253e714	2026-08-20T19:14:25+08:00	fix(benchmarks): accept automatic NL scene sessions
+40799f357f6920023e8fd837c13b2c67c7cbe62b	2026-08-20T19:26:26+08:00	feat(benchmarks): harden external structured providers
+cb4b23b9032dc90299ce798f6cdb5c625122df97	2026-08-20T23:06:40+08:00	fix(benchmarks): route duplicate NL placements safely
+1697be7bdfe0f9f252ceb21c0a3212e290f50822	2026-08-20T23:11:16+08:00	fix(benchmarks): derive automatic scene budgets locally
+abba8f7ee7157079762be6342b9aa3fac4bee60b	2026-08-20T23:17:24+08:00	docs(benchmarks): assess MCP provider gateway feasibility
+ab87ea57d433b447b0c7785ca4d525342b25d189	2026-08-25T17:39:06+08:00	feat(benchmarks): add MCP provider gateway
+7f2f03445c32474ce89cd4022af76abf7e33082e	2026-08-26T02:01:03+08:00	feat(benchmarks): qualify isolated compound fault bundles
+HEAD	final archive commit	docs(benchmarks): add reproducible generator meeting report

@@ -1,0 +1,26 @@
+{
+  "applications": [
+    "bind9"
+  ],
+  "difficulty": "hard",
+  "execute_lifecycle": true,
+  "fault_count": 3,
+  "fault_relationship": "cascading",
+  "fault_types": [
+    "dns.nameserver",
+    "routing.bird.ospf_wrong_area",
+    "software.config.replace"
+  ],
+  "objective": "Validate isolated cascading DNS, OSPF and software configuration faults",
+  "observer_template": "network_observer",
+  "prepare_topology": false,
+  "publish": false,
+  "qualification_runs": 2,
+  "request_id": "boundary_cascading_compound_bundle",
+  "resource_class": "small",
+  "scale": 8,
+  "schema_version": 1,
+  "seed": "boundary-cascading-compound-v1",
+  "topology_id": "bundle_boundary_validation",
+  "topology_spec": "topology_specs/bundle_boundary_validation/request.json"
+}

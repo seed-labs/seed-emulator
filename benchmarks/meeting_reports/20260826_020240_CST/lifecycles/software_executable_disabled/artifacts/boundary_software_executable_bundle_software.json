@@ -1,0 +1,18 @@
+{
+  "artifact_fingerprint": "c5e70d462c00be145e14bc057046787e284eb747814131bfdfc6529b57a78600",
+  "artifact_id": "boundary_software_executable_bundle_software",
+  "artifact_type": "software",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "19ec3a7ca0f2e63baad3fee43a67b34359880ed10c2a10a3c48ba6439846d726"
+  ],
+  "payload": {
+    "required_software": [
+      "bind9",
+      "curl_tools"
+    ]
+  },
+  "producer": "software_agent",
+  "schema_version": 1,
+  "warnings": []
+}

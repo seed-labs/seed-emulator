@@ -1,5 +1,16 @@
 {
   "entries": {
+    "23816b45d74440496d67b3e1e291546223fac12bb0787ca8fd45b3fc59756f9f": {
+      "benchmark_id": "boundary_docker_network_bundle",
+      "latest_bundle_fingerprint": "e66445f947c3e657d47e32138974bffe178ad4faea02df3b7518d0ab79171fa8",
+      "revisions": [
+        {
+          "bundle_fingerprint": "e66445f947c3e657d47e32138974bffe178ad4faea02df3b7518d0ab79171fa8",
+          "quality_fingerprint": "b8568bf2cff2446be00d7550c48f1748bd777bd0156020cac087330752a23414",
+          "registered_at": "2026-08-25T17:11:09.895770+00:00"
+        }
+      ]
+    },
     "3ccb768cb308b1ccc27609d58fdb4c60d0e629ad837133ed26fb3f21da0a88e7": {
       "benchmark_id": "production_application_pilot",
       "latest_bundle_fingerprint": "40dcf703f31e94d4df95736a2dbb0f356f5b4be6da9554488218ab236d583d44",
@@ -23,6 +34,33 @@
           "bundle_fingerprint": "40dcf703f31e94d4df95736a2dbb0f356f5b4be6da9554488218ab236d583d44",
           "quality_fingerprint": "16dc15bc3be29d995176ed159bd437cf497174b9592e25b2f8b73c69171fefab",
           "registered_at": "2026-08-14T17:30:56.946345+00:00"
+        }
+      ]
+    },
+    "44af77bab16864c88ce795557edb4438df021662a7582efcf48655964a657e63": {
+      "benchmark_id": "mimo_dns_6as_lifecycle_20260825",
+      "latest_bundle_fingerprint": "157e60bac89eda19de41ba732491a9964bbc490cf6a8140f522c01679dc95088",
+      "revisions": [
+        {
+          "bundle_fingerprint": "fedf2806f0e38d8f225caf069de917b7c4f036d62daaaad0160455b48bbc45b2",
+          "quality_fingerprint": "52a112c7bf56660931e89158b0ac81a2cc4ffa6af827f429aa07f771ef536cc0",
+          "registered_at": "2026-08-25T10:47:48.880805+00:00"
+        },
+        {
+          "bundle_fingerprint": "157e60bac89eda19de41ba732491a9964bbc490cf6a8140f522c01679dc95088",
+          "quality_fingerprint": "044baef77ff676530507f09af0967023aca6eff80b91e60b4088e9ae49e8b1df",
+          "registered_at": "2026-08-25T10:50:25.239587+00:00"
+        }
+      ]
+    },
+    "c4150aa3857a070450880c75580decab27e4abf7a33de217c53665580fdcab7d": {
+      "benchmark_id": "boundary_cascading_compound_bundle",
+      "latest_bundle_fingerprint": "620c71233516d888731ec4317d4f01f1f76ddee80940d234ccb5151175f479c0",
+      "revisions": [
+        {
+          "bundle_fingerprint": "620c71233516d888731ec4317d4f01f1f76ddee80940d234ccb5151175f479c0",
+          "quality_fingerprint": "07a9b97d627ab9f467555ce83e567f33c9dfc0f4d4d74b02c71c682bf4a08e22",
+          "registered_at": "2026-08-25T17:15:23.441743+00:00"
         }
       ]
     }

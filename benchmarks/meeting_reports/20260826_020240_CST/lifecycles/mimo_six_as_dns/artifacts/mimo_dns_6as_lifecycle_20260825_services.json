@@ -1,0 +1,42 @@
+{
+  "artifact_fingerprint": "9168e14465b5d27c0bc5db5e381ba7ffabc53d760dcdbdaaa78c91ebd0bebb1f",
+  "artifact_id": "mimo_dns_6as_lifecycle_20260825_services",
+  "artifact_type": "service",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "7c37dede90bf54de0b03a9b55b16aa171553f61a2d3bb6bb1b2b0d34c18163ff",
+    "515ebc1edcfde7307ef94d93d4baafb4b8ad9ebdb4f152591c4f9331b2bb30f5"
+  ],
+  "payload": {
+    "services": [
+      {
+        "capabilities_required": [
+          "dns.bind9.v1"
+        ],
+        "driver": "service.process",
+        "parameters": {
+          "health_argv": [
+            "rndc",
+            "status"
+          ],
+          "start_argv": [
+            "service",
+            "named",
+            "start"
+          ]
+        },
+        "ports": [
+          53
+        ],
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-mimo-dns-6as-lifecycle-20260825-0a6128e31a-hnode_64512_host0-1"
+        },
+        "service_id": "bind9_service"
+      }
+    ]
+  },
+  "producer": "service_agent",
+  "schema_version": 1,
+  "warnings": []
+}

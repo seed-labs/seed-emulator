@@ -1,0 +1,201 @@
+{
+  "tasks": [
+    {
+      "agent_role": "topology_agent",
+      "dependencies": [],
+      "input_artifacts": [],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_topology",
+      "output_artifact_type": "topology_ref",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_topology_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "software_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_topology_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_topology"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_software",
+      "output_artifact_type": "software",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_software_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "service_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_topology_agent",
+        "boundary_software_executable_bundle_software_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_topology",
+        "boundary_software_executable_bundle_software"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_services",
+      "output_artifact_type": "service",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_service_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "workload_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_topology_agent",
+        "boundary_software_executable_bundle_service_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_topology",
+        "boundary_software_executable_bundle_services"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_workloads",
+      "output_artifact_type": "workload",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_workload_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "fault_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_topology_agent",
+        "boundary_software_executable_bundle_service_agent",
+        "boundary_software_executable_bundle_workload_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_topology",
+        "boundary_software_executable_bundle_services",
+        "boundary_software_executable_bundle_workloads"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_faults",
+      "output_artifact_type": "fault_set",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_fault_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "test_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_topology_agent",
+        "boundary_software_executable_bundle_service_agent",
+        "boundary_software_executable_bundle_workload_agent",
+        "boundary_software_executable_bundle_fault_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_topology",
+        "boundary_software_executable_bundle_services",
+        "boundary_software_executable_bundle_workloads",
+        "boundary_software_executable_bundle_faults"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_tests",
+      "output_artifact_type": "test",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_test_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "oracle_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_test_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_tests"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_oracle",
+      "output_artifact_type": "oracle",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_oracle_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "scoring_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_test_agent",
+        "boundary_software_executable_bundle_oracle_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_tests",
+        "boundary_software_executable_bundle_oracle"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_scoring",
+      "output_artifact_type": "scoring",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_scoring_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "safety_reviewer_agent",
+      "dependencies": [
+        "boundary_software_executable_bundle_topology_agent",
+        "boundary_software_executable_bundle_software_agent",
+        "boundary_software_executable_bundle_service_agent",
+        "boundary_software_executable_bundle_workload_agent",
+        "boundary_software_executable_bundle_fault_agent",
+        "boundary_software_executable_bundle_test_agent",
+        "boundary_software_executable_bundle_oracle_agent",
+        "boundary_software_executable_bundle_scoring_agent"
+      ],
+      "input_artifacts": [
+        "boundary_software_executable_bundle_topology",
+        "boundary_software_executable_bundle_software",
+        "boundary_software_executable_bundle_services",
+        "boundary_software_executable_bundle_workloads",
+        "boundary_software_executable_bundle_faults",
+        "boundary_software_executable_bundle_tests",
+        "boundary_software_executable_bundle_oracle",
+        "boundary_software_executable_bundle_scoring"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "boundary_software_executable_bundle_blind_policy",
+      "output_artifact_type": "blind_policy",
+      "parameters": {
+        "request_fingerprint": "e2aa3a9356d917d84fc3009711969621d5963bba9a2cfc3cd2ed6c4bdec0525f",
+        "request_id": "boundary_software_executable_bundle"
+      },
+      "schema_version": 1,
+      "task_id": "boundary_software_executable_bundle_safety_reviewer_agent",
+      "timeout_seconds": 600
+    }
+  ]
+}

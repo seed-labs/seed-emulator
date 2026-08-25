@@ -1,0 +1,14 @@
+{
+  "entry_fingerprint": "e912694c796eeb8d658c9e79434de346d522ee1dec9b6c5f3ee3617d531d8017",
+  "inputs": {
+    "contract": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+    "request": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+    "topology": "ba56296e675c1222fa9408d7a243ed3dc29445180876a6324db20843f8d64c2c"
+  },
+  "key": "695fc8045c153cfa1bdde5d28c57f5c6cbf363e3a87ff61f5c71fb0af51c54cd",
+  "schema_version": 1,
+  "value": {
+    "bundle_fingerprint": "504e150f83ccd1fbf3d1038423cc783e5a42e5c3216a1c718bb0fe0d84304856",
+    "quality_fingerprint": "ff1cd028e762f75b860733513254424fa40775d31d899a1fdd73e22c7bcc5dbd"
+  }
+}

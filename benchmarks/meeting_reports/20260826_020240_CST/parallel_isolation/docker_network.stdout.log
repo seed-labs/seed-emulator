@@ -1,0 +1,21 @@
+{
+  "bundle_fingerprint": "c5320af57c660b7316597147d7419b4388dfeea72d636b31a9b54bd86ceda67b",
+  "cache_key": "ff9a4924b4cbb2655819841af1701e532924aa289953b9c63021cb9fb5358468",
+  "coordinator_result": "complete",
+  "created_at": "2026-08-25T18:27:34.021079+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "isolation_cleanup_verified": true,
+  "isolation_session_id": "30e41ec3fe",
+  "isolation_status": "cleaned",
+  "qualification_status": "qualified",
+  "quality_fingerprint": "8d2d018871dcbc9b63bfdfaf524b525ee6a4c4933cf8556c2628de04bfa96f15",
+  "quality_passed": true,
+  "release": null,
+  "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+  "request_id": "boundary_docker_network_bundle",
+  "scale_passed": true,
+  "schema_version": 1,
+  "summary_fingerprint": "39b87ae42b5ba20a17320fc783342d319fe5d05bbc17549b95744158c7c429ff",
+  "worker_count": 9,
+  "workspace": "/home/zvanadium/seed-emulator/benchmarks/reports/meeting_parallel_isolation_20260826_020240/docker_network"
+}

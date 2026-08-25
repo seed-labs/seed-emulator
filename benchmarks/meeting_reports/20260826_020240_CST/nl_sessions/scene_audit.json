@@ -1,0 +1,25 @@
+{
+  "audit_fingerprint": "2ec2d07a2dddb2bc3257078f107e62b33552800be54a34c9b868b511001079a5",
+  "created_at": "2026-08-25T18:05:22.336727+00:00",
+  "evidence": [
+    "approved_scene.json",
+    "capability_snapshot.json",
+    "compiled/benchmark_request.json",
+    "compiled/bridge_plan.json",
+    "compiled/topology_plan.json",
+    "compiled/topology_request.json",
+    "input.json",
+    "normalized_scene.json",
+    "provider_request.json",
+    "provider_response.json",
+    "scene_approval_challenge.json",
+    "scene_preview.json",
+    "scene_requirements.json",
+    "security_input.json",
+    "security_scene.json"
+  ],
+  "nl_contract_sha256": "c66318565571c58d2e59e74d9e0e388704f444beadb0d63803ee1f5e0788ea3d",
+  "schema_version": 1,
+  "session": "/home/zvanadium/seed-emulator/benchmarks/reports/nl_sessions/meeting_scene_plan_success_20260826",
+  "status": "ready"
+}

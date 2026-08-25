@@ -1,0 +1,49 @@
+{
+  "baseline_mode": "real_capability_manifest",
+  "bundle_fingerprint": "c5320af57c660b7316597147d7419b4388dfeea72d636b31a9b54bd86ceda67b",
+  "generated_at": "2026-08-25T18:26:00.413906+00:00",
+  "passed": true,
+  "results": [
+    {
+      "asset_count": 8,
+      "execution_mode": "plan_only_no_container_launch",
+      "passed": true,
+      "planning_seconds": 0.0,
+      "resolved_asset_count": 9,
+      "selector_count": 9
+    },
+    {
+      "asset_count": 20,
+      "execution_mode": "plan_only_no_container_launch",
+      "passed": true,
+      "planning_seconds": 0.0,
+      "resolved_asset_count": 9,
+      "selector_count": 9
+    },
+    {
+      "asset_count": 100,
+      "execution_mode": "plan_only_no_container_launch",
+      "passed": true,
+      "planning_seconds": 0.0,
+      "resolved_asset_count": 9,
+      "selector_count": 9
+    },
+    {
+      "asset_count": 1000,
+      "execution_mode": "plan_only_no_container_launch",
+      "passed": true,
+      "planning_seconds": 0.0,
+      "resolved_asset_count": 9,
+      "selector_count": 9
+    },
+    {
+      "asset_count": 10000,
+      "execution_mode": "plan_only_no_container_launch",
+      "passed": true,
+      "planning_seconds": 0.088353,
+      "resolved_asset_count": 9,
+      "selector_count": 9
+    }
+  ],
+  "schema_version": 1
+}

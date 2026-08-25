@@ -1,0 +1,18 @@
+{
+  "artifact_ids": [
+    "boundary_software_config_bundle_topology",
+    "boundary_software_config_bundle_software",
+    "boundary_software_config_bundle_services",
+    "boundary_software_config_bundle_workloads",
+    "boundary_software_config_bundle_faults",
+    "boundary_software_config_bundle_tests",
+    "boundary_software_config_bundle_oracle",
+    "boundary_software_config_bundle_scoring",
+    "boundary_software_config_bundle_blind_policy",
+    "boundary_software_config_bundle_lifecycle"
+  ],
+  "benchmark_id": "boundary_software_config_bundle",
+  "enabled": false,
+  "schema_version": 1,
+  "seed": "boundary-software-config-v1"
+}

@@ -1,0 +1,18 @@
+compileall=passed
+generator_readme_coverage=passed directories=9
+covered=generator/README.md
+covered=generator/bundle/README.md
+covered=generator/bundle/examples/README.md
+covered=generator/bundle/examples/boundary_validation/README.md
+covered=generator/faults/README.md
+covered=generator/mcp/README.md
+covered=generator/nl/README.md
+covered=generator/topology/README.md
+covered=generator/topology/examples/README.md
+generator_readme_sync=passed
+MCP provider gateway tests: PASS
+natural_language_generator_tests=passed
+natural-language arbitrary scene bridge tests: PASS
+bundle isolation tests passed
+bundle fault profile tests passed
+benchmark_cli_list=passed lines=72

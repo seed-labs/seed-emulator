@@ -1,0 +1,23 @@
+{
+  "benchmark_id": "boundary_ospf_bundle",
+  "bundle_fingerprint": "5f354647ec973a69b89db0738737c612e6c0278b96479706cd3de28ca864fb16",
+  "created_at": "2026-08-25T18:13:23.430050+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "minimum_independent_runs": 2,
+  "qualification_level": "formal",
+  "qualification_sha256": "549793b53ff27012b64114348ee2f7041f8cab0fa938d5f2aff02b9485cf4041",
+  "receipts": [
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/ospf_wrong_area/lifecycle_round_01.json",
+      "run_id": "d556b7f6-ee8d-469b-9270-5ed834d8790a",
+      "sha256": "63a8d51a6fe6a933288a0b65ba7962d0dcce52285aabc836b8d77bfd42162156"
+    },
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/ospf_wrong_area/lifecycle_round_02.json",
+      "run_id": "8b3fe9fa-3a74-4c88-8f37-9848397bc345",
+      "sha256": "490d4d73a7fd46a38c088bb614df96558fc9da92aa8f25dadaa21a8e9ee72cce"
+    }
+  ],
+  "schema_version": 1,
+  "status": "qualified"
+}

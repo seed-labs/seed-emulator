@@ -1,0 +1,13 @@
+{
+  "artifact_fingerprint": "1e9299f543eff1918c8064cb766f983311dd0261095aacc459e864683713d5bc",
+  "artifact_id": "boundary_ipv6_bundle_topology",
+  "artifact_type": "topology_ref",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "topology_id": "bundle_boundary_validation"
+  },
+  "producer": "topology_agent",
+  "schema_version": 1,
+  "warnings": []
+}

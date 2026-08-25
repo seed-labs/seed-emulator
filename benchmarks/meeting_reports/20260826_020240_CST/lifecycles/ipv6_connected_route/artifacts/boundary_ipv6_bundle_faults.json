@@ -1,0 +1,54 @@
+{
+  "artifact_fingerprint": "b5211f58910ef336baedca5faaf2b9a077d79a20858a71e4d76cff7882c95daf",
+  "artifact_id": "boundary_ipv6_bundle_faults",
+  "artifact_type": "fault_set",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "1e9299f543eff1918c8064cb766f983311dd0261095aacc459e864683713d5bc",
+    "066eea09e9979339e00cd0fde0483f93de0a4d311df42259ff8c6a5cf7050f8b",
+    "1c00cc23905e426fb2384a1c66cb8e4c74bc6925a22407faddbb10ccd2106b06"
+  ],
+  "payload": {
+    "faults": [
+      {
+        "depends_on": [],
+        "expectations": {
+          "must_break": [
+            "bind9_network_ipv6_connected_route_removed_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_01_bind9",
+        "fault_type": "network.ipv6.connected_route_removed",
+        "parameters": {
+          "address": "2001:db8:0::1/64",
+          "interface": "benchmark6",
+          "prefix": "2001:db8::/64"
+        },
+        "safety": {
+          "max_affected_asns": 1,
+          "max_affected_assets": 1,
+          "protected_assets": [
+            "bndl-boundary-ipv6-bundle-bfe5bfea4d-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-ipv6-v1:bind9:0",
+        "selector": {
+          "container": "bndl-boundary-ipv6-bundle-bfe5bfea4d-brdnode_64512_router0-1"
+        }
+      }
+    ],
+    "relationship": "single"
+  },
+  "producer": "fault_agent",
+  "schema_version": 1,
+  "warnings": []
+}

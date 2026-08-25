@@ -1,0 +1,18 @@
+{
+  "artifact_ids": [
+    "boundary_ipv6_bundle_topology",
+    "boundary_ipv6_bundle_software",
+    "boundary_ipv6_bundle_services",
+    "boundary_ipv6_bundle_workloads",
+    "boundary_ipv6_bundle_faults",
+    "boundary_ipv6_bundle_tests",
+    "boundary_ipv6_bundle_oracle",
+    "boundary_ipv6_bundle_scoring",
+    "boundary_ipv6_bundle_blind_policy",
+    "boundary_ipv6_bundle_lifecycle"
+  ],
+  "benchmark_id": "boundary_ipv6_bundle",
+  "enabled": false,
+  "schema_version": 1,
+  "seed": "boundary-ipv6-v1"
+}

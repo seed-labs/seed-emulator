@@ -1,0 +1,53 @@
+{
+  "artifact_fingerprint": "288912633cbfd22675d383c78c24cf5cfd3799cda04e6a0d40fa587947cc9988",
+  "artifact_id": "boundary_ospf_bundle_faults",
+  "artifact_type": "fault_set",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "772150b605d9b37af13bc3f7c9df5dacc9e19e4e618c3693579fa325978a4ab0",
+    "a1ff26e3c4eac162c93a56ba9703c39bcb45c6ed96a75bc4a6ede30bfeae402a",
+    "85c88c8733889e0568a5d063fb2b8a53f36dd41c9a5c22afec4f73a8b1349d58"
+  ],
+  "payload": {
+    "faults": [
+      {
+        "depends_on": [],
+        "expectations": {
+          "must_break": [
+            "bind9_routing_bird_ospf_wrong_area_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_01_bind9",
+        "fault_type": "routing.bird.ospf_wrong_area",
+        "parameters": {
+          "bad_area": 39620,
+          "correct_area": 0
+        },
+        "safety": {
+          "max_affected_asns": 1,
+          "max_affected_assets": 1,
+          "protected_assets": [
+            "bndl-boundary-ospf-bundle-950f22d74d-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-ospf-v1:bind9:0",
+        "selector": {
+          "container": "bndl-boundary-ospf-bundle-950f22d74d-brdnode_64513_router0-1"
+        }
+      }
+    ],
+    "relationship": "single"
+  },
+  "producer": "fault_agent",
+  "schema_version": 1,
+  "warnings": []
+}

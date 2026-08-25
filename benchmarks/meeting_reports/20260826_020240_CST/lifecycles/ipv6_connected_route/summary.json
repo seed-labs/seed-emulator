@@ -1,0 +1,21 @@
+{
+  "bundle_fingerprint": "d678e7a58821bcf3bb6c731b915e5830eba43add794e3fcd5e9d56d71713d407",
+  "cache_key": "75be48998c13425ebf91361b92ee79db452c1442b8a625bceddaed8b06540174",
+  "coordinator_result": "complete",
+  "created_at": "2026-08-25T18:11:01.462642+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "isolation_cleanup_verified": true,
+  "isolation_session_id": "bfe5bfea4d",
+  "isolation_status": "cleaned",
+  "qualification_status": "qualified",
+  "quality_fingerprint": "a62f6147f8c46a0482b45e49d124feaf1f79c3d1f992ab25d3e65b94e2eb8659",
+  "quality_passed": true,
+  "release": null,
+  "request_fingerprint": "1f60cf9f59172aa61127f2994428869efe2d9521bd693583f7456020576d0143",
+  "request_id": "boundary_ipv6_bundle",
+  "scale_passed": true,
+  "schema_version": 1,
+  "summary_fingerprint": "e34d1c02418f08d4f8226cb210db2aa51502784c1089d9a462de85e6c283ce7b",
+  "worker_count": 9,
+  "workspace": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/ipv6_connected_route"
+}

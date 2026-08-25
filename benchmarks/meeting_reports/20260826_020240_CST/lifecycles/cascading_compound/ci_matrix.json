@@ -1,0 +1,73 @@
+{
+  "matrix_fingerprint": "83a1812b2a9a303814fd7f3fb0a3de6b0342faded851809879081159d541e431",
+  "rows": [
+    {
+      "execution_mode": "real_full",
+      "required_checks": [
+        "contract",
+        "plan",
+        "resource_budget",
+        "safety",
+        "quality",
+        "docker_lifecycle"
+      ],
+      "scale": 5,
+      "schedule": "per_commit"
+    },
+    {
+      "execution_mode": "plan_full",
+      "required_checks": [
+        "contract",
+        "plan",
+        "resource_budget",
+        "safety",
+        "quality",
+        "selector_full_resolution"
+      ],
+      "scale": 20,
+      "schedule": "per_commit"
+    },
+    {
+      "execution_mode": "real_full",
+      "required_checks": [
+        "contract",
+        "plan",
+        "resource_budget",
+        "safety",
+        "quality",
+        "docker_lifecycle"
+      ],
+      "scale": 100,
+      "schedule": "nightly"
+    },
+    {
+      "execution_mode": "plan_performance_sampled",
+      "required_checks": [
+        "contract",
+        "plan",
+        "resource_budget",
+        "safety",
+        "quality",
+        "sampling",
+        "performance"
+      ],
+      "scale": 1000,
+      "schedule": "weekly"
+    },
+    {
+      "execution_mode": "plan_performance_sampled",
+      "required_checks": [
+        "contract",
+        "plan",
+        "resource_budget",
+        "safety",
+        "quality",
+        "sampling",
+        "performance"
+      ],
+      "scale": 10000,
+      "schedule": "weekly"
+    }
+  ],
+  "schema_version": 1
+}

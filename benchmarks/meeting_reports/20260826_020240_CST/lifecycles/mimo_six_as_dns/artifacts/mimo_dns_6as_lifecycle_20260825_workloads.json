@@ -1,0 +1,31 @@
+{
+  "artifact_fingerprint": "3c1668ee55fa06afc98df2681062b299e2cf2192ec688cc5c853562851c02526",
+  "artifact_id": "mimo_dns_6as_lifecycle_20260825_workloads",
+  "artifact_type": "workload",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "7c37dede90bf54de0b03a9b55b16aa171553f61a2d3bb6bb1b2b0d34c18163ff",
+    "9168e14465b5d27c0bc5db5e381ba7ffabc53d760dcdbdaaa78c91ebd0bebb1f"
+  ],
+  "payload": {
+    "workloads": [
+      {
+        "driver": "workload.dns",
+        "duration_seconds": 1,
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.247.96.3"
+        },
+        "schema_version": 1,
+        "source": {
+          "container": "bndl-mimo-dns-6as-lifecycle-20260825-0a6128e31a-hnode_64517_host1-1"
+        },
+        "target_service": "bind9_service",
+        "workload_id": "bind9_workload"
+      }
+    ]
+  },
+  "producer": "workload_agent",
+  "schema_version": 1,
+  "warnings": []
+}

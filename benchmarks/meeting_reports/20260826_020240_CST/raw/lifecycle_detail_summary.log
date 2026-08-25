@@ -1,0 +1,53 @@
+{
+  "cascading_compound": {
+    "convergence": true,
+    "drivers": [
+      "dns.nameserver",
+      "routing.bird.ospf_wrong_area",
+      "software.config.replace"
+    ],
+    "passed": true
+  },
+  "docker_network_disconnect": {
+    "convergence": true,
+    "drivers": [
+      "docker.network.disconnected"
+    ],
+    "passed": true
+  },
+  "ipv6_connected_route": {
+    "convergence": true,
+    "drivers": [
+      "network.ipv6.connected_route_removed"
+    ],
+    "passed": true
+  },
+  "mimo_six_as_dns": {
+    "convergence": true,
+    "drivers": [
+      "dns.nameserver"
+    ],
+    "passed": true
+  },
+  "ospf_wrong_area": {
+    "convergence": true,
+    "drivers": [
+      "routing.bird.ospf_wrong_area"
+    ],
+    "passed": true
+  },
+  "software_config_replace": {
+    "convergence": true,
+    "drivers": [
+      "software.config.replace"
+    ],
+    "passed": true
+  },
+  "software_executable_disabled": {
+    "convergence": true,
+    "drivers": [
+      "software.executable.disabled"
+    ],
+    "passed": true
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "applications": [
+    "bind9"
+  ],
+  "difficulty": "medium",
+  "execute_lifecycle": true,
+  "fault_count": 1,
+  "fault_relationship": "independent",
+  "fault_types": [
+    "docker.network.disconnected"
+  ],
+  "objective": "Validate scoped Docker network disconnect and recovery",
+  "observer_template": "network_observer",
+  "prepare_topology": false,
+  "publish": false,
+  "qualification_runs": 2,
+  "request_id": "boundary_docker_network_bundle",
+  "resource_class": "small",
+  "scale": 8,
+  "schema_version": 1,
+  "seed": "boundary-docker-network-v1",
+  "topology_id": "bundle_boundary_validation",
+  "topology_spec": "topology_specs/bundle_boundary_validation/request.json"
+}

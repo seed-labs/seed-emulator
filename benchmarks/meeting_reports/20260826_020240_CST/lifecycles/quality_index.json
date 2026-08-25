@@ -1,0 +1,82 @@
+{
+  "entries": {
+    "1609c0e6f1278141ae0764a9dbc63f0a3cfdcec065454242b5a2a0a0442c52da": {
+      "benchmark_id": "boundary_ospf_bundle",
+      "latest_bundle_fingerprint": "5f354647ec973a69b89db0738737c612e6c0278b96479706cd3de28ca864fb16",
+      "revisions": [
+        {
+          "bundle_fingerprint": "5f354647ec973a69b89db0738737c612e6c0278b96479706cd3de28ca864fb16",
+          "quality_fingerprint": "c7fdb5ad5a8881d2ad384adcc5c22bde7a4dd3b7600e8a21563bb1a1261c7321",
+          "registered_at": "2026-08-25T18:12:41.153771+00:00"
+        }
+      ]
+    },
+    "2ecc58bfdcd26ff3e941e69aa464f8a56fb9405146f36432081a84a5917330be": {
+      "benchmark_id": "boundary_docker_network_bundle",
+      "latest_bundle_fingerprint": "5a5db3f13bf196fabce0ba2bec70ee4abdb0db5f7c8eb9ebb5cfe38ea7f295d4",
+      "revisions": [
+        {
+          "bundle_fingerprint": "5a5db3f13bf196fabce0ba2bec70ee4abdb0db5f7c8eb9ebb5cfe38ea7f295d4",
+          "quality_fingerprint": "ead850d7c2c0e8d43e1399ec64bb40481d90dccbe0c98450a8921ea2c67fd64a",
+          "registered_at": "2026-08-25T18:13:50.405531+00:00"
+        }
+      ]
+    },
+    "460fdc7a5a5a6757fcfe988dc91f114952cd239f85da70f18b6a5279323e963e": {
+      "benchmark_id": "boundary_software_executable_bundle",
+      "latest_bundle_fingerprint": "001605bafccd7e0cf85c470bd57947717f97a808a1c3b26dfa5d1991a3ab23f0",
+      "revisions": [
+        {
+          "bundle_fingerprint": "001605bafccd7e0cf85c470bd57947717f97a808a1c3b26dfa5d1991a3ab23f0",
+          "quality_fingerprint": "a3cc1ee80bf39cf7bc306933ed283a5dd0656f979f2f5a356fcc45d0099a7c80",
+          "registered_at": "2026-08-25T18:17:44.349098+00:00"
+        }
+      ]
+    },
+    "5b12898b222223ee967633950ca8050c6a94157023be6e519fe2f09af8525a8d": {
+      "benchmark_id": "boundary_cascading_compound_bundle",
+      "latest_bundle_fingerprint": "504e150f83ccd1fbf3d1038423cc783e5a42e5c3216a1c718bb0fe0d84304856",
+      "revisions": [
+        {
+          "bundle_fingerprint": "504e150f83ccd1fbf3d1038423cc783e5a42e5c3216a1c718bb0fe0d84304856",
+          "quality_fingerprint": "ff1cd028e762f75b860733513254424fa40775d31d899a1fdd73e22c7bcc5dbd",
+          "registered_at": "2026-08-25T18:19:52.015247+00:00"
+        }
+      ]
+    },
+    "82e8055dedf791bf2c0c8337fc94b3706d8833f9d1e86e3b7b63c8093a5c536b": {
+      "benchmark_id": "mimo_dns_6as_lifecycle_20260825",
+      "latest_bundle_fingerprint": "6755979aeec6cdc98a25eccbb11d09a66f6d4f6bec476d63e05b3ebbe5dee55b",
+      "revisions": [
+        {
+          "bundle_fingerprint": "6755979aeec6cdc98a25eccbb11d09a66f6d4f6bec476d63e05b3ebbe5dee55b",
+          "quality_fingerprint": "70a5de65da27c173fd273e9d11e42d91ed9c10018e0d913ff6bbce32847d6a03",
+          "registered_at": "2026-08-25T18:09:23.519154+00:00"
+        }
+      ]
+    },
+    "c965a66b978def8c38011096c2aef3a596881bf3770622d925a90a376413b358": {
+      "benchmark_id": "boundary_ipv6_bundle",
+      "latest_bundle_fingerprint": "d678e7a58821bcf3bb6c731b915e5830eba43add794e3fcd5e9d56d71713d407",
+      "revisions": [
+        {
+          "bundle_fingerprint": "d678e7a58821bcf3bb6c731b915e5830eba43add794e3fcd5e9d56d71713d407",
+          "quality_fingerprint": "a62f6147f8c46a0482b45e49d124feaf1f79c3d1f992ab25d3e65b94e2eb8659",
+          "registered_at": "2026-08-25T18:10:31.165798+00:00"
+        }
+      ]
+    },
+    "f6f3c8fe3e2dfe5a9f8848e2fee4ba605a255d81d4c59cbcfbb5733614baaab9": {
+      "benchmark_id": "boundary_software_config_bundle",
+      "latest_bundle_fingerprint": "155fab655ca93b5d4a5a8eb49f77c975401c8521d560a99302b7dbc89a8afe4a",
+      "revisions": [
+        {
+          "bundle_fingerprint": "155fab655ca93b5d4a5a8eb49f77c975401c8521d560a99302b7dbc89a8afe4a",
+          "quality_fingerprint": "4fbb5ab8fe53d74276da98dc42780e8dcb7620637a511399597447919fb7832f",
+          "registered_at": "2026-08-25T18:16:31.568507+00:00"
+        }
+      ]
+    }
+  },
+  "schema_version": 1
+}

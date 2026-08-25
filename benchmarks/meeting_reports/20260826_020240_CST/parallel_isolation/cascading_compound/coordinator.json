@@ -1,0 +1,287 @@
+{
+  "created_at": "2026-08-25T18:27:07.400396+00:00",
+  "definition_fingerprint": "d8f9465a82c893a5d140c4c4b4c45e64ec6203e266361ff9ad2bb53808ba4af3",
+  "result": "complete",
+  "schema_version": 1,
+  "tasks": {
+    "boundary_cascading_compound_bundle_fault_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.727233+00:00",
+      "definition": {
+        "agent_role": "fault_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_topology_agent",
+          "boundary_cascading_compound_bundle_service_agent",
+          "boundary_cascading_compound_bundle_workload_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_topology",
+          "boundary_cascading_compound_bundle_services",
+          "boundary_cascading_compound_bundle_workloads"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_faults",
+        "output_artifact_type": "fault_set",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_fault_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "09607c715f4e1ae43b921a003bde6cd9be74b0743ef0406858a0f457a5380b5c",
+      "lease": null,
+      "output_fingerprint": "b33cee58d2721b86b8f20ce2457b76a3c8f7366fa8190688b25f8584ff850412",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_oracle_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.848172+00:00",
+      "definition": {
+        "agent_role": "oracle_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_test_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_tests"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_oracle",
+        "output_artifact_type": "oracle",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_oracle_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "f82446bb3459d54fc4e6cbeda09514a76ff1ee6593e6c40b937cbff92792c216",
+      "lease": null,
+      "output_fingerprint": "5affea54551f68fc1b2e1b4814ac780d9c0c50dbded66d4f6a891c447808d1fe",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_safety_reviewer_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:08.015089+00:00",
+      "definition": {
+        "agent_role": "safety_reviewer_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_topology_agent",
+          "boundary_cascading_compound_bundle_software_agent",
+          "boundary_cascading_compound_bundle_service_agent",
+          "boundary_cascading_compound_bundle_workload_agent",
+          "boundary_cascading_compound_bundle_fault_agent",
+          "boundary_cascading_compound_bundle_test_agent",
+          "boundary_cascading_compound_bundle_oracle_agent",
+          "boundary_cascading_compound_bundle_scoring_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_topology",
+          "boundary_cascading_compound_bundle_software",
+          "boundary_cascading_compound_bundle_services",
+          "boundary_cascading_compound_bundle_workloads",
+          "boundary_cascading_compound_bundle_faults",
+          "boundary_cascading_compound_bundle_tests",
+          "boundary_cascading_compound_bundle_oracle",
+          "boundary_cascading_compound_bundle_scoring"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_blind_policy",
+        "output_artifact_type": "blind_policy",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_safety_reviewer_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "bbf08a527dd1327fbbd433faf1d9c17d25defb33cec6320263cff6017ebb4e43",
+      "lease": null,
+      "output_fingerprint": "9e1d7127de44e4e1d12daeafbea51f15de02048deee08c1db9c3fff69080cd18",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_scoring_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.948122+00:00",
+      "definition": {
+        "agent_role": "scoring_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_test_agent",
+          "boundary_cascading_compound_bundle_oracle_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_tests",
+          "boundary_cascading_compound_bundle_oracle"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_scoring",
+        "output_artifact_type": "scoring",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_scoring_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "010a09ac97706839e536c92707e672613fca40c69644efda7b28d2043f4e20f8",
+      "lease": null,
+      "output_fingerprint": "04488a3f4a46f61f16d9c05731b683a5bdc658e36a367324f08a83ed770b7365",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_service_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.641276+00:00",
+      "definition": {
+        "agent_role": "service_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_topology_agent",
+          "boundary_cascading_compound_bundle_software_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_topology",
+          "boundary_cascading_compound_bundle_software"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_services",
+        "output_artifact_type": "service",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_service_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "a04e754b49f334938e42bcc1d3f594dc325a67c84e42d816f31be2365cb676c3",
+      "lease": null,
+      "output_fingerprint": "e88d213dda654287177fc55a81d58d595e6aab68b229da2b5f774f735c62c296",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_software_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.563315+00:00",
+      "definition": {
+        "agent_role": "software_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_topology_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_topology"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_software",
+        "output_artifact_type": "software",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_software_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "aec8b4dc9a9b468fe867db3727f697369a2ab976c462eb0a67f7801e380fa74e",
+      "lease": null,
+      "output_fingerprint": "31c3c923246ac65d1e00151296ea3986d7c2238cfcd7c46fe8ad0c637970fe24",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_test_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.792200+00:00",
+      "definition": {
+        "agent_role": "test_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_topology_agent",
+          "boundary_cascading_compound_bundle_service_agent",
+          "boundary_cascading_compound_bundle_workload_agent",
+          "boundary_cascading_compound_bundle_fault_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_topology",
+          "boundary_cascading_compound_bundle_services",
+          "boundary_cascading_compound_bundle_workloads",
+          "boundary_cascading_compound_bundle_faults"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_tests",
+        "output_artifact_type": "test",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_test_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "d1d66454a9eaff2bc154d78a16a27ec71f5e9152d3019ec4bc736a24251b4855",
+      "lease": null,
+      "output_fingerprint": "c5af2cc34bb7ad2540cedc81256b950516f62d43de26b43b61b64a6e8b72ad90",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_topology_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.483355+00:00",
+      "definition": {
+        "agent_role": "topology_agent",
+        "dependencies": [],
+        "input_artifacts": [],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_topology",
+        "output_artifact_type": "topology_ref",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_topology_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "d41d37c5d40afa5594d23a762e41ea17ae690e718d2f49a39241952ce8960495",
+      "lease": null,
+      "output_fingerprint": "c16a71c2a5a646951c86296797dbd0a929f43dba067e20f060ddec7058b38b73",
+      "status": "complete"
+    },
+    "boundary_cascading_compound_bundle_workload_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:27:07.686253+00:00",
+      "definition": {
+        "agent_role": "workload_agent",
+        "dependencies": [
+          "boundary_cascading_compound_bundle_topology_agent",
+          "boundary_cascading_compound_bundle_service_agent"
+        ],
+        "input_artifacts": [
+          "boundary_cascading_compound_bundle_topology",
+          "boundary_cascading_compound_bundle_services"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_cascading_compound_bundle_workloads",
+        "output_artifact_type": "workload",
+        "parameters": {
+          "request_fingerprint": "ede35c49200c02232b2a87525f636e81274c39db3718acbd856408d6d6aeb9d4",
+          "request_id": "boundary_cascading_compound_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_cascading_compound_bundle_workload_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "249de1dcdaab725fdc1266bb0beb50dcd6c22eeeb43f00e0dc67d3982bfe870f",
+      "lease": null,
+      "output_fingerprint": "56e5d93a9d38e9d1d577ff4c7673592adc23d4e71a9b24120aaca3a979ba58e2",
+      "status": "complete"
+    }
+  },
+  "updated_at": "2026-08-25T18:27:08.015089+00:00"
+}

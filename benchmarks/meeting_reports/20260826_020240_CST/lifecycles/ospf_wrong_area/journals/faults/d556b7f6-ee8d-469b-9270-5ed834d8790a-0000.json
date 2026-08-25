@@ -1,0 +1,21 @@
+{
+  "actions": [
+    {
+      "action_id": "fault_01_bind9",
+      "cleanup_exit": 0,
+      "cleanup_output": "BIRD 2.17.2 ready.\nReading configuration from /etc/bird/bird.conf\nReconfigured\n",
+      "expires_at": "",
+      "recovery_check_exit": 1,
+      "recovery_verified": true,
+      "snapshot": "08d073da345aa599e39002358b567ad45af17ec41385ca1586706203b71cb164  /etc/bird/bird.conf\n",
+      "snapshot_exit": 0,
+      "status": "recovered"
+    }
+  ],
+  "created_at": "2026-08-25T18:12:46.900795+00:00",
+  "execution_id": "d556b7f6-ee8d-469b-9270-5ed834d8790a-0000",
+  "plan_fingerprint": "60a59e337ca64d41f928d565a0e8d03068b9d6421c2048ea7960ce86d4b60eab",
+  "schema_version": 1,
+  "status": "recovered",
+  "updated_at": "2026-08-25T18:12:55.408046+00:00"
+}

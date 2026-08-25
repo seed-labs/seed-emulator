@@ -1,0 +1,18 @@
+{
+  "artifact_ids": [
+    "boundary_cascading_compound_bundle_topology",
+    "boundary_cascading_compound_bundle_software",
+    "boundary_cascading_compound_bundle_services",
+    "boundary_cascading_compound_bundle_workloads",
+    "boundary_cascading_compound_bundle_faults",
+    "boundary_cascading_compound_bundle_tests",
+    "boundary_cascading_compound_bundle_oracle",
+    "boundary_cascading_compound_bundle_scoring",
+    "boundary_cascading_compound_bundle_blind_policy",
+    "boundary_cascading_compound_bundle_lifecycle"
+  ],
+  "benchmark_id": "boundary_cascading_compound_bundle",
+  "enabled": false,
+  "schema_version": 1,
+  "seed": "boundary-cascading-compound-v1"
+}

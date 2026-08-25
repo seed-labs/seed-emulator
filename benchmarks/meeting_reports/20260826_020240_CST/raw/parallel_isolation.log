@@ -1,0 +1,19 @@
+{
+  "parallel_sessions": [
+    {
+      "request_id": "boundary_docker_network_bundle",
+      "compose_project": "bndl-boundary-docker-network-bundle-30e41ec3fe",
+      "runtime_containers": 8,
+      "qualified": true,
+      "cleanup_verified": true
+    },
+    {
+      "request_id": "boundary_cascading_compound_bundle",
+      "compose_project": "bndl-boundary-cascading-compound-bundle-0b42ef4548",
+      "runtime_containers": 8,
+      "qualified": true,
+      "cleanup_verified": true
+    }
+  ],
+  "zero_residue": true
+}

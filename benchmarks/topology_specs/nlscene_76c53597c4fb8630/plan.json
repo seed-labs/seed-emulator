@@ -1,0 +1,213 @@
+{
+  "autonomous_systems": [
+    {
+      "asn": 64512,
+      "host_addresses": [
+        "10.0.0.3",
+        "10.0.0.4"
+      ],
+      "index": 0,
+      "lan_prefix": "10.0.0.0/24",
+      "loopback_address": "100.64.0.1",
+      "router_address": "10.0.0.2"
+    },
+    {
+      "asn": 64513,
+      "host_addresses": [
+        "10.0.1.3",
+        "10.0.1.4"
+      ],
+      "index": 1,
+      "lan_prefix": "10.0.1.0/24",
+      "loopback_address": "100.64.0.2",
+      "router_address": "10.0.1.2"
+    },
+    {
+      "asn": 64514,
+      "host_addresses": [
+        "10.0.2.3",
+        "10.0.2.4"
+      ],
+      "index": 2,
+      "lan_prefix": "10.0.2.0/24",
+      "loopback_address": "100.64.0.3",
+      "router_address": "10.0.2.2"
+    },
+    {
+      "asn": 64515,
+      "host_addresses": [
+        "10.0.3.3",
+        "10.0.3.4"
+      ],
+      "index": 3,
+      "lan_prefix": "10.0.3.0/24",
+      "loopback_address": "100.64.0.4",
+      "router_address": "10.0.3.2"
+    },
+    {
+      "asn": 64516,
+      "host_addresses": [
+        "10.0.4.3",
+        "10.0.4.4"
+      ],
+      "index": 4,
+      "lan_prefix": "10.0.4.0/24",
+      "loopback_address": "100.64.0.5",
+      "router_address": "10.0.4.2"
+    },
+    {
+      "asn": 64517,
+      "host_addresses": [
+        "10.0.5.3",
+        "10.0.5.4"
+      ],
+      "index": 5,
+      "lan_prefix": "10.0.5.0/24",
+      "loopback_address": "100.64.0.6",
+      "router_address": "10.0.5.2"
+    }
+  ],
+  "edge_policy": "ring",
+  "external_links": [
+    {
+      "index": 0,
+      "ix_id": 1000,
+      "left_address": "172.16.0.2",
+      "left_asn": 64512,
+      "prefix": "172.16.0.0/24",
+      "right_address": "172.16.0.3",
+      "right_asn": 64513
+    },
+    {
+      "index": 1,
+      "ix_id": 1001,
+      "left_address": "172.16.1.2",
+      "left_asn": 64512,
+      "prefix": "172.16.1.0/24",
+      "right_address": "172.16.1.3",
+      "right_asn": 64517
+    },
+    {
+      "index": 2,
+      "ix_id": 1002,
+      "left_address": "172.16.2.2",
+      "left_asn": 64513,
+      "prefix": "172.16.2.0/24",
+      "right_address": "172.16.2.3",
+      "right_asn": 64514
+    },
+    {
+      "index": 3,
+      "ix_id": 1003,
+      "left_address": "172.16.3.2",
+      "left_asn": 64514,
+      "prefix": "172.16.3.0/24",
+      "right_address": "172.16.3.3",
+      "right_asn": 64515
+    },
+    {
+      "index": 4,
+      "ix_id": 1004,
+      "left_address": "172.16.4.2",
+      "left_asn": 64515,
+      "prefix": "172.16.4.0/24",
+      "right_address": "172.16.4.3",
+      "right_asn": 64516
+    },
+    {
+      "index": 5,
+      "ix_id": 1005,
+      "left_address": "172.16.5.2",
+      "left_asn": 64516,
+      "prefix": "172.16.5.0/24",
+      "right_address": "172.16.5.3",
+      "right_asn": 64517
+    }
+  ],
+  "fingerprint": "cc9000f4f783e61116a1cebc3adf0aacd4181a741e51d3b64286fcf973ae98fd",
+  "generator_version": "1.0.0",
+  "master_seed": "demo-mimo-dns-6as-v1",
+  "platform": "amd",
+  "request": {
+    "as_count": 6,
+    "asn_start": 64512,
+    "budget": {
+      "max_ases": 6,
+      "max_containers": 20,
+      "max_cpu_cores": 1.2,
+      "max_links": 6,
+      "max_memory_mb": 1536,
+      "max_networks": 12
+    },
+    "edge_policy": "ring",
+    "explicit_edges": [],
+    "extra_links": 0,
+    "hosts_per_as": 2,
+    "ix_pool": "172.16.0.0/12",
+    "ix_prefixlen": 24,
+    "lan_pool": "10.0.0.0/8",
+    "lan_prefixlen": 24,
+    "loopback_pool": "100.64.0.0/10",
+    "master_seed": "demo-mimo-dns-6as-v1",
+    "platform": "amd",
+    "software": [
+      {
+        "capabilities": [
+          "dns.bind9.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "bind9",
+          "dnsutils"
+        ],
+        "schema_version": 1,
+        "software_id": "bind9",
+        "target_asns": [
+          64512
+        ],
+        "target_nodes": [
+          "host0"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "observer.network.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "curl",
+          "dnsutils",
+          "netcat-openbsd"
+        ],
+        "schema_version": 1,
+        "software_id": "curl_tools",
+        "target_asns": [
+          64517
+        ],
+        "target_nodes": [
+          "host1"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      }
+    ],
+    "topology_id": "nlscene_76c53597c4fb8630"
+  },
+  "resource_estimate": {
+    "ases": 6,
+    "containers": 20,
+    "cpu_cores": 1.2,
+    "links": 6,
+    "memory_mb": 1536,
+    "networks": 12
+  },
+  "schema_version": 1,
+  "topology_id": "nlscene_76c53597c4fb8630",
+  "topology_name": "DECLARATIVE_nlscene_76c53597c4fb8630"
+}

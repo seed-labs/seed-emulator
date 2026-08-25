@@ -1,0 +1,53 @@
+{
+  "artifact_fingerprint": "9cde71172f6fdf673e6da87ea651951378f58e228c7ddb7d67c1e02bd018ce9e",
+  "artifact_id": "mimo_dns_6as_lifecycle_20260825_faults",
+  "artifact_type": "fault_set",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "7c37dede90bf54de0b03a9b55b16aa171553f61a2d3bb6bb1b2b0d34c18163ff",
+    "9168e14465b5d27c0bc5db5e381ba7ffabc53d760dcdbdaaa78c91ebd0bebb1f",
+    "3c1668ee55fa06afc98df2681062b299e2cf2192ec688cc5c853562851c02526"
+  ],
+  "payload": {
+    "faults": [
+      {
+        "depends_on": [],
+        "expectations": {
+          "must_break": [
+            "bind9_dns_nameserver_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_01_bind9",
+        "fault_type": "dns.nameserver",
+        "parameters": {
+          "bad_nameserver": "192.0.2.5",
+          "expected_nameserver": "127.0.0.11"
+        },
+        "safety": {
+          "max_affected_asns": 1,
+          "max_affected_assets": 1,
+          "protected_assets": [
+            "bndl-mimo-dns-6as-lifecycle-20260825-0a6128e31a-hnode_64517_host1-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "demo-mimo-dns-6as-v1:bind9:0",
+        "selector": {
+          "container": "bndl-mimo-dns-6as-lifecycle-20260825-0a6128e31a-hnode_64512_host0-1"
+        }
+      }
+    ],
+    "relationship": "single"
+  },
+  "producer": "fault_agent",
+  "schema_version": 1,
+  "warnings": []
+}

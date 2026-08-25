@@ -1,0 +1,287 @@
+{
+  "created_at": "2026-08-25T18:13:49.563110+00:00",
+  "definition_fingerprint": "e0232f9ad0cb74f211d1e8924ae75886aba9ded466cafde6540a877be8eb90af",
+  "result": "complete",
+  "schema_version": 1,
+  "tasks": {
+    "boundary_docker_network_bundle_fault_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.817237+00:00",
+      "definition": {
+        "agent_role": "fault_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_topology_agent",
+          "boundary_docker_network_bundle_service_agent",
+          "boundary_docker_network_bundle_workload_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_topology",
+          "boundary_docker_network_bundle_services",
+          "boundary_docker_network_bundle_workloads"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_faults",
+        "output_artifact_type": "fault_set",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_fault_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "7299401ebfe2d90075a5abd92a6a838ddeb10e806bae534177a554ed880b859b",
+      "lease": null,
+      "output_fingerprint": "907e18e154e7cbcc1d1bc75cfa8ab7d8586b4737c09981e300124179bb1ae2fa",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_oracle_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.984321+00:00",
+      "definition": {
+        "agent_role": "oracle_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_test_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_tests"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_oracle",
+        "output_artifact_type": "oracle",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_oracle_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "2f10b72bf917a2b5cd0f0b2dac26166f33c58db25e00911f31fa7e082cc1d4e5",
+      "lease": null,
+      "output_fingerprint": "09f3397c209255065c491bf68df7743d0389bdaf124427ddf6cad6d7b20a90f4",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_safety_reviewer_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:50.263460+00:00",
+      "definition": {
+        "agent_role": "safety_reviewer_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_topology_agent",
+          "boundary_docker_network_bundle_software_agent",
+          "boundary_docker_network_bundle_service_agent",
+          "boundary_docker_network_bundle_workload_agent",
+          "boundary_docker_network_bundle_fault_agent",
+          "boundary_docker_network_bundle_test_agent",
+          "boundary_docker_network_bundle_oracle_agent",
+          "boundary_docker_network_bundle_scoring_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_topology",
+          "boundary_docker_network_bundle_software",
+          "boundary_docker_network_bundle_services",
+          "boundary_docker_network_bundle_workloads",
+          "boundary_docker_network_bundle_faults",
+          "boundary_docker_network_bundle_tests",
+          "boundary_docker_network_bundle_oracle",
+          "boundary_docker_network_bundle_scoring"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_blind_policy",
+        "output_artifact_type": "blind_policy",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_safety_reviewer_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "f04459c5c45a24169fa523106db4980bc1c9895f46e670069ebc092f133647ff",
+      "lease": null,
+      "output_fingerprint": "7eb3b1ef8c9db4636033615079db09dd444225817ef406ba57dcca3b9a1e0589",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_scoring_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:50.079368+00:00",
+      "definition": {
+        "agent_role": "scoring_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_test_agent",
+          "boundary_docker_network_bundle_oracle_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_tests",
+          "boundary_docker_network_bundle_oracle"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_scoring",
+        "output_artifact_type": "scoring",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_scoring_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "6aa367188519f86364e64b88f44059ff746befe18d7ef38d8d7bd14a9fcba25b",
+      "lease": null,
+      "output_fingerprint": "746c0d7df849f586ce58b7bf7a205e171bcdd606b2b35fb8251b7a9b04eb0292",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_service_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.712185+00:00",
+      "definition": {
+        "agent_role": "service_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_topology_agent",
+          "boundary_docker_network_bundle_software_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_topology",
+          "boundary_docker_network_bundle_software"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_services",
+        "output_artifact_type": "service",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_service_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "81284a2c6f9597fee5d791bfbe0834bded843cf964413019b1a31c3e31101c3d",
+      "lease": null,
+      "output_fingerprint": "b563cdbcd3f59daca18cf4eb82fc9a3ccf640bb347a859d7455507b048ace158",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_software_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.669163+00:00",
+      "definition": {
+        "agent_role": "software_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_topology_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_topology"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_software",
+        "output_artifact_type": "software",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_software_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "307895a7efe24bc9bb2eadf6865af67aa0eea6ac1cbd0135002af2502762cfea",
+      "lease": null,
+      "output_fingerprint": "f1bd7b96ff1e246bd48eccb2978a26290e0eea81f026d905a331e18e4b0caa85",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_test_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.909283+00:00",
+      "definition": {
+        "agent_role": "test_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_topology_agent",
+          "boundary_docker_network_bundle_service_agent",
+          "boundary_docker_network_bundle_workload_agent",
+          "boundary_docker_network_bundle_fault_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_topology",
+          "boundary_docker_network_bundle_services",
+          "boundary_docker_network_bundle_workloads",
+          "boundary_docker_network_bundle_faults"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_tests",
+        "output_artifact_type": "test",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_test_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "11250d64c638ce55d0ad127b50c826a16a8b0dbadd3efc7f9eb026af2efbfb58",
+      "lease": null,
+      "output_fingerprint": "965eeb220ef06408c5093372f1dab0b13aecbf99a32282135c0bc876a152fd6d",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_topology_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.614136+00:00",
+      "definition": {
+        "agent_role": "topology_agent",
+        "dependencies": [],
+        "input_artifacts": [],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_topology",
+        "output_artifact_type": "topology_ref",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_topology_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "80678857468b85264ef28756681d5b4f8aa6cbd3fa8deaacfb9177be4bd6b21a",
+      "lease": null,
+      "output_fingerprint": "85ad8f5aac15e331ca205fd0a2369437cba0d756801e42295568c7dc45adad69",
+      "status": "complete"
+    },
+    "boundary_docker_network_bundle_workload_agent": {
+      "attempts": 1,
+      "completed_at": "2026-08-25T18:13:49.767212+00:00",
+      "definition": {
+        "agent_role": "workload_agent",
+        "dependencies": [
+          "boundary_docker_network_bundle_topology_agent",
+          "boundary_docker_network_bundle_service_agent"
+        ],
+        "input_artifacts": [
+          "boundary_docker_network_bundle_topology",
+          "boundary_docker_network_bundle_services"
+        ],
+        "max_attempts": 3,
+        "output_artifact_id": "boundary_docker_network_bundle_workloads",
+        "output_artifact_type": "workload",
+        "parameters": {
+          "request_fingerprint": "92085f1233b7dcdc23679ea4a61194b6d10c381f0c9f6958f861b49a45ebaf85",
+          "request_id": "boundary_docker_network_bundle"
+        },
+        "schema_version": 1,
+        "task_id": "boundary_docker_network_bundle_workload_agent",
+        "timeout_seconds": 600
+      },
+      "error": "",
+      "input_fingerprint": "e8acf068255a8913bba9d6b0e565368c79e80a75f7c3fa551a656188df80668f",
+      "lease": null,
+      "output_fingerprint": "58ba8f8fe5671db87a6e1d7a84f434063018fcdb4cb3b9a2c5f675fc54dc513e",
+      "status": "complete"
+    }
+  },
+  "updated_at": "2026-08-25T18:13:50.263460+00:00"
+}

@@ -1,0 +1,145 @@
+{
+  "artifact_fingerprint": "ec3b16ee738b003c799d53c92e838ca30ad3a465abbac4f78b469fbfbbc89dd0",
+  "artifact_id": "boundary_software_config_bundle_tests",
+  "artifact_type": "test",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "208439fac4c8f018f13910abac0afbc97946a3b186d9396620f7d1dbf1de52fd",
+    "64e72c16d89557e6bc69cbc84518670692fb846bfcfd3120b98b45b61bded8a2",
+    "b4035411785c8caa0a5809f174fbc6269f187ad462b3930d829b637668bc33b8",
+    "935d1da8f1462688d73be10509db95792095e3808925598c481076dd9eb30f17"
+  ],
+  "payload": {
+    "tests": [
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_healthy",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.146.242.4"
+        },
+        "phase": "baseline",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+        },
+        "test_id": "baseline_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.146.242.4"
+        },
+        "phase": "active",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+        },
+        "test_id": "active_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "equals",
+          "value": "true"
+        },
+        "driver": "probe.container",
+        "expectation_id": "observer_availability",
+        "parameters": {},
+        "phase": "active",
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+        },
+        "test_id": "active_observer"
+      },
+      {
+        "assertion": {
+          "kind": "exit_code",
+          "value": 0
+        },
+        "driver": "probe.dns",
+        "expectation_id": "bind9_availability",
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.146.242.4"
+        },
+        "phase": "recovery",
+        "retries": 5,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+        },
+        "test_id": "recovery_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "contains",
+          "value": "mode=healthy"
+        },
+        "driver": "probe.file",
+        "expectation_id": "fault_01_bind9_healthy",
+        "parameters": {
+          "path": "/etc/jq/benchmark.conf"
+        },
+        "phase": "baseline",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1"
+        },
+        "test_id": "baseline_fault_01_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "contains",
+          "value": "mode=broken"
+        },
+        "driver": "probe.file",
+        "expectation_id": "bind9_software_config_replace_effect",
+        "parameters": {
+          "path": "/etc/jq/benchmark.conf"
+        },
+        "phase": "active",
+        "retries": 1,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1"
+        },
+        "test_id": "active_fault_01_bind9"
+      },
+      {
+        "assertion": {
+          "kind": "contains",
+          "value": "mode=healthy"
+        },
+        "driver": "probe.file",
+        "expectation_id": "bind9_software_config_replace_effect",
+        "parameters": {
+          "path": "/etc/jq/benchmark.conf"
+        },
+        "phase": "recovery",
+        "retries": 5,
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1"
+        },
+        "test_id": "recovery_fault_01_bind9"
+      }
+    ]
+  },
+  "producer": "test_agent",
+  "schema_version": 1,
+  "warnings": []
+}

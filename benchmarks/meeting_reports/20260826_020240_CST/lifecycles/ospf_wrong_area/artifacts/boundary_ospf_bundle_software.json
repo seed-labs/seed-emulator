@@ -1,0 +1,18 @@
+{
+  "artifact_fingerprint": "fb1fc3555c6de5edecb207e7caef23141ef88b06f28789cb9e288ec73043a141",
+  "artifact_id": "boundary_ospf_bundle_software",
+  "artifact_type": "software",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "772150b605d9b37af13bc3f7c9df5dacc9e19e4e618c3693579fa325978a4ab0"
+  ],
+  "payload": {
+    "required_software": [
+      "bind9",
+      "curl_tools"
+    ]
+  },
+  "producer": "software_agent",
+  "schema_version": 1,
+  "warnings": []
+}

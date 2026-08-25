@@ -1,0 +1,201 @@
+{
+  "tasks": [
+    {
+      "agent_role": "topology_agent",
+      "dependencies": [],
+      "input_artifacts": [],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_topology",
+      "output_artifact_type": "topology_ref",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_topology_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "software_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_topology_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_topology"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_software",
+      "output_artifact_type": "software",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_software_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "service_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_topology_agent",
+        "mimo_dns_6as_lifecycle_20260825_software_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_topology",
+        "mimo_dns_6as_lifecycle_20260825_software"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_services",
+      "output_artifact_type": "service",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_service_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "workload_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_topology_agent",
+        "mimo_dns_6as_lifecycle_20260825_service_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_topology",
+        "mimo_dns_6as_lifecycle_20260825_services"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_workloads",
+      "output_artifact_type": "workload",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_workload_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "fault_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_topology_agent",
+        "mimo_dns_6as_lifecycle_20260825_service_agent",
+        "mimo_dns_6as_lifecycle_20260825_workload_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_topology",
+        "mimo_dns_6as_lifecycle_20260825_services",
+        "mimo_dns_6as_lifecycle_20260825_workloads"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_faults",
+      "output_artifact_type": "fault_set",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_fault_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "test_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_topology_agent",
+        "mimo_dns_6as_lifecycle_20260825_service_agent",
+        "mimo_dns_6as_lifecycle_20260825_workload_agent",
+        "mimo_dns_6as_lifecycle_20260825_fault_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_topology",
+        "mimo_dns_6as_lifecycle_20260825_services",
+        "mimo_dns_6as_lifecycle_20260825_workloads",
+        "mimo_dns_6as_lifecycle_20260825_faults"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_tests",
+      "output_artifact_type": "test",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_test_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "oracle_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_test_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_tests"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_oracle",
+      "output_artifact_type": "oracle",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_oracle_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "scoring_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_test_agent",
+        "mimo_dns_6as_lifecycle_20260825_oracle_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_tests",
+        "mimo_dns_6as_lifecycle_20260825_oracle"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_scoring",
+      "output_artifact_type": "scoring",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_scoring_agent",
+      "timeout_seconds": 600
+    },
+    {
+      "agent_role": "safety_reviewer_agent",
+      "dependencies": [
+        "mimo_dns_6as_lifecycle_20260825_topology_agent",
+        "mimo_dns_6as_lifecycle_20260825_software_agent",
+        "mimo_dns_6as_lifecycle_20260825_service_agent",
+        "mimo_dns_6as_lifecycle_20260825_workload_agent",
+        "mimo_dns_6as_lifecycle_20260825_fault_agent",
+        "mimo_dns_6as_lifecycle_20260825_test_agent",
+        "mimo_dns_6as_lifecycle_20260825_oracle_agent",
+        "mimo_dns_6as_lifecycle_20260825_scoring_agent"
+      ],
+      "input_artifacts": [
+        "mimo_dns_6as_lifecycle_20260825_topology",
+        "mimo_dns_6as_lifecycle_20260825_software",
+        "mimo_dns_6as_lifecycle_20260825_services",
+        "mimo_dns_6as_lifecycle_20260825_workloads",
+        "mimo_dns_6as_lifecycle_20260825_faults",
+        "mimo_dns_6as_lifecycle_20260825_tests",
+        "mimo_dns_6as_lifecycle_20260825_oracle",
+        "mimo_dns_6as_lifecycle_20260825_scoring"
+      ],
+      "max_attempts": 3,
+      "output_artifact_id": "mimo_dns_6as_lifecycle_20260825_blind_policy",
+      "output_artifact_type": "blind_policy",
+      "parameters": {
+        "request_fingerprint": "837f73a7c5a87fa7748406235f9afc88f9fe75599d447db5cc9ee9f1827b5d9c",
+        "request_id": "mimo_dns_6as_lifecycle_20260825"
+      },
+      "schema_version": 1,
+      "task_id": "mimo_dns_6as_lifecycle_20260825_safety_reviewer_agent",
+      "timeout_seconds": 600
+    }
+  ]
+}

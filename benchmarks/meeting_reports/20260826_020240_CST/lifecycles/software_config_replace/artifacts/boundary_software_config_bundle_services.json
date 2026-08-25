@@ -1,0 +1,42 @@
+{
+  "artifact_fingerprint": "64e72c16d89557e6bc69cbc84518670692fb846bfcfd3120b98b45b61bded8a2",
+  "artifact_id": "boundary_software_config_bundle_services",
+  "artifact_type": "service",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "208439fac4c8f018f13910abac0afbc97946a3b186d9396620f7d1dbf1de52fd",
+    "dd8ae1eceb1d610e6956c97001117228a471a77f89e53fc4aff09ec61eec5c96"
+  ],
+  "payload": {
+    "services": [
+      {
+        "capabilities_required": [
+          "dns.bind9.v1"
+        ],
+        "driver": "service.process",
+        "parameters": {
+          "health_argv": [
+            "rndc",
+            "status"
+          ],
+          "start_argv": [
+            "service",
+            "named",
+            "start"
+          ]
+        },
+        "ports": [
+          53
+        ],
+        "schema_version": 1,
+        "selector": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1"
+        },
+        "service_id": "bind9_service"
+      }
+    ]
+  },
+  "producer": "service_agent",
+  "schema_version": 1,
+  "warnings": []
+}

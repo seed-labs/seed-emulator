@@ -1,0 +1,350 @@
+{
+  "base_compose_project": "decl_bundle_boundary_validation",
+  "cleanup_verified": true,
+  "commands": [
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "label=com.docker.compose.project=bndl-boundary-software-config-bundle-109d6f2c72",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:15:15.196906+00:00",
+      "output": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "network",
+        "ls",
+        "-q"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:15:15.594104+00:00",
+      "output": "e32b4b9bfddc\ne7c981c601cd\n5a1caf5c9726\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "network",
+        "inspect",
+        "e32b4b9bfddc",
+        "e7c981c601cd",
+        "5a1caf5c9726"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:15:15.990302+00:00",
+      "output": "[\n    {\n        \"Name\": \"bridge\",\n        \"Id\": \"e32b4b9bfddca5eda8bb9be59b8dec1c3aae84fe99ac8d87a1a404b3319f1646\",\n        \"Created\": \"2026-08-15T17:08:56.41+08:00\",\n        \"Scope\": \"local\",\n        \"Driver\": \"bridge\",\n        \"EnableIPv4\": true,\n        \"EnableIPv6\": false,\n        \"IPAM\": {\n            \"Driver\": \"default\",\n            \"Options\": null,\n            \"Config\": [\n                {\n                    \"Subnet\": \"172.17.0.0/16\",\n                    \"Gateway\": \"172.17.0.1\"\n                }\n            ]\n        },\n        \"Internal\": false,\n        \"Attachable\": false,\n        \"Ingress\": false,\n        \"ConfigFrom\": {\n            \"Network\": \"\"\n        },\n        \"ConfigOnly\": false,\n        \"Options\": {\n            \"com.docker.network.bridge.default_bridge\": \"true\",\n            \"com.docker.network.bridge.enable_icc\": \"true\",\n            \"com.docker.network.bridge.enable_ip_masquerade\": \"true\",\n            \"com.docker.network.bridge.host_binding_ipv4\": \"0.0.0.0\",\n            \"com.docker.network.bridge.name\": \"docker0\",\n            \"com.docker.network.driver.mtu\": \"1500\"\n        },\n        \"Labels\": {},\n        \"Containers\": {},\n        \"Status\": {\n            \"IPAM\": {\n                \"Subnets\": {\n                    \"172.17.0.0/16\": {\n                        \"IPsInUse\": 3,\n                        \"DynamicIPsAvailable\": 65533\n                    }\n                }\n            }\n        }\n    },\n    {\n        \"Name\": \"host\",\n        \"Id\": \"e7c981c601cd1bd07332e40e5cfa8eb3532e77303a7f781dc394f77b1adaa1fc\",\n        \"Created\": \"2026-07-07T03:09:05.76631682+08:00\",\n        \"Scope\": \"local\",\n        \"Driver\": \"host\",\n        \"EnableIPv4\": true,\n        \"EnableIPv6\": false,\n        \"IPAM\": {\n            \"Driver\": \"default\",\n            \"Options\": null,\n            \"Config\": null\n        },\n        \"Internal\": false,\n        \"Attachable\": false,\n        \"Ingress\": false,\n        \"ConfigFrom\": {\n            \"Network\": \"\"\n        },\n        \"ConfigOnly\": false,\n        \"Options\": {},\n        \"Labels\": {},\n        \"Containers\": {},\n        \"Status\": {\n            \"IPAM\": {}\n        }\n    },\n    {\n        \"Name\": \"none\",\n        \"Id\": \"5a1caf5c9726e057ed397cb2e0d63a4c5da1e49ec3ef8d35f4653d49fa57baac\",\n        \"Created\": \"2026-07-07T03:09:05.757962418+08:00\",\n        \"Scope\": \"local\",\n        \"Driver\": \"null\",\n        \"EnableIPv4\": true,\n        \"EnableIPv6\": false,\n        \"IPAM\": {\n            \"Driver\": \"default\",\n            \"Options\": null,\n            \"Config\": null\n        },\n        \"Internal\": false,\n        \"Attachable\": false,\n        \"Ingress\": false,\n        \"ConfigFrom\": {\n            \"Network\": \"\"\n        },\n        \"ConfigOnly\": false,\n        \"Options\": {},\n        \"Labels\": {},\n        \"Containers\": {},\n        \"Status\": {\n            \"IPAM\": {}\n        }\n    }\n]\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "--project-name",
+        "bndl-boundary-software-config-bundle-109d6f2c72",
+        "--file",
+        "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_config_replace/runtime_context/docker-compose.yml",
+        "up",
+        "-d",
+        "--build",
+        "--remove-orphans"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:24.166210+00:00",
+      "output": "dary-software-config-bundle-109d6f2c72_net_64512_lan0 Creating \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64512_lan0 Created \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64513_lan0 Creating \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64513_lan0 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Creating \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Created \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Starting \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Started \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Started \n"
+    },
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "label=com.docker.compose.project=bndl-boundary-software-config-bundle-109d6f2c72",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:24.981802+00:00",
+      "output": "4754d05de7ac\n65d5244d9fbc\ne554ec4f957a\ndec4ec22fa27\n4110bb776ad3\n8a796627071e\nc65e103f1b5a\n5f55f235f66b\neff5b11bb967\n6e3ef42b312f\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "4754d05de7ac"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:25.418583+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1|sha256:1f052f3de7b207571ca22ece859f9bddc017c8b08c32089d2b8dc4e033d954b0|bndl-boundary-software-config-bundle-109d6f2c72|brdnode_64512_router0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "65d5244d9fbc"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:26.204190+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1|sha256:d456e74297b2679a44209cce58189694de211c047be3b4bfdf83f5fdf2607a88|bndl-boundary-software-config-bundle-109d6f2c72|hnode_64512_host0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "e554ec4f957a"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:26.691946+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1|sha256:bef9c50510643b20c4d0611c2499bc2c0dcfc2e9fbd849fce242478647a2afb2|bndl-boundary-software-config-bundle-109d6f2c72|brdnode_64513_router0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "dec4ec22fa27"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:27.109737+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1|sha256:ef3198657e8c044f7163dc11320906ad81850b109f9e8723a70155659e720532|bndl-boundary-software-config-bundle-109d6f2c72|hnode_64512_host1\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "4110bb776ad3"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:27.520532+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1|sha256:dddac91fdc429276fecf300baf84791de32bc45877fccd6a1c24afad5abfce15|bndl-boundary-software-config-bundle-109d6f2c72|hnode_64512_host2\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "8a796627071e"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:28.453065+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1|sha256:80d29e75aa45d7b034afd7e8c53c8559da916b980d2944a12ca0cb92999d1ba5|bndl-boundary-software-config-bundle-109d6f2c72|hnode_64513_host1\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "c65e103f1b5a"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:29.068757+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1|sha256:b2a1232f1a96d33a2ed7c88e69d8c2af5c49651efc989457c0d903a61f051205|bndl-boundary-software-config-bundle-109d6f2c72|hnode_64513_host2\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "5f55f235f66b"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:29.624479+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1|sha256:809ab2e4cd9f71aa9e577d694cdb7b983278610be425c2b50f7e248d50fb42ca|bndl-boundary-software-config-bundle-109d6f2c72|hnode_64513_host0\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "eff5b11bb967"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:30.708937+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1|sha256:9b3e0ebde5dc9048c18f9a165b01ad309942e4545861d5848cdd302382feef20|bndl-boundary-software-config-bundle-109d6f2c72|072d7840db6a44d06e5c5fd4d7ea8a7d\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}",
+        "6e3ef42b312f"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:16:31.143719+00:00",
+      "output": "/bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1|sha256:7242d756091c8b9e1a91242c49402e8a328a351b843c09b4c8e59bdd376d4d11|bndl-boundary-software-config-bundle-109d6f2c72|ad739b7b201eccafa592110d2bf214a7\n"
+    },
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "--project-name",
+        "bndl-boundary-software-config-bundle-109d6f2c72",
+        "--file",
+        "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_config_replace/runtime_context/docker-compose.yml",
+        "down",
+        "--remove-orphans",
+        "--volumes"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:36.985782+00:00",
+      "output": "2-hnode_64513_host1-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Stopping \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Stopped \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Removing \n Container bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1 Removed \n Container bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1 Removed \n Network bndl-boundary-software-config-bundle-109d6f2c72_default Removing \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64513_lan0 Removing \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64512_lan0 Removing \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_ix_ix1000 Removing \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64513_lan0 Removed \n Network bndl-boundary-software-config-bundle-109d6f2c72_default Removed \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_64512_lan0 Removed \n Network bndl-boundary-software-config-bundle-109d6f2c72_net_ix_ix1000 Removed \n"
+    },
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "label=com.docker.compose.project=bndl-boundary-software-config-bundle-109d6f2c72",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-08-25T18:17:37.494527+00:00",
+      "output": ""
+    }
+  ],
+  "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+  "compose_sha256": "3c58756e33980e6b4c4a93863393d2575b02bc617459aa90fa1bc0aac6ca4d4f",
+  "container_rebindings": {
+    "as64512brd-router0-10.32.0.2": "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1",
+    "as64512h-host0-10.32.0.3": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1",
+    "as64512h-host1-10.32.0.4": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1",
+    "as64512h-host2-10.32.0.5": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1",
+    "as64513brd-router0-10.32.1.2": "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1",
+    "as64513h-host0-10.32.1.3": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1",
+    "as64513h-host1-10.32.1.4": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1",
+    "as64513h-host2-10.32.1.5": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+  },
+  "containers": [
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "4754d05de7ac",
+      "image_digest": "sha256:1f052f3de7b207571ca22ece859f9bddc017c8b08c32089d2b8dc4e033d954b0",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1",
+      "service": "brdnode_64512_router0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "65d5244d9fbc",
+      "image_digest": "sha256:d456e74297b2679a44209cce58189694de211c047be3b4bfdf83f5fdf2607a88",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1",
+      "service": "hnode_64512_host0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "e554ec4f957a",
+      "image_digest": "sha256:bef9c50510643b20c4d0611c2499bc2c0dcfc2e9fbd849fce242478647a2afb2",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1",
+      "service": "brdnode_64513_router0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "dec4ec22fa27",
+      "image_digest": "sha256:ef3198657e8c044f7163dc11320906ad81850b109f9e8723a70155659e720532",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1",
+      "service": "hnode_64512_host1"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "4110bb776ad3",
+      "image_digest": "sha256:dddac91fdc429276fecf300baf84791de32bc45877fccd6a1c24afad5abfce15",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1",
+      "service": "hnode_64512_host2"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "8a796627071e",
+      "image_digest": "sha256:80d29e75aa45d7b034afd7e8c53c8559da916b980d2944a12ca0cb92999d1ba5",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1",
+      "service": "hnode_64513_host1"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "c65e103f1b5a",
+      "image_digest": "sha256:b2a1232f1a96d33a2ed7c88e69d8c2af5c49651efc989457c0d903a61f051205",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1",
+      "service": "hnode_64513_host2"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "5f55f235f66b",
+      "image_digest": "sha256:809ab2e4cd9f71aa9e577d694cdb7b983278610be425c2b50f7e248d50fb42ca",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1",
+      "service": "hnode_64513_host0"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "eff5b11bb967",
+      "image_digest": "sha256:9b3e0ebde5dc9048c18f9a165b01ad309942e4545861d5848cdd302382feef20",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1",
+      "service": "072d7840db6a44d06e5c5fd4d7ea8a7d"
+    },
+    {
+      "compose_project": "bndl-boundary-software-config-bundle-109d6f2c72",
+      "id": "6e3ef42b312f",
+      "image_digest": "sha256:7242d756091c8b9e1a91242c49402e8a328a351b843c09b4c8e59bdd376d4d11",
+      "name": "bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1",
+      "service": "ad739b7b201eccafa592110d2bf214a7"
+    }
+  ],
+  "finished_at": "2026-08-25T18:17:37.549500+00:00",
+  "fixed_container_names_removed": 8,
+  "network_rebindings": {
+    "10.32.0.0/24": "10.146.242.0/24",
+    "10.32.1.0/24": "10.199.2.0/24",
+    "172.28.0.0/24": "10.251.182.0/24"
+  },
+  "peer_service_rebindings": {
+    "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1": "brdnode_64512_router0",
+    "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1": "brdnode_64513_router0",
+    "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1": "hnode_64512_host0",
+    "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1": "hnode_64512_host1",
+    "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1": "hnode_64512_host2",
+    "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1": "hnode_64513_host0",
+    "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1": "hnode_64513_host1",
+    "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1": "hnode_64513_host2"
+  },
+  "remaining_container_ids": [],
+  "request_id": "boundary_software_config_bundle",
+  "running_at": "2026-08-25T18:16:31.159711+00:00",
+  "runtime_compose_file": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_config_replace/runtime_context/docker-compose.yml",
+  "runtime_compose_removed": true,
+  "runtime_compose_sha256": "a7bd79166f540b37fd01220cb8a421d2770c37fecae813a42640164d3852bdf2",
+  "runtime_context_removed": true,
+  "schema_version": 1,
+  "service_containers": {
+    "072d7840db6a44d06e5c5fd4d7ea8a7d": "bndl-boundary-software-config-bundle-109d6f2c72-072d7840db6a44d06e5c5fd4d7ea8a7d-1",
+    "ad739b7b201eccafa592110d2bf214a7": "bndl-boundary-software-config-bundle-109d6f2c72-ad739b7b201eccafa592110d2bf214a7-1",
+    "brdnode_64512_router0": "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64512_router0-1",
+    "brdnode_64513_router0": "bndl-boundary-software-config-bundle-109d6f2c72-brdnode_64513_router0-1",
+    "hnode_64512_host0": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host0-1",
+    "hnode_64512_host1": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host1-1",
+    "hnode_64512_host2": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64512_host2-1",
+    "hnode_64513_host0": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host0-1",
+    "hnode_64513_host1": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host1-1",
+    "hnode_64513_host2": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+  },
+  "session_id": "109d6f2c72",
+  "started_at": "2026-08-25T18:15:14.659637+00:00",
+  "status": "cleaned",
+  "topology_id": "bundle_boundary_validation"
+}

@@ -1,0 +1,31 @@
+{
+  "artifact_fingerprint": "b4035411785c8caa0a5809f174fbc6269f187ad462b3930d829b637668bc33b8",
+  "artifact_id": "boundary_software_config_bundle_workloads",
+  "artifact_type": "workload",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "208439fac4c8f018f13910abac0afbc97946a3b186d9396620f7d1dbf1de52fd",
+    "64e72c16d89557e6bc69cbc84518670692fb846bfcfd3120b98b45b61bded8a2"
+  ],
+  "payload": {
+    "workloads": [
+      {
+        "driver": "workload.dns",
+        "duration_seconds": 1,
+        "parameters": {
+          "name": "service.pilot.test",
+          "server": "10.146.242.4"
+        },
+        "schema_version": 1,
+        "source": {
+          "container": "bndl-boundary-software-config-bundle-109d6f2c72-hnode_64513_host2-1"
+        },
+        "target_service": "bind9_service",
+        "workload_id": "bind9_workload"
+      }
+    ]
+  },
+  "producer": "workload_agent",
+  "schema_version": 1,
+  "warnings": []
+}

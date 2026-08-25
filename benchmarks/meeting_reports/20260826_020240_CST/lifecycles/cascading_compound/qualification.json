@@ -1,0 +1,23 @@
+{
+  "benchmark_id": "boundary_cascading_compound_bundle",
+  "bundle_fingerprint": "504e150f83ccd1fbf3d1038423cc783e5a42e5c3216a1c718bb0fe0d84304856",
+  "created_at": "2026-08-25T18:20:58.841643+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "minimum_independent_runs": 2,
+  "qualification_level": "formal",
+  "qualification_sha256": "e08380838e7e147ecec8206d2bb0745d4fc19bb5caa4e8be14dae76fc763cc97",
+  "receipts": [
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/cascading_compound/lifecycle_round_01.json",
+      "run_id": "be8c9c10-23d9-4ece-8c7f-961a6581fa42",
+      "sha256": "5b20fca1846475374b68eb3764067206370706b4cea08632ad60d4483e8339e8"
+    },
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/cascading_compound/lifecycle_round_02.json",
+      "run_id": "88e8fe55-d849-426f-a565-de440c096c35",
+      "sha256": "4ca1f749d109e9860d0e26b3576f7da00906d69dbe358442e1a2bed4d21a3779"
+    }
+  ],
+  "schema_version": 1,
+  "status": "qualified"
+}

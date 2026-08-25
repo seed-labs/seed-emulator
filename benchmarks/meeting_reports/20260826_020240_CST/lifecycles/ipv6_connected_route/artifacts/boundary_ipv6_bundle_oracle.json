@@ -1,0 +1,38 @@
+{
+  "artifact_fingerprint": "74771f6cabd32b66b6ff2793f6899c6f35fdfb277ff33b231c11cf80f1beaa08",
+  "artifact_id": "boundary_ipv6_bundle_oracle",
+  "artifact_type": "oracle",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "debabd2eab4d65b68c33ad9692f9f420495833d8f5124d1acd202212143a41c2"
+  ],
+  "payload": {
+    "oracles": [
+      {
+        "oracle_id": "generated_oracle_v1",
+        "phase_requirements": {
+          "active": [
+            "active_bind9",
+            "active_observer",
+            "active_fault_01_bind9"
+          ],
+          "recovery": [
+            "recovery_bind9",
+            "recovery_fault_01_bind9"
+          ]
+        },
+        "required_tests": [
+          "active_bind9",
+          "active_observer",
+          "active_fault_01_bind9",
+          "recovery_bind9",
+          "recovery_fault_01_bind9"
+        ],
+        "schema_version": 1
+      }
+    ]
+  },
+  "producer": "oracle_agent",
+  "schema_version": 1,
+  "warnings": []
+}

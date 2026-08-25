@@ -1,0 +1,10 @@
+{
+  "allowed": true,
+  "objective": {
+    "allowed": true,
+    "findings": []
+  },
+  "schema_version": 1,
+  "shell_or_docker_fields_representable": false,
+  "source_fingerprint_matches": true
+}

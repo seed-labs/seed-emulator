@@ -1,0 +1,56 @@
+{
+  "artifact_fingerprint": "907e18e154e7cbcc1d1bc75cfa8ab7d8586b4737c09981e300124179bb1ae2fa",
+  "artifact_id": "boundary_docker_network_bundle_faults",
+  "artifact_type": "fault_set",
+  "capabilities_required": [],
+  "input_fingerprints": [
+    "85ad8f5aac15e331ca205fd0a2369437cba0d756801e42295568c7dc45adad69",
+    "b563cdbcd3f59daca18cf4eb82fc9a3ccf640bb347a859d7455507b048ace158",
+    "58ba8f8fe5671db87a6e1d7a84f434063018fcdb4cb3b9a2c5f675fc54dc513e"
+  ],
+  "payload": {
+    "faults": [
+      {
+        "depends_on": [],
+        "expectations": {
+          "must_break": [
+            "bind9_docker_network_disconnected_effect"
+          ],
+          "must_preserve": [
+            "observer_availability"
+          ]
+        },
+        "fault_id": "fault_01_bind9",
+        "fault_type": "docker.network.disconnected",
+        "parameters": {
+          "bird_reconfigure": true,
+          "docker_network": "bndl-boundary-docker-network-bundle-ef33d88c64_net_ix_ix1000",
+          "interface": "ix1000",
+          "remove_interface": false,
+          "target_ip": "10.213.98.2"
+        },
+        "safety": {
+          "max_affected_asns": 1,
+          "max_affected_assets": 1,
+          "protected_assets": [
+            "bndl-boundary-docker-network-bundle-ef33d88c64-hnode_64513_host2-1"
+          ],
+          "require_recovery": true
+        },
+        "schedule": {
+          "at_seconds": 0,
+          "duration_seconds": 0
+        },
+        "schema_version": 1,
+        "seed": "boundary-docker-network-v1:bind9:0",
+        "selector": {
+          "container": "bndl-boundary-docker-network-bundle-ef33d88c64-brdnode_64512_router0-1"
+        }
+      }
+    ],
+    "relationship": "single"
+  },
+  "producer": "fault_agent",
+  "schema_version": 1,
+  "warnings": []
+}

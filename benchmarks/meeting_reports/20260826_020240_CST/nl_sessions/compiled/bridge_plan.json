@@ -1,0 +1,626 @@
+{
+  "application_capabilities": {
+    "bind9": "dns.bind9.v1",
+    "network_observer": "observer.network.v1",
+    "nginx": "http.nginx.v1"
+  },
+  "benchmark_request": {
+    "applications": [
+      "nginx",
+      "bind9"
+    ],
+    "difficulty": "medium",
+    "execute_lifecycle": false,
+    "fault_count": 1,
+    "fault_relationship": "independent",
+    "fault_types": [
+      "dns.nameserver"
+    ],
+    "objective": "生成一个包含3个AS、每个AS有2台主机的环形拓扑，在一个节点部署nginx，在另一个节点部署bind9，注入dns.nameserver故障",
+    "observer_template": "network_observer",
+    "prepare_topology": false,
+    "publish": false,
+    "qualification_runs": 2,
+    "request_id": "nlscene_req_7d3b8b3e4bc857ba",
+    "resource_class": "small",
+    "scale": 9,
+    "schema_version": 1,
+    "seed": "meeting-demo-v1",
+    "topology_id": "nlscene_7d3b8b3e4bc857ba",
+    "topology_spec": "topology_specs/nlscene_7d3b8b3e4bc857ba/request.json"
+  },
+  "bridge_fingerprint": "46e19751f281efae93342b30743dce95e78938a3430d420ae2d075c28f302977",
+  "fault_bindings": {
+    "dns.nameserver": "dns_nameserver"
+  },
+  "intent": {
+    "application_placements": [
+      {
+        "target_asns": [],
+        "target_nodes": [],
+        "target_roles": [
+          "host"
+        ],
+        "template_id": "nginx"
+      },
+      {
+        "target_asns": [],
+        "target_nodes": [],
+        "target_roles": [
+          "host"
+        ],
+        "template_id": "bind9"
+      }
+    ],
+    "assumptions": [
+      "hosts_per_as_defaulted_to_2",
+      "difficulty_defaulted_to_medium"
+    ],
+    "difficulty": "medium",
+    "fault_count": 1,
+    "fault_relationship": "single",
+    "fault_types": [
+      "dns.nameserver"
+    ],
+    "objective": "生成一个包含3个AS、每个AS有2台主机的环形拓扑，在一个节点部署nginx，在另一个节点部署bind9，注入dns.nameserver故障",
+    "observer_required": false,
+    "provider_model": "deterministic_scene:deterministic-scene-v2",
+    "request_id": "nlscene_req_7d3b8b3e4bc857ba",
+    "schema_version": 1,
+    "seed": "meeting-demo-v1",
+    "source_text_sha256": "8439172d01359459eef9168a8d3fcb9da62bb60936d1bccd898bc345380ab191",
+    "topology": {
+      "as_count": 3,
+      "asn_start": 64512,
+      "budget": null,
+      "budget_mode": "auto",
+      "edge_policy": "ring",
+      "explicit_edges": [],
+      "extra_links": 0,
+      "hosts_per_as": 2,
+      "ix_pool": "172.16.0.0/12",
+      "ix_prefixlen": 29,
+      "lan_pool": "10.0.0.0/8",
+      "lan_prefixlen": 24,
+      "loopback_pool": "100.64.0.0/10",
+      "platform": "amd"
+    },
+    "topology_id": "nlscene_7d3b8b3e4bc857ba",
+    "unknown_requirements": []
+  },
+  "preview": {
+    "application_capabilities": {
+      "bind9": "dns.bind9.v1",
+      "network_observer": "observer.network.v1",
+      "nginx": "http.nginx.v1"
+    },
+    "arbitrary_scene_bridge": true,
+    "bridge_fingerprint": "46e19751f281efae93342b30743dce95e78938a3430d420ae2d075c28f302977",
+    "edge_policy": "ring",
+    "execution_authorized": false,
+    "explicit_allocated_edges": [
+      [
+        64512,
+        64513
+      ],
+      [
+        64512,
+        64514
+      ],
+      [
+        64513,
+        64514
+      ]
+    ],
+    "fault_bindings": {
+      "dns.nameserver": "dns_nameserver"
+    },
+    "handoff_target": "Topology capability manifest",
+    "mode": "plan_only_no_docker_state_change",
+    "next_stage": "register and compile only after one-time approval",
+    "publication_authorized": false,
+    "resource_estimate": {
+      "ases": 3,
+      "containers": 11,
+      "cpu_cores": 0.6,
+      "links": 3,
+      "memory_mb": 768,
+      "networks": 6
+    },
+    "safety": {
+      "address_and_asn_checks": [
+        {
+          "check": "lan_pool",
+          "envelope": "10.0.0.0/8",
+          "network": "10.0.0.0/8"
+        },
+        {
+          "check": "ix_pool",
+          "envelope": "172.16.0.0/12",
+          "network": "172.16.0.0/12"
+        },
+        {
+          "check": "loopback_pool",
+          "envelope": "100.64.0.0/10",
+          "network": "100.64.0.0/10"
+        },
+        {
+          "check": "private_asn_range",
+          "end": 64514,
+          "start": 64512
+        }
+      ],
+      "allowed": true,
+      "application_placement_check": {
+        "allowed": true,
+        "check": "application_observer_isolation",
+        "compiler_selected_applications": [
+          "nginx",
+          "bind9"
+        ],
+        "empty_selector_semantics": "deterministic_single_asset",
+        "observer_assets": [
+          {
+            "asn": 64514,
+            "node": "host1",
+            "role": "host"
+          }
+        ],
+        "resolved_placements": [
+          {
+            "target_asns": [
+              64512
+            ],
+            "target_nodes": [
+              "host0"
+            ],
+            "target_roles": [
+              "host"
+            ],
+            "template_id": "nginx"
+          },
+          {
+            "target_asns": [
+              64512
+            ],
+            "target_nodes": [
+              "host1"
+            ],
+            "target_roles": [
+              "host"
+            ],
+            "template_id": "bind9"
+          },
+          {
+            "target_asns": [
+              64514
+            ],
+            "target_nodes": [
+              "host1"
+            ],
+            "target_roles": [
+              "host"
+            ],
+            "template_id": "network_observer"
+          }
+        ]
+      },
+      "docker_operations_present": false,
+      "execution_authorized": false,
+      "host_operations_present": false,
+      "policy": {
+        "arbitrary_commands": "not representable",
+        "fault_source": "audited FaultDriver bindings only",
+        "host_path_access": "not representable",
+        "software_source": "audited ApplicationTemplate catalog only",
+        "topology_model": "TopologyRequest v1 only"
+      },
+      "resource_budget_check": {
+        "allowed": true,
+        "effective_budget": {
+          "max_ases": 3,
+          "max_containers": 11,
+          "max_cpu_cores": 0.6,
+          "max_links": 3,
+          "max_memory_mb": 768,
+          "max_networks": 6
+        },
+        "explicit_budget_was_modified": false,
+        "mode": "auto",
+        "provider_budget": null,
+        "resource_estimate": {
+          "ases": 3,
+          "containers": 11,
+          "cpu_cores": 0.6,
+          "links": 3,
+          "memory_mb": 768,
+          "networks": 6
+        }
+      },
+      "schema_version": 1,
+      "shell_present": false
+    },
+    "schema_version": 1,
+    "topology_fingerprint": "6f2761a2fca3838072331a770ccddd064d7cc985ab19e9e5dd27fb74d3289bf6",
+    "topology_id": "nlscene_7d3b8b3e4bc857ba"
+  },
+  "safety_report": {
+    "address_and_asn_checks": [
+      {
+        "check": "lan_pool",
+        "envelope": "10.0.0.0/8",
+        "network": "10.0.0.0/8"
+      },
+      {
+        "check": "ix_pool",
+        "envelope": "172.16.0.0/12",
+        "network": "172.16.0.0/12"
+      },
+      {
+        "check": "loopback_pool",
+        "envelope": "100.64.0.0/10",
+        "network": "100.64.0.0/10"
+      },
+      {
+        "check": "private_asn_range",
+        "end": 64514,
+        "start": 64512
+      }
+    ],
+    "allowed": true,
+    "application_placement_check": {
+      "allowed": true,
+      "check": "application_observer_isolation",
+      "compiler_selected_applications": [
+        "nginx",
+        "bind9"
+      ],
+      "empty_selector_semantics": "deterministic_single_asset",
+      "observer_assets": [
+        {
+          "asn": 64514,
+          "node": "host1",
+          "role": "host"
+        }
+      ],
+      "resolved_placements": [
+        {
+          "target_asns": [
+            64512
+          ],
+          "target_nodes": [
+            "host0"
+          ],
+          "target_roles": [
+            "host"
+          ],
+          "template_id": "nginx"
+        },
+        {
+          "target_asns": [
+            64512
+          ],
+          "target_nodes": [
+            "host1"
+          ],
+          "target_roles": [
+            "host"
+          ],
+          "template_id": "bind9"
+        },
+        {
+          "target_asns": [
+            64514
+          ],
+          "target_nodes": [
+            "host1"
+          ],
+          "target_roles": [
+            "host"
+          ],
+          "template_id": "network_observer"
+        }
+      ]
+    },
+    "docker_operations_present": false,
+    "execution_authorized": false,
+    "host_operations_present": false,
+    "policy": {
+      "arbitrary_commands": "not representable",
+      "fault_source": "audited FaultDriver bindings only",
+      "host_path_access": "not representable",
+      "software_source": "audited ApplicationTemplate catalog only",
+      "topology_model": "TopologyRequest v1 only"
+    },
+    "resource_budget_check": {
+      "allowed": true,
+      "effective_budget": {
+        "max_ases": 3,
+        "max_containers": 11,
+        "max_cpu_cores": 0.6,
+        "max_links": 3,
+        "max_memory_mb": 768,
+        "max_networks": 6
+      },
+      "explicit_budget_was_modified": false,
+      "mode": "auto",
+      "provider_budget": null,
+      "resource_estimate": {
+        "ases": 3,
+        "containers": 11,
+        "cpu_cores": 0.6,
+        "links": 3,
+        "memory_mb": 768,
+        "networks": 6
+      }
+    },
+    "schema_version": 1,
+    "shell_present": false
+  },
+  "topology_plan": {
+    "autonomous_systems": [
+      {
+        "asn": 64512,
+        "host_addresses": [
+          "10.0.0.3",
+          "10.0.0.4"
+        ],
+        "index": 0,
+        "lan_prefix": "10.0.0.0/24",
+        "loopback_address": "100.64.0.1",
+        "router_address": "10.0.0.2"
+      },
+      {
+        "asn": 64513,
+        "host_addresses": [
+          "10.0.1.3",
+          "10.0.1.4"
+        ],
+        "index": 1,
+        "lan_prefix": "10.0.1.0/24",
+        "loopback_address": "100.64.0.2",
+        "router_address": "10.0.1.2"
+      },
+      {
+        "asn": 64514,
+        "host_addresses": [
+          "10.0.2.3",
+          "10.0.2.4"
+        ],
+        "index": 2,
+        "lan_prefix": "10.0.2.0/24",
+        "loopback_address": "100.64.0.3",
+        "router_address": "10.0.2.2"
+      }
+    ],
+    "edge_policy": "ring",
+    "external_links": [
+      {
+        "index": 0,
+        "ix_id": 1000,
+        "left_address": "172.16.0.2",
+        "left_asn": 64512,
+        "prefix": "172.16.0.0/29",
+        "right_address": "172.16.0.3",
+        "right_asn": 64513
+      },
+      {
+        "index": 1,
+        "ix_id": 1001,
+        "left_address": "172.16.0.10",
+        "left_asn": 64512,
+        "prefix": "172.16.0.8/29",
+        "right_address": "172.16.0.11",
+        "right_asn": 64514
+      },
+      {
+        "index": 2,
+        "ix_id": 1002,
+        "left_address": "172.16.0.18",
+        "left_asn": 64513,
+        "prefix": "172.16.0.16/29",
+        "right_address": "172.16.0.19",
+        "right_asn": 64514
+      }
+    ],
+    "fingerprint": "6f2761a2fca3838072331a770ccddd064d7cc985ab19e9e5dd27fb74d3289bf6",
+    "generator_version": "1.0.0",
+    "master_seed": "meeting-demo-v1",
+    "platform": "amd",
+    "request": {
+      "as_count": 3,
+      "asn_start": 64512,
+      "budget": {
+        "max_ases": 3,
+        "max_containers": 11,
+        "max_cpu_cores": 0.6,
+        "max_links": 3,
+        "max_memory_mb": 768,
+        "max_networks": 6
+      },
+      "edge_policy": "ring",
+      "explicit_edges": [],
+      "extra_links": 0,
+      "hosts_per_as": 2,
+      "ix_pool": "172.16.0.0/12",
+      "ix_prefixlen": 29,
+      "lan_pool": "10.0.0.0/8",
+      "lan_prefixlen": 24,
+      "loopback_pool": "100.64.0.0/10",
+      "master_seed": "meeting-demo-v1",
+      "platform": "amd",
+      "software": [
+        {
+          "capabilities": [
+            "http.nginx.v1"
+          ],
+          "fault_profiles": [],
+          "managed_files": [],
+          "packages": [
+            "nginx"
+          ],
+          "schema_version": 1,
+          "software_id": "nginx",
+          "target_asns": [
+            64512
+          ],
+          "target_nodes": [
+            "host0"
+          ],
+          "target_roles": [
+            "host"
+          ]
+        },
+        {
+          "capabilities": [
+            "dns.bind9.v1"
+          ],
+          "fault_profiles": [],
+          "managed_files": [],
+          "packages": [
+            "bind9",
+            "dnsutils"
+          ],
+          "schema_version": 1,
+          "software_id": "bind9",
+          "target_asns": [
+            64512
+          ],
+          "target_nodes": [
+            "host1"
+          ],
+          "target_roles": [
+            "host"
+          ]
+        },
+        {
+          "capabilities": [
+            "observer.network.v1"
+          ],
+          "fault_profiles": [],
+          "managed_files": [],
+          "packages": [
+            "curl",
+            "dnsutils",
+            "netcat-openbsd"
+          ],
+          "schema_version": 1,
+          "software_id": "curl_tools",
+          "target_asns": [
+            64514
+          ],
+          "target_nodes": [
+            "host1"
+          ],
+          "target_roles": [
+            "host"
+          ]
+        }
+      ],
+      "topology_id": "nlscene_7d3b8b3e4bc857ba"
+    },
+    "resource_estimate": {
+      "ases": 3,
+      "containers": 11,
+      "cpu_cores": 0.6,
+      "links": 3,
+      "memory_mb": 768,
+      "networks": 6
+    },
+    "schema_version": 1,
+    "topology_id": "nlscene_7d3b8b3e4bc857ba",
+    "topology_name": "DECLARATIVE_nlscene_7d3b8b3e4bc857ba"
+  },
+  "topology_request": {
+    "as_count": 3,
+    "asn_start": 64512,
+    "budget": {
+      "max_ases": 3,
+      "max_containers": 11,
+      "max_cpu_cores": 0.6,
+      "max_links": 3,
+      "max_memory_mb": 768,
+      "max_networks": 6
+    },
+    "edge_policy": "ring",
+    "explicit_edges": [],
+    "extra_links": 0,
+    "hosts_per_as": 2,
+    "ix_pool": "172.16.0.0/12",
+    "ix_prefixlen": 29,
+    "lan_pool": "10.0.0.0/8",
+    "lan_prefixlen": 24,
+    "loopback_pool": "100.64.0.0/10",
+    "master_seed": "meeting-demo-v1",
+    "platform": "amd",
+    "software": [
+      {
+        "capabilities": [
+          "http.nginx.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "nginx"
+        ],
+        "schema_version": 1,
+        "software_id": "nginx",
+        "target_asns": [
+          64512
+        ],
+        "target_nodes": [
+          "host0"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "dns.bind9.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "bind9",
+          "dnsutils"
+        ],
+        "schema_version": 1,
+        "software_id": "bind9",
+        "target_asns": [
+          64512
+        ],
+        "target_nodes": [
+          "host1"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "observer.network.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "curl",
+          "dnsutils",
+          "netcat-openbsd"
+        ],
+        "schema_version": 1,
+        "software_id": "curl_tools",
+        "target_asns": [
+          64514
+        ],
+        "target_nodes": [
+          "host1"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      }
+    ],
+    "topology_id": "nlscene_7d3b8b3e4bc857ba"
+  }
+}

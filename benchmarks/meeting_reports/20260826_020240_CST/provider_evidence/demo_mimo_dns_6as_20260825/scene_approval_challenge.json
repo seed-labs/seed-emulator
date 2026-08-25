@@ -1,0 +1,16 @@
+{
+  "bridge_fingerprint": "36e8c01ba38c3f01b33417f3ea66fb820b4b2813c96f44a80dbdab48959ea7fd",
+  "catalog_fingerprint": "fd44b743ab7249f4be02bf9d2dc1b7017b36c19edee704a7aa92b7ff2a56b78a",
+  "challenge_fingerprint": "d3396aad7b9af728c789118f297b4a24f72dcfcc3a6d2b77124696203f748a3c",
+  "challenge_kind": "declarative_scene_delivery_v1",
+  "consumed": true,
+  "consumed_at": "2026-08-25T10:10:23.201448+00:00",
+  "docker_execution_authorized": false,
+  "expires_at": "2026-08-26T10:09:40.822448+00:00",
+  "issued_at": "2026-08-25T10:09:40.822448+00:00",
+  "publication_authorized": false,
+  "scene_fingerprint": "0ed4f4137956218aad2d99527e235f1c5ecdf621877d3768cd58723cba9b9687",
+  "schema_version": 1,
+  "token_sha256": "55eeb6b22797536782502ddd6a07574f15d8acbd2869620ddb5054a8de625cbc",
+  "topology_fingerprint": "cc9000f4f783e61116a1cebc3adf0aacd4181a741e51d3b64286fcf973ae98fd"
+}

@@ -1,0 +1,23 @@
+{
+  "benchmark_id": "boundary_docker_network_bundle",
+  "bundle_fingerprint": "5a5db3f13bf196fabce0ba2bec70ee4abdb0db5f7c8eb9ebb5cfe38ea7f295d4",
+  "created_at": "2026-08-25T18:14:49.625126+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "minimum_independent_runs": 2,
+  "qualification_level": "formal",
+  "qualification_sha256": "94df5285bfd226455ebd0313e5e7c051b2e0ae7b1a9b5cd5fa7822f50a9d4396",
+  "receipts": [
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/docker_network_disconnect/lifecycle_round_01.json",
+      "run_id": "0dee3b5a-8df1-4c54-9bec-19ff531f2735",
+      "sha256": "9875fa155a082991dea8e93ee7a945fabbfe7f7180ef7c3f56065bb1519f3b72"
+    },
+    {
+      "path": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/docker_network_disconnect/lifecycle_round_02.json",
+      "run_id": "d95254ee-8303-4790-8fb8-54a1b268b07d",
+      "sha256": "d3890430f2d948675d07db212fdd9c5f36b563aeca2de83d6864224a9c662a79"
+    }
+  ],
+  "schema_version": 1,
+  "status": "qualified"
+}

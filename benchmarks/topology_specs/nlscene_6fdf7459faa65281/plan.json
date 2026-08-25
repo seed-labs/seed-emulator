@@ -1,0 +1,152 @@
+{
+  "autonomous_systems": [
+    {
+      "asn": 64512,
+      "host_addresses": [
+        "10.0.0.3",
+        "10.0.0.4"
+      ],
+      "index": 0,
+      "lan_prefix": "10.0.0.0/24",
+      "loopback_address": "100.64.0.1",
+      "router_address": "10.0.0.2"
+    },
+    {
+      "asn": 64513,
+      "host_addresses": [
+        "10.0.1.3",
+        "10.0.1.4"
+      ],
+      "index": 1,
+      "lan_prefix": "10.0.1.0/24",
+      "loopback_address": "100.64.0.2",
+      "router_address": "10.0.1.2"
+    },
+    {
+      "asn": 64514,
+      "host_addresses": [
+        "10.0.2.3",
+        "10.0.2.4"
+      ],
+      "index": 2,
+      "lan_prefix": "10.0.2.0/24",
+      "loopback_address": "100.64.0.3",
+      "router_address": "10.0.2.2"
+    }
+  ],
+  "edge_policy": "ring",
+  "external_links": [
+    {
+      "index": 0,
+      "ix_id": 1000,
+      "left_address": "172.16.0.2",
+      "left_asn": 64512,
+      "prefix": "172.16.0.0/29",
+      "right_address": "172.16.0.3",
+      "right_asn": 64513
+    },
+    {
+      "index": 1,
+      "ix_id": 1001,
+      "left_address": "172.16.0.10",
+      "left_asn": 64512,
+      "prefix": "172.16.0.8/29",
+      "right_address": "172.16.0.11",
+      "right_asn": 64514
+    },
+    {
+      "index": 2,
+      "ix_id": 1002,
+      "left_address": "172.16.0.18",
+      "left_asn": 64513,
+      "prefix": "172.16.0.16/29",
+      "right_address": "172.16.0.19",
+      "right_asn": 64514
+    }
+  ],
+  "fingerprint": "ba49a13637c42283ba5dadb5c18d24032f12f2c255144b6b1cd6f73a8cdd2c61",
+  "generator_version": "1.0.0",
+  "master_seed": "scene-bridge-real-v3",
+  "platform": "amd",
+  "request": {
+    "as_count": 3,
+    "asn_start": 64512,
+    "budget": {
+      "max_ases": 3,
+      "max_containers": 11,
+      "max_cpu_cores": 0.6,
+      "max_links": 3,
+      "max_memory_mb": 768,
+      "max_networks": 6
+    },
+    "edge_policy": "ring",
+    "explicit_edges": [],
+    "extra_links": 0,
+    "hosts_per_as": 2,
+    "ix_pool": "172.16.0.0/12",
+    "ix_prefixlen": 29,
+    "lan_pool": "10.0.0.0/8",
+    "lan_prefixlen": 24,
+    "loopback_pool": "100.64.0.0/10",
+    "master_seed": "scene-bridge-real-v3",
+    "platform": "amd",
+    "software": [
+      {
+        "capabilities": [
+          "http.nginx.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "nginx"
+        ],
+        "schema_version": 1,
+        "software_id": "nginx",
+        "target_asns": [
+          64512
+        ],
+        "target_nodes": [
+          "host0"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      },
+      {
+        "capabilities": [
+          "observer.network.v1"
+        ],
+        "fault_profiles": [],
+        "managed_files": [],
+        "packages": [
+          "curl",
+          "dnsutils",
+          "netcat-openbsd"
+        ],
+        "schema_version": 1,
+        "software_id": "curl_tools",
+        "target_asns": [
+          64514
+        ],
+        "target_nodes": [
+          "host1"
+        ],
+        "target_roles": [
+          "host"
+        ]
+      }
+    ],
+    "topology_id": "nlscene_6fdf7459faa65281"
+  },
+  "resource_estimate": {
+    "ases": 3,
+    "containers": 11,
+    "cpu_cores": 0.6,
+    "links": 3,
+    "memory_mb": 768,
+    "networks": 6
+  },
+  "schema_version": 1,
+  "topology_id": "nlscene_6fdf7459faa65281",
+  "topology_name": "DECLARATIVE_nlscene_6fdf7459faa65281"
+}

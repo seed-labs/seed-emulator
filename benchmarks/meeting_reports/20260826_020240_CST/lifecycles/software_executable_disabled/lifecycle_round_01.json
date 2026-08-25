@@ -1,0 +1,175 @@
+{
+  "ai_invoked": false,
+  "benchmark_id": "boundary_software_executable_bundle",
+  "blind_mode": true,
+  "bundle_fingerprint": "001605bafccd7e0cf85c470bd57947717f97a808a1c3b26dfa5d1991a3ab23f0",
+  "cleanup_failures": [],
+  "convergence": {
+    "attempts": [
+      {
+        "attempt": 1,
+        "elapsed_seconds": 1.634,
+        "failed_tests": [],
+        "passed": true,
+        "stable_streak": 1
+      },
+      {
+        "attempt": 2,
+        "elapsed_seconds": 5.523,
+        "failed_tests": [],
+        "passed": true,
+        "stable_streak": 2
+      }
+    ],
+    "elapsed_seconds": 5.523,
+    "passed": true,
+    "stable_samples_required": 2
+  },
+  "execution_backend": "DockerLifecycleRunner",
+  "faults": [
+    {
+      "injection_verified": true,
+      "journal": "/home/zvanadium/seed-emulator/benchmarks/meeting_reports/20260826_020240_CST/lifecycles/software_executable_disabled/journals/faults/1ded2c9d-629f-4e60-ad89-38cb1064a22c-0000.json",
+      "plan_fingerprint": "8fb466d7f0171a4903324fad68deaae3e711b3e7f9094ce8f4d4bd31afd9042b"
+    }
+  ],
+  "finished_at": "2026-08-25T18:18:00.549539+00:00",
+  "generator_contract_sha256": "0d10f3361b6f3122896501f1f8037239b542d6c2011cb838fbc4b4931df833ea",
+  "mode": "no_ai",
+  "passed": true,
+  "receipt_sha256": "bf1dbba2873fa36a74e7643b8e8e1c2d48f004a5f2f8f31f70b25d8be517ed10",
+  "run_id": "1ded2c9d-629f-4e60-ad89-38cb1064a22c",
+  "schema_version": 1,
+  "services": [
+    {
+      "exit_code": 0,
+      "output": "version: BIND 9.18.39-0ubuntu0.24.04.5-Ubuntu (Extended Support Version) <id:>\nrunning on localhost: Linux x86_64 7.0.0-28-generic #28~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 15:50:57 UTC 2\nboot time: Tue, 25 Aug 2026 18:17:45 GMT\nlast configured: Tue, 25 Aug 2026 18:17:45 GMT\nconfiguration file: /etc/bind/named.conf\nCPUs found: 8\nworker threads: 8\nUDP listeners per interface: 8\nnumber of zones: 103 (98 automatic)\ndebug level: 0\nxfers running: 0\nxfers deferred: 0\nsoa queries in progress: 0\nquery logging is OFF\nrecursive clients: 0/900/1000\ntcp clients: 0/150\nTCP high-water: 0\nserver is up and running\n",
+      "passed": true,
+      "service_id": "bind9_service"
+    },
+    {
+      "exit_code": 0,
+      "output": "version: BIND 9.18.39-0ubuntu0.24.04.5-Ubuntu (Extended Support Version) <id:>\nrunning on localhost: Linux x86_64 7.0.0-28-generic #28~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 15:50:57 UTC 2\nboot time: Tue, 25 Aug 2026 18:17:45 GMT\nlast configured: Tue, 25 Aug 2026 18:17:45 GMT\nconfiguration file: /etc/bind/named.conf\nCPUs found: 8\nworker threads: 8\nUDP listeners per interface: 8\nnumber of zones: 103 (98 automatic)\ndebug level: 0\nxfers running: 0\nxfers deferred: 0\nsoa queries in progress: 0\nquery logging is OFF\nrecursive clients: 0/900/1000\ntcp clients: 0/150\nTCP high-water: 0\nserver is up and running\n",
+      "passed": true,
+      "phase": "recovery",
+      "service_id": "bind9_service"
+    }
+  ],
+  "started_at": "2026-08-25T18:17:44.373086+00:00",
+  "tests": [
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "fault_01_bind9_healthy",
+      "passed": true,
+      "phase": "baseline",
+      "test_id": "baseline_fault_01_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "true\n",
+          "passed": true
+        }
+      ],
+      "expectation_id": "observer_availability",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_observer"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 1,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_software_executable_disabled_effect",
+      "passed": true,
+      "phase": "active",
+      "test_id": "active_fault_01_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_availability",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_bind9"
+    },
+    {
+      "evidence": [
+        {
+          "exit_code": 0,
+          "metrics": {},
+          "output": "",
+          "passed": true
+        }
+      ],
+      "expectation_id": "bind9_software_executable_disabled_effect",
+      "passed": true,
+      "phase": "recovery",
+      "test_id": "recovery_fault_01_bind9"
+    }
+  ],
+  "topology_tainted": false,
+  "workloads": [
+    {
+      "exit_code": 0,
+      "output": "",
+      "passed": true,
+      "workload_id": "bind9_workload"
+    },
+    {
+      "exit_code": 0,
+      "output": "",
+      "passed": true,
+      "phase": "recovery",
+      "workload_id": "bind9_workload"
+    }
+  ]
+}

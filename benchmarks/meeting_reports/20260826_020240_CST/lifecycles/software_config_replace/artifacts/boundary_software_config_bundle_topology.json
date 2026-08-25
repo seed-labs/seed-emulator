@@ -1,0 +1,13 @@
+{
+  "artifact_fingerprint": "208439fac4c8f018f13910abac0afbc97946a3b186d9396620f7d1dbf1de52fd",
+  "artifact_id": "boundary_software_config_bundle_topology",
+  "artifact_type": "topology_ref",
+  "capabilities_required": [],
+  "input_fingerprints": [],
+  "payload": {
+    "topology_id": "bundle_boundary_validation"
+  },
+  "producer": "topology_agent",
+  "schema_version": 1,
+  "warnings": []
+}
