@@ -134,6 +134,7 @@ class NaturalLanguagePlanner:
             "output_schema": BENCHMARK_INTENT_OUTPUT_SCHEMA,
             "provider": provider.provider_id,
             "model": provider.model_id,
+            "provider_transport": provider.audit_metadata(),
         }
         prompt_record["prompt_fingerprint"] = canonical_sha256(prompt_record)
         atomic_json(session / "provider_request.json", prompt_record)

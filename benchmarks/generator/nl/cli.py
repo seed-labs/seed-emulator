@@ -10,6 +10,8 @@ from generator.nl.catalog import build_capability_catalog
 from generator.nl.provider import (
     DeterministicLLMProvider, MiMoProvider, OpenAICompatibleProvider,
 )
+from generator.mcp.profile import builtin_profile
+from generator.mcp.provider import MCPProvider
 from generator.nl.session import NaturalLanguageExecutor, NaturalLanguagePlanner
 from generator.nl.scene_provider import DeterministicSceneProvider
 from generator.nl.scene_session import (
@@ -23,6 +25,21 @@ from generator.nl.unsafe_session import (
 
 BENCHMARKS_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_SESSION_ROOT = BENCHMARKS_DIR / "reports/nl_sessions"
+
+
+PROVIDER_CHOICES = ("deterministic", "openai-compatible", "mimo", "mcp")
+MCP_PROFILE_CHOICES = ("mimo", "openai-compatible")
+
+
+def _add_mcp_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--mcp-profile", choices=MCP_PROFILE_CHOICES, default="mimo",
+        help="trusted MCP Gateway profile used when --provider=mcp",
+    )
+    parser.add_argument(
+        "--mcp-fallback-profile", choices=MCP_PROFILE_CHOICES,
+        help="fallback only for MCP transport failures; never schema/policy rejection",
+    )
 
 
 def _under_session_root(value: Path) -> Path:
@@ -40,7 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--text", required=True)
     plan.add_argument("--seed", default="natural-language-v1")
     plan.add_argument(
-        "--provider", choices=("deterministic", "openai-compatible", "mimo"),
+        "--provider", choices=PROVIDER_CHOICES,
         default="deterministic",
     )
     plan.add_argument("--model")
@@ -49,6 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--timeout", type=int, default=60)
     plan.add_argument("--session-id")
     plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
+    _add_mcp_arguments(plan)
     generate = commands.add_parser("nl-generate", help="execute an approved intent once")
     generate.add_argument("--intent", type=Path, required=True)
     generate.add_argument("--approval-token", required=True)
@@ -60,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     scene_plan.add_argument("--text", required=True)
     scene_plan.add_argument("--seed", default="natural-language-scene-v1")
     scene_plan.add_argument(
-        "--provider", choices=("deterministic", "openai-compatible", "mimo"),
+        "--provider", choices=PROVIDER_CHOICES,
         default="deterministic",
     )
     scene_plan.add_argument("--model")
@@ -69,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     scene_plan.add_argument("--timeout", type=int, default=120)
     scene_plan.add_argument("--session-id")
     scene_plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
+    _add_mcp_arguments(scene_plan)
     scene_generate = commands.add_parser(
         "nl-scene-generate",
         help="register, compile, and deliver an approved scene capability manifest",
@@ -82,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     unsafe_plan.add_argument("--text", required=True)
     unsafe_plan.add_argument("--seed", default="unsafe-natural-language-v1")
     unsafe_plan.add_argument(
-        "--provider", choices=("deterministic", "openai-compatible", "mimo"),
+        "--provider", choices=PROVIDER_CHOICES,
         default="deterministic",
     )
     unsafe_plan.add_argument("--model")
@@ -91,6 +110,7 @@ def build_parser() -> argparse.ArgumentParser:
     unsafe_plan.add_argument("--timeout", type=int, default=120)
     unsafe_plan.add_argument("--session-id")
     unsafe_plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
+    _add_mcp_arguments(unsafe_plan)
     unsafe_plan.add_argument(
         "--unsafe-base-image", default="debian:bookworm-slim",
         help="base image used only by the deterministic unsafe fixture provider",
@@ -120,6 +140,27 @@ def _provider(args, *, unsafe: bool = False, scene: bool = False):
                 args.model or "deterministic-scene-v2"
             )
         return DeterministicLLMProvider(args.model or "deterministic-nl-v1")
+    if args.provider == "mcp":
+        primary = builtin_profile(
+            args.mcp_profile,
+            model_id=args.model,
+            base_url=args.base_url,
+            api_key_env=args.api_key_env,
+            timeout_seconds=args.timeout,
+        )
+        fallbacks = ()
+        if args.mcp_fallback_profile:
+            if args.mcp_fallback_profile == args.mcp_profile:
+                raise ValueError("MCP primary and fallback profiles must differ")
+            fallbacks = (builtin_profile(
+                args.mcp_fallback_profile,
+                timeout_seconds=args.timeout,
+            ),)
+        return MCPProvider(
+            primary,
+            working_directory=BENCHMARKS_DIR,
+            fallbacks=fallbacks,
+        )
     if args.provider == "mimo":
         return MiMoProvider(
             model_id=args.model or "mimo-v2.5-pro",

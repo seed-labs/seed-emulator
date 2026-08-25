@@ -120,6 +120,7 @@ class NaturalLanguageScenePlanner:
             "output_schema": BENCHMARK_SCENE_OUTPUT_SCHEMA,
             "provider": provider.provider_id,
             "model": provider.model_id,
+            "provider_transport": provider.audit_metadata(),
         }
         request["prompt_fingerprint"] = canonical_sha256(request)
         atomic_json(session / "provider_request.json", request)

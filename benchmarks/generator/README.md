@@ -83,6 +83,7 @@ flowchart TB
 | `topology/` | 声明式拓扑模型、规划、SEED 编译、能力清单和拓扑测试 |
 | `topology/examples/` | 声明式拓扑请求示例 |
 | `nl/` | 自然语言意图、LLMProvider、澄清、安全、审批和 NL CLI |
+| `mcp/` | 多厂商 MCP Contract、可信 profile、stdio 客户端、单用途 Gateway 和路由 |
 
 自然语言 CLI 的自动 session ID 使用小写白名单格式，可直接用于审计目录；显式 session ID 同样按该
 规则 fail closed。内置确定性 Provider 支持中文“个/台主机”数量分类词；外部 Provider 仍必须输出同一
@@ -93,6 +94,8 @@ flowchart TB
 使用 `explicit`，并保持原值接受资源门禁，绝不静默抬高。
 拓扑内置软件（当前为 router 上的 `iptables`）会进入自然语言 capability snapshot，但不进入应用
 placement；重复应用 placement 被路由到澄清/扩展流程，而不是静默合并。
+外部模型在用户未声明额外故障实例数时必须令 `fault_count` 等于唯一故障类型数；不一致输出由本地
+澄清门禁拦截，不能直接进入编译。
 
 详细说明分别见各目录的 `README.md`。
 
@@ -161,6 +164,10 @@ python3 -m generator.nl.cli nl-plan \
 
 NL 层内置 deterministic、通用 OpenAI-compatible 和 Xiaomi MiMo Provider；所有远程
 Provider 都只负责结构化意图翻译，API Key 仅从环境变量读取，后续编译与生命周期不调用 AI。
+新增 MCP 路径通过 `--provider mcp --mcp-profile mimo|openai-compatible` 复用同一
+`LLMProvider` 边界。MCP Gateway 只暴露 `translate_benchmark_scene`，不暴露执行工具；Generator
+会固定协议与 Tool Schema，并对 `structuredContent` 再做本地 Contract、Scene Schema、安全和预算
+检查。可选 fallback 只处理传输/上游可用性故障，不能绕过协议或安全拒绝。详见 `mcp/README.md`。
 
 ## 根层模块
 
@@ -184,6 +191,7 @@ Provider 都只负责结构化意图翻译，API Key 仅从环境变量读取，
 - `PRODUCTION_GENERATOR_DESIGN.md`
 - `GROUP_MEETING_DEMO_GUIDE.md`
 - `MCP_PROVIDER_FEASIBILITY_REPORT.md`（外部模型 Provider MCP 化的只读可行性分析）
+- `mcp/DEVELOPMENT_WORKFLOW.md`（多厂商 MCP 翻译层的实现流程、威胁模型和完成标准）
 
 ## 输入与产物边界
 

@@ -12,7 +12,7 @@ from generator.nl.provider import LLMProvider, ProviderResponse
 from generator.software import BUILTIN_ROUTER_SOFTWARE
 
 
-SCENE_PROMPT_VERSION = "benchmark-scene-v1.0.4"
+SCENE_PROMPT_VERSION = "benchmark-scene-v1.0.5"
 SCENE_SUPPORTED_FAULTS = {
     "container.stopped", "dns.nameserver", "network.acl.scoped",
     "network.netem", "routing.bird.wrong_asn",
@@ -35,6 +35,9 @@ the deterministic local planner will calculate the exact reservation. Only when 
 user explicitly states resource ceilings emit budget_mode="explicit" with every
 budget field, without weakening or increasing the user's limits. A benchmark always
 needs the protected observer, so observer_required must be true.
+fault_types must contain each requested fault plugin exactly once. Unless the user
+explicitly states a separate number of fault instances, fault_count must equal the
+length of fault_types; never infer extra instances from topology size or target count.
 """
 
 

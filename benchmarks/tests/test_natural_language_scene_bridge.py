@@ -93,6 +93,7 @@ scene_catalog_prompt = build_scene_messages(TEXT, catalog.snapshot)[1]["content"
 assert 'budget_mode="auto" and budget=null' in scene_prompt
 assert "observer_required must be true" in scene_prompt
 assert "at most one application_placements entry" in scene_prompt
+assert "fault_count must equal the" in scene_prompt
 assert '"software_id": "iptables"' in scene_catalog_prompt
 assert analyze_scene_requirements(intent, catalog).status == "ready"
 bridge = compile_scene_intent(intent, catalog)

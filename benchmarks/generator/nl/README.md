@@ -6,6 +6,12 @@
 确定性生成器能够验证的 `TopologyRequest` 和 `BenchmarkRequest`。LLM 只负责意图提取，
 不拥有 Docker、FaultDriver、发布或修复执行权限。
 
+本层现在支持 `--provider mcp --mcp-profile <profile>`，通过 `generator/mcp/` 的单用途
+Provider Gateway 调用多个厂商。MCP 返回仍经过本层原有严格 Scene Schema、歧义、能力、预算和
+安全门禁；只有进程/网络/429/5xx 等传输故障可以使用 `--mcp-fallback-profile`，协议或策略拒绝
+绝不切换厂商。修改 Provider/CLI 或 MCP 数据流时必须同步维护本 README、`generator/mcp/README.md`
+和上级 `generator/README.md`。
+
 > **强制同步规则（README_SYNC_REQUIRED）**：修改本目录任意 `.py` 文件时必须同步更新本
 > README；改变 CLI、Intent schema、Provider、审批、审计或与 Bundle/Topology/Fault 层的
 > 关系时，还必须同步更新 `generator/README.md` 和受影响层的 README。
@@ -263,6 +269,8 @@ python3 -m generator.nl.cli nl-scene-plan \
 小写字母、数字、点、下划线或连字符的 ID。
 确定性中文解析器同时识别“每个 AS 6 个主机”和“每个 AS 6 台主机”等常用数量表达。
 解析语义变化会同步提升 prompt/provider 版本，使旧 provider cache 自动失效，避免继续复用旧规模结果。
+未明确声明故障实例数时，外部 Provider 必须令 `fault_count` 等于唯一 `fault_types` 数量，不得根据
+拓扑规模或目标数量擅自扩增；不一致结果进入现有澄清门禁。
 资源预算使用显式来源语义：用户未声明上限时 Provider 必须输出 `budget_mode=auto, budget=null`，由本地
 拓扑规划器先在系统硬上限内规划，再把准确估算固化为有效预算；用户明确声明上限时使用
 `budget_mode=explicit`，本地绝不抬高或修改用户上限，估算超限即拒绝。预算来源、Provider 值、有效值
@@ -315,4 +323,17 @@ FaultDriver 且必须在编译 manifest 中找到实际目标。未知应用/故
 
 ```bash
 python3 tests/test_natural_language_scene_bridge.py
+python3 tests/test_mcp_provider.py
 ```
+
+多厂商 MCP 入口示例：
+
+```bash
+python3 -m generator.nl.cli nl-scene-plan \
+  --provider mcp --mcp-profile mimo \
+  --text "生成一个包含3个AS的环形网络，部署nginx并注入延迟故障"
+```
+
+MCP Contract、profile、Gateway、fallback、安全边界和审计字段详见
+`generator/mcp/README.md`。API Key 仍只从指定环境变量读取，MCP profile 和 Session 证据只保存
+环境变量名称，不保存值。

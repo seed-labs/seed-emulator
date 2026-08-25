@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import hashlib
 import json
 import os
@@ -31,6 +31,7 @@ class ProviderResponse:
     response_fingerprint: str
     validation_attempts: int = 1
     validation_failures: Tuple[str, ...] = ()
+    transport_metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -49,6 +50,14 @@ class LLMProvider(ABC):
         seed: str,
     ) -> ProviderResponse:
         """Return JSON data only; never execute or return tool calls."""
+
+    def audit_metadata(self) -> Dict[str, Any]:
+        """Return non-secret provider configuration suitable for session evidence."""
+        return {
+            "transport": "direct",
+            "provider": self.provider_id,
+            "model": self.model_id,
+        }
 
 
 def _fingerprint(value: Mapping[str, Any]) -> str:
