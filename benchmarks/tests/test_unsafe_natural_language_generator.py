@@ -64,7 +64,9 @@ assert first_policy.policy_fingerprint == second_policy.policy_fingerprint
 assert first_policy.sanitized_compose_yaml == second_policy.sanitized_compose_yaml
 assert first_policy.effective_limits["service_count"] == 2
 assert first_policy.base_images == ("fixture-base:latest",)
-assert {step.phase for step in base_plan.steps} == {"baseline", "exercise", "verify"}
+assert {step.phase for step in base_plan.steps} == {
+    "baseline", "inject", "observe", "recover", "verify",
+}
 
 sanitized = yaml.safe_load(first_policy.sanitized_compose_yaml)
 assert all(network["driver"] == "bridge" and network["internal"] is True for network in sanitized["networks"].values())
@@ -142,6 +144,12 @@ expect_error(lambda: validate_unsafe_provider_output(budget_attack))
 disk_budget_attack = copy.deepcopy(base_output)
 disk_budget_attack["budget"]["max_disk_mb"] = 16
 expect_error(lambda: plan_from(disk_budget_attack))
+
+phase_order_attack = copy.deepcopy(base_output)
+phase_order_attack["steps"][1], phase_order_attack["steps"][3] = (
+    phase_order_attack["steps"][3], phase_order_attack["steps"][1],
+)
+expect_error(lambda: plan_from(phase_order_attack))
 
 
 class MaliciousProvider(LLMProvider):

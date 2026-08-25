@@ -2,6 +2,16 @@
 
 # Benchmark Generator
 
+## Unified arbitrary benchmark workflow
+
+The recommended NL workflow is now `generator.nl.cli plan` followed by an
+explicitly approved `generate`. One natural-language request produces topology,
+software, fault, recovery, and test declarations. The system hardens the response,
+deploys it through the label-scoped isolated Compose backend, executes the complete
+fault lifecycle, captures hashed evidence, and prepares a provisional score.
+Arbitrary-code results remain promotion-ineligible until converted into a reviewed
+capability/driver; legacy NL, Scene, and Unsafe commands remain compatibility APIs.
+
 ## Parallel lifecycle boundary
 
 Production Bundle isolation clones the whole generated topology context per

@@ -21,6 +21,9 @@ from generator.nl.unsafe_provider import DeterministicUnsafeProvider
 from generator.nl.unsafe_session import (
     UnsafeNaturalLanguageExecutor, UnsafeNaturalLanguagePlanner,
 )
+from generator.nl.unified import (
+    UnifiedNaturalLanguageExecutor, UnifiedNaturalLanguagePlanner,
+)
 
 
 BENCHMARKS_DIR = Path(__file__).resolve().parents[2]
@@ -53,6 +56,32 @@ def _under_session_root(value: Path) -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Natural-language Benchmark Generator v1")
     commands = parser.add_subparsers(dest="command", required=True)
+    unified_plan = commands.add_parser(
+        "plan",
+        help="generate any benchmark as a hardened isolated plan (recommended)",
+    )
+    unified_plan.add_argument("--text", required=True)
+    unified_plan.add_argument("--seed", default="arbitrary-benchmark-v1")
+    unified_plan.add_argument(
+        "--provider", choices=PROVIDER_CHOICES, default="deterministic",
+    )
+    unified_plan.add_argument("--model")
+    unified_plan.add_argument("--base-url")
+    unified_plan.add_argument("--api-key-env")
+    unified_plan.add_argument("--timeout", type=int, default=120)
+    unified_plan.add_argument("--session-id")
+    unified_plan.add_argument("--session-root", type=Path, default=DEFAULT_SESSION_ROOT)
+    unified_plan.add_argument("--unsafe-base-image", default="debian:bookworm-slim")
+    _add_mcp_arguments(unified_plan)
+    unified_generate = commands.add_parser(
+        "generate",
+        help="execute one approved arbitrary benchmark plan in isolation",
+    )
+    unified_generate.add_argument("--plan", type=Path, required=True)
+    unified_generate.add_argument("--approval-token", required=True)
+    unified_generate.add_argument(
+        "--acknowledge-arbitrary-code", action="store_true", required=True,
+    )
     plan = commands.add_parser("nl-plan", help="parse, clarify and compile plan-only evidence")
     plan.add_argument("--text", required=True)
     plan.add_argument("--seed", default="natural-language-v1")
@@ -182,6 +211,29 @@ def main(argv=None) -> int:
         if args.command == "catalog":
             print(json.dumps(build_capability_catalog(BENCHMARKS_DIR).to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
             return 0
+        if args.command == "plan":
+            root = _under_session_root(args.session_root)
+            result = UnifiedNaturalLanguagePlanner(BENCHMARKS_DIR, root).plan(
+                args.text,
+                provider=_provider(args, unsafe=True),
+                seed=args.seed,
+                session_id=args.session_id,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return {
+                "ready": 0, "blocked": 3, "provider_error": 4,
+                "policy_rejected": 6, "schema_rejected": 6,
+            }[result["status"]]
+        if args.command == "generate":
+            plan = _under_session_root(args.plan)
+            result = UnifiedNaturalLanguageExecutor(
+                BENCHMARKS_DIR, DEFAULT_SESSION_ROOT,
+            ).execute(
+                plan, args.approval_token,
+                acknowledge_arbitrary_code=args.acknowledge_arbitrary_code,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return 0 if result["status"] == "complete" else 5
         if args.command == "nl-plan":
             root = _under_session_root(args.session_root)
             result = NaturalLanguagePlanner(BENCHMARKS_DIR, root).plan(

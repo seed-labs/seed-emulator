@@ -31,7 +31,17 @@ def git_paths(*args: str) -> set[Path]:
         ["git", *args], cwd=BENCHMARKS, check=True, text=True,
         stdout=subprocess.PIPE,
     )
-    return {Path(line) for line in result.stdout.splitlines() if line}
+    paths = set()
+    for line in result.stdout.splitlines():
+        if not line:
+            continue
+        path = Path(line)
+        # Git reports tracked paths relative to the repository root while
+        # ls-files may report untracked paths relative to cwd. Normalize both.
+        if path.parts and path.parts[0] == BENCHMARKS.name:
+            path = Path(*path.parts[1:])
+        paths.add(path)
+    return paths
 
 
 def changed_paths() -> set[Path]:

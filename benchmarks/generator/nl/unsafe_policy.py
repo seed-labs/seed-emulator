@@ -294,8 +294,13 @@ def compile_unsafe_policy(
     if not step_services <= set(service_ids):
         raise ValueError("unsafe lifecycle step references an unknown service")
     phases = {item.phase for item in plan.steps}
-    if phases != {"baseline", "exercise", "verify"}:
-        raise ValueError("unsafe lifecycle must include baseline, exercise and verify phases")
+    legacy = {"baseline", "exercise", "verify"} <= phases
+    complete = {"baseline", "inject", "recover", "verify"} <= phases
+    if not (legacy or complete):
+        raise ValueError(
+            "arbitrary lifecycle must include baseline/inject/recover/verify "
+            "or the legacy baseline/exercise/verify phases"
+        )
 
     sanitized_yaml = yaml.safe_dump(sanitized, sort_keys=True, allow_unicode=True)
     effective_limits = {
@@ -314,7 +319,7 @@ def compile_unsafe_policy(
         {"severity": "high", "code": "generated_dockerfiles", "mitigation": "isolated build context, network=none, time and image-size budgets"},
         {"severity": "high", "code": "linux_net_admin", "mitigation": "only NET_ADMIN/NET_RAW in private non-host namespaces"},
         {"severity": "high", "code": "untrusted_compose", "mitigation": "strict key policy plus deterministic hardening and project labels"},
-        {"severity": "medium", "code": "no_automatic_qualification", "mitigation": "unsafe_generated plans are permanently promotion-ineligible"},
+        {"severity": "medium", "code": "no_automatic_qualification", "mitigation": "arbitrary-code evidence may be prepared for scoring but remains promotion-ineligible"},
     )
     policy_fingerprint = _sha({
         "plan": plan.fingerprint,

@@ -2,6 +2,28 @@
 
 # Natural-Language Generator Gateway
 
+## 统一任意 Benchmark 入口
+
+推荐入口不再要求用户显式选择 Bundle、Scene 或 Unsafe：
+
+```bash
+python3 -m generator.nl.cli plan --text "描述任意拓扑、软件、故障和测试"
+python3 -m generator.nl.cli generate \
+  --plan reports/nl_sessions/<session>/benchmark_plan.json \
+  --approval-token '<one-time-token>' \
+  --acknowledge-arbitrary-code
+```
+
+`plan` 是唯一接收自然语言的生产入口。LLM 输出严格的 arbitrary benchmark IR：Compose
+表达拓扑，Dockerfile 表达软件，`baseline/inject/observe/recover/verify` steps 表达故障和测试。
+本地响应硬化随后完成 JSON Schema、Compose/Dockerfile/Shell、资源预算和逃逸策略检查，默认
+不改变 Docker 状态。`generate` 只接收已批准的 `benchmark_plan.json`，在 session 独立 Compose
+project 中构建并运行，结束后强制清理，生成 `evidence_manifest.json`、
+`scoring_preparation.json` 和 `benchmark_execution_result.json`。
+
+内部执行等级仍为 `isolated_arbitrary_code`，原 `nl-*` 命令保留为兼容接口。任意代码证据可以
+进入评分准备，但在提炼为受控 capability 前保持 `promotion_eligible=false`。
+
 本层允许用户用中文或英文描述 benchmark 需求，并把不可信自然语言/LLM 输出转换成现有
 确定性生成器能够验证的 `TopologyRequest` 和 `BenchmarkRequest`。LLM 只负责意图提取，
 不拥有 Docker、FaultDriver、发布或修复执行权限。

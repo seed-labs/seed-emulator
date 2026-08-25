@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 
 UNSAFE_SCHEMA_VERSION = 1
 IDENTITY = re.compile(r"^[a-z][a-z0-9_.-]{2,63}$")
-PHASES = {"baseline", "exercise", "verify"}
+PHASES = {"baseline", "exercise", "inject", "observe", "recover", "verify"}
 SYSTEM_LIMITS = {
     "max_services": 32,
     "max_cpu_cores": 16.0,
@@ -61,7 +61,7 @@ UNSAFE_PLAN_OUTPUT_SCHEMA: Dict[str, Any] = {
                 ],
                 "properties": {
                     "step_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{2,63}$"},
-                    "phase": {"enum": ["baseline", "exercise", "verify"]},
+                    "phase": {"enum": sorted(PHASES)},
                     "service": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{2,63}$"},
                     "shell": {"type": "string", "minLength": 1, "maxLength": 16384},
                     "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 300},
@@ -253,6 +253,18 @@ class UnsafeScenarioPlan:
             raise ValueError("unsafe step identities must be unique")
         if any(item.timeout_seconds > self.budget.max_step_seconds for item in self.steps):
             raise ValueError("unsafe step exceeds plan timeout budget")
+        phases = [item.phase for item in self.steps]
+        if "inject" in phases:
+            required = ("baseline", "inject", "recover", "verify")
+            if any(phase not in phases for phase in required):
+                raise ValueError("arbitrary benchmark lifecycle is incomplete")
+            positions = [phases.index(phase) for phase in required]
+            if positions != sorted(positions) or len(set(positions)) != len(positions):
+                raise ValueError("arbitrary benchmark lifecycle phases are out of order")
+            if "observe" in phases and not (
+                phases.index("inject") < phases.index("observe") < phases.index("recover")
+            ):
+                raise ValueError("fault observation must occur between injection and recovery")
         if not re.fullmatch(r"[0-9a-f]{64}", self.source_text_sha256):
             raise ValueError("unsafe source fingerprint is invalid")
 
