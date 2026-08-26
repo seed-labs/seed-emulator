@@ -13,6 +13,9 @@ Git README 覆盖集合。
 该测试还强制 `generator/README.md` 同时包含可渲染的 Mermaid flowchart 与
 sequenceDiagram，并检查两张图覆盖统一入口、受控 Bundle、隔离任意代码、证据和评分准备。
 流程图节点使用短标签和 `<br/>` 换行，防止桌面端 Mermaid 渲染时中文或长标识被裁切。
+`test_benchmark_readmes.py` 同时审计所有非运行归档 README 中的 `python3 -m` 模块、Python
+脚本和测试 shell 路径，拒绝不存在的模块、文件占位符，以及会实际触发编译的
+`topologies/*.py --help` 误导命令。
 
 该目录覆盖 benchmark CLI、场景安全边界、生成器、自然语言桥接、bundle 和真实 Docker 生命周期。
 

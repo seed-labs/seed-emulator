@@ -8,7 +8,13 @@
 
 ```bash
 cd /home/zvanadium/seed-emulator/benchmarks
-python3 topologies/<entry>.py --help
+python3 topologies/firewall_mini_internet.py
+python3 topologies/network_software_suite.py
+python3 topologies/random_complex_internet.py
 ```
+
+这些文件是直接执行即编译拓扑的兼容包装器，**没有 `--help` CLI**；传入 `--help` 仍会执行
+拓扑编译。只需要规划、校验或查看参数时，应使用
+`python3 -m generator.topology.cli --help`，避免误触发生成。
 
 入口参数、默认资源或输出位置变化时同步更新本 README、对应 topology spec 和回归测试。

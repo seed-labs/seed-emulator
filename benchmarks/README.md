@@ -26,8 +26,10 @@
 ```bash
 cd /home/zvanadium/seed-emulator/benchmarks
 python3 benchmark_cli.py --list
-python3 -m generator.cli --help
 python3 -m generator.nl.cli --help
+python3 -m generator.topology.cli --help
+python3 -m generator.faults.cli --help
+python3 -m generator.bundle.cli --help
 python3 tests/test_benchmark_readmes.py
 python3 tests/test_generator_readmes.py
 ```

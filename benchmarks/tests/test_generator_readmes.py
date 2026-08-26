@@ -75,7 +75,7 @@ def validate_root_diagrams() -> None:
         "generator flowchart": "flowchart TB" in content,
         "generator sequence": "sequenceDiagram" in content,
         "unified plan entry": "generator.nl.cli plan" in content,
-        "controlled lifecycle": "CompiledBenchmarkBundle" in content,
+        "controlled lifecycle": "Compiled<br/>BenchmarkBundle" in content,
         "arbitrary lifecycle": "isolated_arbitrary_code" in content,
         "evidence/scoring": "临时评分准备" in content,
         "wrapped flow labels": content.count("<br/>") >= 12,

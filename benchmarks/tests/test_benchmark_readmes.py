@@ -3,11 +3,15 @@
 
 from __future__ import annotations
 
+import importlib.util
+import re
 import subprocess
+import sys
 from pathlib import Path
 
 
 BENCHMARKS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BENCHMARKS))
 REQUIRED = (
     BENCHMARKS,
     BENCHMARKS / "agents",
@@ -23,6 +27,7 @@ REQUIRED = (
 MARKER = "README_SYNC_REQUIRED"
 SYNC_SUFFIXES = {".py", ".json", ".sh"}
 RUNTIME_LAYERS = {"reports"}
+STDLIB_MODULES = {"compileall", "py_compile", "unittest"}
 
 
 def git_paths(*args: str) -> set[Path]:
@@ -83,6 +88,38 @@ def main() -> None:
     if errors:
         raise SystemExit("README coverage failed:\n- " + "\n- ".join(sorted(errors)))
     print(f"README coverage passed: {len(REQUIRED)} benchmark layers")
+
+    command_errors: list[str] = []
+    for readme in sorted(BENCHMARKS.rglob("README.md")):
+        if "meeting_reports" in readme.parts:
+            continue
+        content = readme.read_text(encoding="utf-8")
+        for module in re.findall(r"python3\s+-m\s+([A-Za-z_]\w*(?:\.\w+)*)", content):
+            if module not in STDLIB_MODULES and importlib.util.find_spec(module) is None:
+                command_errors.append(
+                    f"{readme.relative_to(BENCHMARKS)} references missing module {module}"
+                )
+        for script in re.findall(r"python3\s+([A-Za-z0-9_./-]+\.py)", content):
+            if not (BENCHMARKS / script).is_file():
+                command_errors.append(
+                    f"{readme.relative_to(BENCHMARKS)} references missing script {script}"
+                )
+        for script in re.findall(r"\b(tests/[A-Za-z0-9_./-]+\.sh)\b", content):
+            if not (BENCHMARKS / script).is_file():
+                command_errors.append(
+                    f"{readme.relative_to(BENCHMARKS)} references missing script {script}"
+                )
+        if "topologies/<entry>.py" in content:
+            command_errors.append(
+                f"{readme.relative_to(BENCHMARKS)} contains a non-runnable topology placeholder"
+            )
+        if re.search(r"python3\s+topologies/\S+\.py\s+--help", content):
+            command_errors.append(
+                f"{readme.relative_to(BENCHMARKS)} uses --help on an eager topology wrapper"
+            )
+    if command_errors:
+        raise SystemExit("README command audit failed:\n- " + "\n- ".join(command_errors))
+    print("README command audit passed")
 
 
 if __name__ == "__main__":
