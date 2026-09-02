@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-"""Build B02a: an agent-facing registrar on top of the B02 DNS Internet."""
+"""Build B02a with Namingo Registrar, Registry, and authoritative TLD DNS."""
 
 from __future__ import annotations
 
@@ -19,16 +19,28 @@ from examples.internet.B02_mini_internet_with_dns import mini_internet_with_dns
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Binding, Emulator, Filter
 from seedemu.layers import Base
-from seedemu.services import DomainNameService
-from seedemu.services.AgentDnsProvisioningService import AgentDnsProvisioningServer
-from seedemu.services.AgentDomainRegistrarService import AgentDomainRegistrarService
-from seedemu.services.AgentManagedDnsService import AgentManagedDnsService
+from seedemu.services import (
+    DomainNameService,
+    NamingoRegistrarService,
+    NamingoRegistryService,
+)
+
+
+COM_TRANSFER_KEY_NAME = "com-transfer"
+COM_TRANSFER_KEY_SECRET = "c2VlZGVtdS1jb20tdHJhbnNmZXIta2V5"
+COM_HIDDEN_PRIMARY_IP = "10.151.0.71"
+COM_PUBLIC_SECONDARY_IPS = ["10.152.0.71", "10.153.0.73"]
+REGISTRAR_IP = "10.150.0.73"
+REGISTRY_IP = "10.154.0.73"
+REGISTRY_EPP_HOSTNAME = "epp.registry.com"
+REGISTRAR_EPP_CLID = "seedemu"
+REGISTRAR_EPP_PASSWORD = "seedemu-epp"
 
 
 def parse_args() -> argparse.Namespace:
     """Parse compilation options while retaining the legacy amd/arm argument."""
     parser = argparse.ArgumentParser(
-        description="Build the B02a dynamic domain-registration scenario."
+        description="Build B02a with Namingo Registrar, Registry, and COM DNS."
     )
     parser.add_argument("legacy_platform", nargs="?", choices=["amd", "arm"])
     parser.add_argument("--platform", choices=["amd", "arm"])
@@ -47,36 +59,89 @@ def resolve_platform(name: str) -> Platform:
     return Platform.AMD64 if name == "amd" else Platform.ARM64
 
 
-def registrar_policy() -> str:
-    """Return the registrar policy exposed by the agent-facing JSON API."""
-    return """{
-  "supported_tlds": ["com"],
-  "reserved_names": ["google.com", "twitter.com"],
-  "max_years": 10,
-  "default_nameservers": [
-    {"name": "ns1.seedemu-dns.net.", "address": "10.161.0.53"},
-    {"name": "ns2.seedemu-dns.net.", "address": "10.162.0.53"}
-  ]
-}"""
+def configure_com_authoritative_topology(
+    dns: DomainNameService,
+) -> None:
+    """Configure A-com as hidden primary and B/C-com as public secondaries."""
+    targets = dns.getPendingTargets()
+    a_com = targets["a-com-server"]
+    b_com = targets["b-com-server"]
+
+    a_com.setHiddenPrimary().setTransferKey(
+        COM_TRANSFER_KEY_NAME, COM_TRANSFER_KEY_SECRET
+    )
+    for secondary_ip in COM_PUBLIC_SECONDARY_IPS:
+        a_com.addTransferTarget(secondary_ip)
+
+    b_com.setSecondary(COM_HIDDEN_PRIMARY_IP).setTransferKey(
+        COM_TRANSFER_KEY_NAME, COM_TRANSFER_KEY_SECRET
+    )
+
+    c_com = dns.install("c-com-server").addZone("com.")
+    c_com.setSecondary(COM_HIDDEN_PRIMARY_IP).setTransferKey(
+        COM_TRANSFER_KEY_NAME, COM_TRANSFER_KEY_SECRET
+    )
 
 
-def secure_com_parent_updates(base: Base) -> None:
-    """Replace B02's permissive com update ACL in this B02a instance only."""
-    key = 'key "agent-parent-update" { algorithm hmac-sha256; secret "YWdlbnQtcGFyZW50LXVwZGF0ZS1rZXk="; };\n'
-    master = base.getAutonomousSystem(151).getHost("host_0")
-    master.setFile("/etc/bind/agent-parent-update.key", key)
-    master.appendStartCommand(
-        "grep -q 'agent-parent-update.key' /etc/bind/named.conf || "
-        "printf '%s\\n' 'include \"/etc/bind/agent-parent-update.key\";' >> /etc/bind/named.conf"
+def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService) -> None:
+    """Add independent Namingo Registrar and Registry nodes to B02a."""
+    base.getAutonomousSystem(150).createHost("namingo-registrar").joinNetwork(
+        "net0", address=REGISTRAR_IP
+    ).setDisplayName("Namingo Registrar")
+    base.getAutonomousSystem(154).createHost("namingo-registry").joinNetwork(
+        "net0", address=REGISTRY_IP
+    ).setDisplayName("Namingo Registry")
+
+    # Publish stable service names through the existing COM zone. The Registry
+    # exposes EPP/TLS and provisions the Registrar account, but the current
+    # Registrar wrapper does not yet initiate EPP transactions.
+    com_zone = dns.getZone("com.")
+    com_zone.addRecord("epp.registry A {}".format(REGISTRY_IP))
+    com_zone.addRecord("whois.registrar A {}".format(REGISTRAR_IP))
+    com_zone.addRecord("rdap.registrar A {}".format(REGISTRAR_IP))
+
+    registrar = NamingoRegistrarService()
+    registrar.install("namingo-registrar").setBackend("custom").setIdentity(
+        name="SeedEmu Namingo Registrar",
+        iana_id="9999",
+        url="http://registrar.com",
+        whois_host="whois.registrar.com",
+        rdap_url="http://rdap.registrar.com",
+        abuse_email="abuse@registrar.com",
+        abuse_phone="+1.5550100",
     )
-    master.appendStartCommand(
-        "sed -i 's/allow-update { any; }/allow-update { key \"agent-parent-update\"; }/' "
-        "/etc/bind/named.conf.zones && rndc reconfig"
+
+    registry = NamingoRegistryService()
+    registry.install("namingo-registry").setEppEndpoint(
+        REGISTRY_EPP_HOSTNAME, 700
+    ).setTlds(["com"]).setRegistrar(
+        clid=REGISTRAR_EPP_CLID,
+        password=REGISTRAR_EPP_PASSWORD,
+        prefix="SEED",
+        whitelist=[REGISTRAR_IP],
+        name="SeedEmu Namingo Registrar",
+        iana_id=9999,
+        email="registrar@registrar.com",
     )
+
+    emu.addBinding(
+        Binding(
+            "namingo-registrar",
+            filter=Filter(asn=150, nodeName="namingo-registrar"),
+        )
+    )
+    emu.addBinding(
+        Binding(
+            "namingo-registry",
+            filter=Filter(asn=154, nodeName="namingo-registry"),
+        )
+    )
+    emu.addLayer(registrar)
+    emu.addLayer(registry)
 
 
 def build_emulator() -> Emulator:
-    """Extend B02 with a registrar API and managed authoritative DNS hosts."""
+    """Extend B02 with a hidden primary and two public COM secondaries."""
     # Reuse B02 so this example has the same routed Internet, authoritative DNS
     # hierarchy, and recursive resolvers as the preceding example.
     emu = mini_internet_with_dns.build_emulator()
@@ -84,69 +149,27 @@ def build_emulator() -> Emulator:
     dns: DomainNameService = emu.getLayer("DomainNameService")
 
     ############################################################################
-    # Create the physical hosts that will run the new virtual services.
-    base.getAutonomousSystem(150).createHost("registrar").joinNetwork("net0").setDisplayName("Domain Registrar")
-    base.getAutonomousSystem(161).createHost("managed-dns-master").joinNetwork("net0", address="10.161.0.53").setDisplayName("Managed DNS Master")
-    base.getAutonomousSystem(162).createHost("managed-dns-secondary").joinNetwork("net0", address="10.162.0.53").setDisplayName("Managed DNS Secondary")
+    # B02 already supplies A-com and B-com. Add the physical C-com host.
+    base.getAutonomousSystem(153).createHost("c-com").joinNetwork(
+        "net0", address=COM_PUBLIC_SECONDARY_IPS[1]
+    ).setDisplayName("COM-C Public Secondary")
 
-    ############################################################################
-    # Install and configure the agent-facing registrar service. A successful
-    # purchase becomes pending_dns; a provisioning consumer can later process
-    # the service's outbox event and update the DNS hierarchy.
-    registrar_service = AgentDomainRegistrarService()
-    registrar_server = registrar_service.install("agent-registrar-api")
-    registrar_server.setPolicy(registrar_policy()).setProvisionerUrl("http://127.0.0.1:8053")
+    # B02 exposes A-com and B-com. B02a turns A-com into a hidden distribution
+    # primary, retains B-com as a public secondary, and adds C-com as a second
+    # public secondary. Only B/C publish NS and glue records to the root zone.
+    configure_com_authoritative_topology(dns)
+    emu.getVirtualNode("a-com-server").setDisplayName("COM-A Hidden Primary")
+    emu.getVirtualNode("b-com-server").setDisplayName("COM-B Public Secondary")
+    emu.getVirtualNode("c-com-server").setDisplayName("COM-C Public Secondary")
 
-    # Provision and verify the managed zone and its inherited com. delegation.
-    # Both control-plane services share the same virtual and physical node.
-    provisioner = AgentDnsProvisioningServer().setParentServers(
-        "10.151.0.71", ["10.152.0.71"]
-    ).setManagedServers("10.161.0.53", ["10.162.0.53"])
-    registrar_server.setDnsProvisioner(provisioner)
-
-    managed_dns = AgentManagedDnsService()
-    managed_dns.install("managed-dns-master").setMaster("10.162.0.53")
-    managed_dns.install("managed-dns-secondary").setSecondary("10.161.0.53")
-
-    # Delegate the provider identity zone in B02a's inherited net. parent. The
-    # records are added to this emulator instance only; B01/B02 remain unchanged.
-    net_zone = dns.getZone("net.")
-    net_zone.addRecord("seedemu-dns.net. NS ns1.seedemu-dns.net.")
-    net_zone.addRecord("seedemu-dns.net. NS ns2.seedemu-dns.net.")
-    net_zone.addRecord("ns1.seedemu-dns.net. A 10.161.0.53")
-    net_zone.addRecord("ns2.seedemu-dns.net. A 10.162.0.53")
-
-    ############################################################################
-    # Bind each virtual service to the corresponding physical host. Specifying
-    # both ASN and node name keeps the placement explicit and deterministic.
     emu.addBinding(
         Binding(
-            "agent-registrar-api",
-            filter=Filter(asn=150, nodeName="registrar"),
+            "c-com-server",
+            filter=Filter(asn=153, nodeName="c-com"),
         )
     )
-    emu.addBinding(
-        Binding(
-            "managed-dns-master",
-            filter=Filter(
-                asn=161,
-                nodeName="managed-dns-master",
-            ),
-        )
-    )
-    emu.addBinding(
-        Binding(
-            "managed-dns-secondary",
-            filter=Filter(
-                asn=162,
-                nodeName="managed-dns-secondary",
-            ),
-        )
-    )
-    # The registrar service is a new service layer. DomainNameService already
-    # belongs to the inherited B02 emulator and therefore is not added again.
-    emu.addLayer(registrar_service)
-    emu.addLayer(managed_dns)
+
+    configure_namingo_services(emu, base, dns)
 
     return emu
 
@@ -168,7 +191,6 @@ def run(
     # Standalone mode: render bindings and compile the Docker deployment.
     if render:
         emu.render()
-        secure_com_parent_updates(emu.getLayer("Base"))
     output_dir = Path(output or SCRIPT_DIR / "output").resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     emu.compile(Docker(platform=platform), str(output_dir), override=override)

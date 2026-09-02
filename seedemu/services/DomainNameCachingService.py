@@ -134,14 +134,21 @@ class DomainNameCachingServer(Server, Configurable):
         node.appendStartCommand('service named start')
 
         for (zone_name, vnode_name) in self.__pending_forward_zones.items():
-            # Prefer authoritative master IPs recorded by DomainNameService
+            # Prefer public authoritative servers. Hidden primaries are zone
+            # distribution endpoints and must not receive resolver traffic.
             vnode_addr = None
             addrs: list = []
             try:
                 dns_layer: DomainNameService = self.__emulator.getRegistry().get('seedemu', 'layer', 'DomainNameService')
-                masters = dns_layer.getMasterIp()
-                if zone_name in masters and len(masters[zone_name]) > 0:
-                    addrs = masters[zone_name]
+                server_vnodes = dns_layer.getZoneServerNames(zone_name)
+                for v in server_vnodes:
+                    try:
+                        pn = self.__emulator.getBindingFor(v)
+                        ifaces = pn.getInterfaces()
+                        if len(ifaces) > 0:
+                            addrs.append(ifaces[0].getAddress())
+                    except Exception:
+                        continue
             except Exception:
                 pass
 
@@ -156,15 +163,9 @@ class DomainNameCachingServer(Server, Configurable):
 
             if vnode_addr is None and not addrs:
                 try:
-                    server_vnodes = dns_layer.getZoneServerNames(zone_name)
-                    for v in server_vnodes:
-                        try:
-                            pn = self.__emulator.getBindingFor(v)
-                            ifaces = pn.getInterfaces()
-                            if len(ifaces) > 0:
-                                addrs.append(ifaces[0].getAddress())
-                        except Exception:
-                            continue
+                    masters = dns_layer.getMasterIp()
+                    if zone_name in masters and len(masters[zone_name]) > 0:
+                        addrs = masters[zone_name]
                 except Exception:
                     pass
 

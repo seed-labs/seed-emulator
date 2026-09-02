@@ -2,7 +2,8 @@ from __future__ import annotations
 from seedemu.core import Node, Printable, Emulator, Service, Server
 from seedemu.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set, Optional
-from re import sub
+from ipaddress import ip_address
+from re import fullmatch, sub
 from random import randint
 import requests
 
@@ -28,8 +29,7 @@ class Zone(Printable):
     __subzones: Dict[str, Zone]
     __records: List[str]
     __gules: List[str]
-    # TODO: maybe make it a Dict[str, List[str]], so a name can point to multiple vnodes?
-    __pending_records: Dict[str, str]
+    __pending_records: Dict[str, List[str]]
 
     def __init__(self, name: str):
         """!
@@ -154,7 +154,7 @@ class Zone(Printable):
 
         @returns self, for chaining API calls.
         """
-        self.__pending_records[name] = vnode
+        self.__pending_records.setdefault(name, []).append(vnode)
 
         return self
 
@@ -164,20 +164,21 @@ class Zone(Printable):
 
         @param emulator emulator object.
         """
-        for (domain_name, vnode_name) in self.__pending_records.items():
-            pnode = emulator.resolvVnode(vnode_name)
+        for domain_name, vnode_names in self.__pending_records.items():
+            for vnode_name in vnode_names:
+                pnode = emulator.resolvVnode(vnode_name)
 
-            ifaces = pnode.getInterfaces()
-            assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
-            addr = ifaces[0].getAddress()
+                ifaces = pnode.getInterfaces()
+                assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
+                addr = ifaces[0].getAddress()
 
-            self.addRecord('{} A {}'.format(domain_name, addr))
+                self.addRecord('{} A {}'.format(domain_name, addr))
 
-    def getPendingRecords(self) -> Dict[str, str]:
+    def getPendingRecords(self) -> Dict[str, List[str]]:
         """!
         @brief Get pending records.
 
-        @returns dict, where key is domain name, and value is vnode name.
+        @returns dict, where key is domain name, and value is a list of vnode names.
         """
         return self.__pending_records
 
@@ -241,6 +242,10 @@ class DomainNameServer(Server):
     __is_master: bool
     __is_real_root: bool
     __include_paths: Dict[str, str]
+    __is_hidden_primary: bool
+    __primary_ip: Optional[str]
+    __transfer_key: Optional[Tuple[str, str]]
+    __transfer_targets: List[str]
 
     def __init__(self):
         """!
@@ -252,6 +257,10 @@ class DomainNameServer(Server):
         self.__is_master = False
         self.__is_real_root = False
         self.__include_paths = {}
+        self.__is_hidden_primary = False
+        self.__primary_ip = None
+        self.__transfer_key = None
+        self.__transfer_targets = []
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -276,6 +285,68 @@ class DomainNameServer(Server):
         @returns self, for chaining API calls.
         """
         self.__is_master = True
+
+        return self
+
+    def setHiddenPrimary(self) -> DomainNameServer:
+        """!
+        @brief Make this server a hidden authoritative primary.
+
+        A hidden primary is not published in parent-zone NS/glue records, does
+        not answer ordinary queries for its hosted zones, and rejects dynamic
+        updates. Zone data is expected to be delivered as a validated zone file
+        by an external publisher such as Namingo Registry's Zone Writer.
+
+        @returns self, for chaining API calls.
+        """
+        self.__is_master = True
+        self.__is_hidden_primary = True
+
+        return self
+
+    def isHiddenPrimary(self) -> bool:
+        """! @brief Return whether this server is a hidden primary. """
+        return self.__is_hidden_primary
+
+    def setSecondary(self, primary_ip: str) -> DomainNameServer:
+        """!
+        @brief Explicitly configure this server as a secondary.
+
+        @param primary_ip hidden/public primary address used for AXFR/IXFR.
+
+        @returns self, for chaining API calls.
+        """
+        ip_address(primary_ip)
+        self.__is_master = False
+        self.__primary_ip = primary_ip
+
+        return self
+
+    def setTransferKey(self, name: str, secret: str) -> DomainNameServer:
+        """!
+        @brief Configure the TSIG key used for NOTIFY and AXFR/IXFR.
+
+        The same key must be configured on the primary and its secondaries.
+        This key is deliberately separate from Registrar/Registry EPP
+        credentials and from any dynamic-update key.
+
+        @returns self, for chaining API calls.
+        """
+        assert fullmatch(r'[A-Za-z0-9_.-]{1,63}', name), 'invalid TSIG key name'
+        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', secret), 'invalid TSIG secret'
+        self.__transfer_key = (name, secret)
+
+        return self
+
+    def addTransferTarget(self, address: str) -> DomainNameServer:
+        """!
+        @brief Authorize and notify a secondary at the given address.
+
+        @returns self, for chaining API calls.
+        """
+        ip_address(address)
+        assert address not in self.__transfer_targets, 'duplicate transfer target'
+        self.__transfer_targets.append(address)
 
         return self
 
@@ -401,6 +472,11 @@ class DomainNameServer(Server):
                 if len(zone.findRecords('SOA')) == 0:
                     zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(zonename), 'admin.{}'.format(zonename), randint(1, 0xffffffff)))
 
+                # A hidden primary is an unpublished distribution endpoint.
+                # Public secondaries add the NS and glue records instead.
+                if self.__is_hidden_primary:
+                    continue
+
                 existing_ns_addr = False
                 for record in zone.getRecords():
                     if record.endswith(' A {}'.format(addr)) and record.startswith('ns'):
@@ -431,7 +507,6 @@ class DomainNameServer(Server):
         @brief Handle the installation.
         """
         assert node == self.__node, 'configured node differs from install node. Please check if there are conflict bindings'
-
         node.addSoftware('bind9')
         if not self.__usesIncludeConfig():
             node.setFile(
@@ -455,7 +530,21 @@ include "/etc/bind/named.conf.local";
             DomainNameServiceFileTemplates['named_options']
         )
 
+        transfer_key_name = None
+        transfer_key_path = None
+        if self.__transfer_key is not None:
+            transfer_key_name, transfer_key_secret = self.__transfer_key
+            transfer_key_path = '/etc/bind/keys/{}.key'.format(transfer_key_name)
+            node.setFile(
+                transfer_key_path,
+                'key "{}" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
+                    transfer_key_name, transfer_key_secret
+                )
+            )
+
         named_conf_local_parts = []
+        if transfer_key_path is not None:
+            named_conf_local_parts.append('include "{}";\n'.format(transfer_key_path))
         if not self.__usesIncludeConfig():
             named_conf_local_parts.append('include "/etc/bind/named.conf.zones";\n')
         for include_path in dict.fromkeys(self.__include_paths.values()).keys():
@@ -475,18 +564,46 @@ include "/etc/bind/named.conf.local";
                 node.setFile(zonepath, '\n'.join(zone.getRecords()))
 
                 if self.__is_master:
-                    node.appendFile('/etc/bind/named.conf.zones',
-                            'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                    if self.__is_hidden_primary:
+                        assert transfer_key_name is not None, 'hidden primary requires a TSIG transfer key'
+                        assert self.__transfer_targets, 'hidden primary requires at least one transfer target'
+                        notify_targets = ' '.join(
+                            '{} key "{}";'.format(addr, transfer_key_name)
+                            for addr in self.__transfer_targets
                         )
-                elif zone.getName() in dns.getMasterIp().keys(): # Check if there are some master servers
-                    master_ips = ';'.join(dns.getMasterIp()[zone.getName()])
+                        node.appendFile(
+                            '/etc/bind/named.conf.zones',
+                            'zone "{}" {{ type master; notify yes; also-notify {{ {} }}; '
+                            'allow-transfer {{ key "{}"; }}; allow-query {{ none; }}; '
+                            'allow-update {{ none; }}; file "{}"; }};\n'.format(
+                                zonename, notify_targets, transfer_key_name, zonepath
+                            )
+                        )
+                    else:
+                        node.appendFile('/etc/bind/named.conf.zones',
+                                'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                            )
+                elif self.__primary_ip is not None or zone.getName() in dns.getMasterIp().keys():
+                    master_ips = [self.__primary_ip] if self.__primary_ip is not None else dns.getMasterIp()[zone.getName()]
+                    if transfer_key_name is not None:
+                        primary_entries = ' '.join(
+                            '{} key "{}";'.format(addr, transfer_key_name)
+                            for addr in master_ips
+                        )
+                    else:
+                        primary_entries = ' '.join('{};'.format(addr) for addr in master_ips)
                     node.appendFile('/etc/bind/named.conf.zones',
-                        'zone "{}" {{ type slave; masters {{ {}; }}; file "{}"; }};\n'.format(zonename, master_ips, zonepath)
+                        'zone "{}" {{ type slave; masters {{ {} }}; file "{}"; allow-update {{ none; }}; }};\n'.format(zonename, primary_entries, zonepath)
                     )
                 else:
                     node.appendFile('/etc/bind/named.conf.zones',
                         'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
                     )
+
+        if self.__transfer_key is not None:
+            node.appendStartCommand('chown -R root:bind /etc/bind/keys')
+            node.appendStartCommand('chmod 0750 /etc/bind/keys')
+            node.appendStartCommand('chmod 0640 /etc/bind/keys/*.key')
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')
@@ -576,12 +693,13 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
-    def getZoneServerNames(self, domain: str) -> List[str]:
+    def getZoneServerNames(self, domain: str, includeHidden: bool = False) -> List[str]:
         """!
         @brief Get the names of servers hosting the given zone. This only works
         if the server was installed by using the "installByName" call.
 
         @param domain domain.
+        @param includeHidden include hidden primary servers in the result.
 
         @returns list of tuple of (node name, asn)
         """
@@ -591,10 +709,15 @@ class DomainNameService(Service):
         for (vnode, sobj) in targets.items():
             server: DomainNameServer = sobj
 
+            if server.isHiddenPrimary() and not includeHidden:
+                continue
+
             hit = False
 
+            normalized_domain = domain if domain == '.' or domain.endswith('.') else domain + '.'
             for zone in server.getZones():
-                if zone.getName() == domain:
+                normalized_zone = zone if zone == '.' or zone.endswith('.') else zone + '.'
+                if normalized_zone == normalized_domain:
                     info.append(vnode)
                     hit = True
                     break

@@ -1,6 +1,6 @@
-id: internet-b02a-domain-registration
-name: Mini Internet With Dynamic Domain Registration
-description: A B02 DNS deployment with registrar control and managed authoritative DNS nodes.
+id: internet-b02a-tld-dns
+name: Mini Internet With Hidden COM Primary
+description: A B02 DNS deployment with Namingo Registrar, Registry, and hidden-primary COM DNS.
 runner: internet
 script: domain_registration.py
 platform: amd
@@ -9,9 +9,12 @@ features:
   - mini-internet
   - dns-component
   - dns-cache
-  - domain-registration
-  - dynamic-domain-registration
-  - managed-authoritative-dns
+  - hidden-primary
+  - authoritative-secondary
+  - tsig-zone-transfer
+  - namingo-registrar
+  - namingo-registry
+  - epp
 
 compile:
   enabled: true
@@ -29,74 +32,60 @@ build:
 runtime:
   compose: output/docker-compose.yml
   readiness:
-    - name: B02a registrar, managed DNS nodes, and client are running
+    - name: Namingo, COM DNS, root, and client containers are running
       type: compose-ps
       services:
-        - hnode_150_registrar
-        - hnode_161_managed-dns-master
-        - hnode_162_managed-dns-secondary
-        - hnode_150_host_0
-        - hnode_153_local-dns-2
+        - hnode_151_host_0
+        - hnode_152_host_0
+        - hnode_153_c-com
+        - hnode_171_host_0
+        - hnode_150_host_1
+        - hnode_150_namingo-registrar
+        - hnode_154_namingo-registry
       retries: 40
       interval: 3
 
-    - name: AS153 local DNS cache is ready
+    - name: COM-A hidden primary is ready
       type: exec
-      service: hnode_153_local-dns-2
+      service: hnode_151_host_0
       command: "pgrep named >/dev/null"
       expect_exit: 0
       retries: 30
       interval: 3
 
-    - name: Agent registrar API is ready
+    - name: COM-B public secondary is ready
       type: exec
-      service: hnode_150_registrar
-      command: "curl -fsS http://127.0.0.1:8080/health | grep -q '\"status\":\"ok\"'"
-      expect_exit: 0
-      retries: 30
-      interval: 2
-
-    - name: Parent delegation provisioner is ready
-      type: exec
-      service: hnode_150_registrar
-      command: "curl -fsS http://127.0.0.1:8053/health | grep -q '\"status\":\"ok\"'"
-      expect_exit: 0
-      retries: 30
-      interval: 2
-
-    - name: Managed DNS master is ready
-      type: exec
-      service: hnode_161_managed-dns-master
-      command: "pgrep named >/dev/null"
+      service: hnode_152_host_0
+      command: "dig @127.0.0.1 com. SOA +norecurse +short | grep -q ."
       expect_exit: 0
       retries: 30
       interval: 3
 
-    - name: Managed DNS master provisioning API is ready
+    - name: COM-C public secondary is ready
       type: exec
-      service: hnode_161_managed-dns-master
-      command: "curl -fsS http://127.0.0.1:8054/health | grep -q '\"status\":\"ok\"'"
+      service: hnode_153_c-com
+      command: "dig @127.0.0.1 com. SOA +norecurse +short | grep -q ."
       expect_exit: 0
       retries: 30
-      interval: 2
+      interval: 3
 
-    - name: Managed DNS secondary provisioning API is ready
+    - name: Namingo Registrar is ready
       type: exec
-      service: hnode_162_managed-dns-secondary
-      command: "curl -fsS http://127.0.0.1:8054/health | grep -q '\"status\":\"ok\"'"
+      service: hnode_150_namingo-registrar
+      command: "pgrep -f start_whois.php >/dev/null && pgrep -f start_rdap.php >/dev/null"
       expect_exit: 0
-      retries: 30
-      interval: 2
+      retries: 60
+      interval: 3
 
-    - name: Managed DNS secondary is ready
+    - name: Namingo Registry EPP is ready
       type: exec
-      service: hnode_162_managed-dns-secondary
-      command: "pgrep named >/dev/null"
+      service: hnode_154_namingo-registry
+      command: "pgrep -f start_epp.php >/dev/null"
       expect_exit: 0
-      retries: 30
+      retries: 60
       interval: 3
 
 test_programs:
-  - name: B02a dynamic registration validation
+  - name: B02a TLD DNS topology validation
     script: test_runtime.py
-    timeout: 360
+    timeout: 180
