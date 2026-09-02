@@ -1,0 +1,44 @@
+{
+  "agent_view": {
+    "objective": "Restore DNS name resolution for the exposed service.",
+    "project_alias": "benchmark-project",
+    "service": "<target-service>",
+    "symptom": { "name": "<probe-name>", "healthy": false }
+  },
+  "allowed_actions": ["inspect_dns", "probe_dns", "repair_dns", "finish"],
+  "actions": {
+    "inspect_dns": {
+      "tool": "benchmark.dns.inspect",
+      "description": "Inspect the DNS resolver configuration exposed for this benchmark.",
+      "fields": ["content", "exit_code"],
+      "arguments": {}
+    },
+    "probe_dns": {
+      "tool": "benchmark.dns.probe",
+      "description": "Probe whether DNS resolution is currently healthy.",
+      "fields": ["name", "healthy", "exit_code", "stdout"],
+      "arguments": { "name": "brdnode_150_router0" }
+    },
+    "repair_dns": {
+      "tool": "benchmark.dns.repair",
+      "description": "Apply the benchmark-authorized DNS repair to the exposed service.",
+      "fields": ["repaired"],
+      "arguments": { "nameserver": "127.0.0.11" }
+    },
+    "finish": {
+      "tool": null,
+      "terminal": true,
+      "description": "Declare completion after a healthy DNS probe has been observed.",
+      "fields": [],
+      "arguments": {}
+    }
+  },
+  "terminal_action": "finish",
+  "target_service": "<target-service>",
+  "project": "<compose-project>",
+  "max_calls": 6,
+  "benchmark_id": "<benchmark-id>",
+  "tool_service_url": "http://host.docker.internal:8000",
+  "grant_token": "<grant-token>",
+  "trace_path": "/tmp/adapter-trace.jsonl"
+}

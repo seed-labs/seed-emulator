@@ -1,0 +1,9 @@
+{
+  "candidate": {
+    "provider_name": "mimo",
+    "model": "mimo-v2.5",
+    "base_url": "https://api.xiaomimimo.com/v1",
+    "api_key_env": "MIMO_API_KEY"
+  },
+  "inspect_model": "openai/mimo-v2.5"
+}

@@ -1,0 +1,164 @@
+networks:
+  attacker_net:
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+  broadcast_net:
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+  victim_net:
+    ipam:
+      config:
+        - subnet: 10.0.3.0/24
+
+services:
+  router:
+    image: handsonsecurity/seedemu-router:2.0
+    container_name: smurf-router
+    privileged: true
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.bc_forwarding=1
+      - net.ipv4.conf.default.bc_forwarding=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      attacker_net:
+        ipv4_address: 10.0.1.254
+      broadcast_net:
+        ipv4_address: 10.0.2.254
+      victim_net:
+        ipv4_address: 10.0.3.254
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for f in /proc/sys/net/ipv4/conf/*/bc_forwarding; do [ -e "$$f" ] && echo 1 > "$$f"; done
+        for f in /proc/sys/net/ipv4/conf/*/rp_filter; do [ -e "$$f" ] && echo 0 > "$$f"; done
+        echo "Router ready"
+        tail -f /dev/null
+
+  attacker:
+    image: smurf-base:latest
+    container_name: smurf-attacker
+    privileged: true
+    depends_on: [router]
+    networks:
+      attacker_net:
+        ipv4_address: 10.0.1.10
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        ip route add 10.0.2.0/24 via 10.0.1.254
+        ip route add 10.0.3.0/24 via 10.0.1.254
+        echo "Attacker ready at 10.0.1.10"
+        tail -f /dev/null
+    volumes:
+      - ./smurf_attack.py:/opt/smurf/smurf_attack.py
+      - ./trigger_attack.sh:/opt/smurf/trigger_attack.sh
+
+  victim:
+    image: smurf-base:latest
+    container_name: smurf-victim
+    privileged: true
+    depends_on: [router]
+    networks:
+      victim_net:
+        ipv4_address: 10.0.3.10
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        ip route add 10.0.1.0/24 via 10.0.3.254
+        ip route add 10.0.2.0/24 via 10.0.3.254
+        echo "Victim ready at 10.0.3.10"
+        tail -f /dev/null
+    volumes:
+      - ./smurf_monitor.py:/opt/smurf/smurf_monitor.py
+
+  amp1:
+    image: smurf-base:latest
+    container_name: smurf-amp1
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.11
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp1 ready; tail -f /dev/null"]
+
+  amp2:
+    image: smurf-base:latest
+    container_name: smurf-amp2
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.12
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp2 ready; tail -f /dev/null"]
+
+  amp3:
+    image: smurf-base:latest
+    container_name: smurf-amp3
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.13
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp3 ready; tail -f /dev/null"]
+
+  amp4:
+    image: smurf-base:latest
+    container_name: smurf-amp4
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.14
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp4 ready; tail -f /dev/null"]
+
+  amp5:
+    image: smurf-base:latest
+    container_name: smurf-amp5
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.15
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp5 ready; tail -f /dev/null"]
+
+  amp6:
+    image: smurf-base:latest
+    container_name: smurf-amp6
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.16
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp6 ready; tail -f /dev/null"]
+
+  amp7:
+    image: smurf-base:latest
+    container_name: smurf-amp7
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.17
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp7 ready; tail -f /dev/null"]
+
+  amp8:
+    image: smurf-base:latest
+    container_name: smurf-amp8
+    privileged: true
+    depends_on: [router]
+    networks:
+      broadcast_net:
+        ipv4_address: 10.0.2.18
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 >/dev/null; sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null; ip route add 10.0.1.0/24 via 10.0.2.254; ip route add 10.0.3.0/24 via 10.0.2.254; echo amp8 ready; tail -f /dev/null"]

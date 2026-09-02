@@ -1,39 +1,13 @@
-<!-- README_SYNC_REQUIRED -->
+# Tests
 
-# Benchmark tests
+<!-- README_SYNC_REQUIRED: Update this file and benchmarks/README.md whenever test scope or commands change. -->
 
-统一任意 benchmark 入口由 `test_unified_natural_language_generator.py` 覆盖；隔离策略、
-响应硬化和旧 Unsafe 兼容性由 `test_unsafe_natural_language_generator.py` 覆盖。真实 Docker
-验收必须检查完整 phase coverage、证据指纹、评分准备文件以及容器/网络/镜像零残留。
-`meeting_reports/` 是完全忽略的本地证据归档，因此不属于 `test_benchmark_readmes.py` 的
-Git README 覆盖集合。
-`test_generator_readmes.py` 不再只检查同目录 README：任何 `.py` 或声明式 `.json` 变化
-都必须同步本目录 README，并逐级同步到 `generator/README.md`；可通过
-`GENERATOR_README_DIFF_BASE=<commit>` 对完整提交区间执行联级审计。
-该测试还强制 `generator/README.md` 同时包含可渲染的 Mermaid flowchart 与
-sequenceDiagram，并检查两张图覆盖统一入口、受控 Bundle、隔离任意代码、证据和评分准备。
-流程图节点使用短标签和 `<br/>` 换行，防止桌面端 Mermaid 渲染时中文或长标识被裁切。
-`test_benchmark_readmes.py` 同时审计所有非运行归档 README 中的 `python3 -m` 模块、Python
-脚本和测试 shell 路径，拒绝不存在的模块、文件占位符，以及会实际触发编译的
-`topologies/*.py --help` 误导命令。
+The suite validates pure topology facts, strict LLM Proposal parsing, all four semantic FaultDrivers, target-bound Binding/catalog compilation, evidence drift rejection, Python and runtime discovery, unified topology lifecycle, Adapter-owned authorization, fault evidence, scoring, and the optional Inspect AI harness. `fixtures/runtime_scenario.json` is legacy compatibility data only.
 
-该目录覆盖 benchmark CLI、场景安全边界、生成器、自然语言桥接、bundle 和真实 Docker 生命周期。
-
-## 测试层次
-
-- 纯单元测试：schema、编译器、分配器、策略和确定性。
-- 集成测试：TopologyRequest、BenchmarkRequest、FaultSpec、bundle 与证据链。
-- 安全测试：命令白名单、资源预算、作用域隔离、prompt injection 和高风险审批。
-- 生命周期测试：基线、注入、blind 测试、修复、恢复、清理与晋级。
-- 文档覆盖：`test_benchmark_readmes.py` 和 `test_generator_readmes.py`。
-
-常用检查：
+The normal unit suite does not invoke Docker or an external model:
 
 ```bash
-cd /home/zvanadium/seed-emulator/benchmarks
-python3 tests/test_benchmark_readmes.py
-python3 tests/test_generator_readmes.py
-python3 -m unittest discover -s tests -p 'test_*.py'
+PYTHONPATH=benchmarks python3 -m unittest discover -s benchmarks/tests -v
 ```
 
-涉及 Docker 或外部 provider 的测试应显式区分真实运行与离线测试，并保留可审计证据。新增测试工具或测试分层时同步更新本 README。
+Integration runs that change Docker state remain explicit and must use the Tool Service boundary.

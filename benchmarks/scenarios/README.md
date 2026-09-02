@@ -1,20 +1,12 @@
-<!-- README_SYNC_REQUIRED -->
+# Scenario documents
 
-# Hand-authored benchmark scenarios
+<!-- README_SYNC_REQUIRED: Update this file and benchmarks/README.md whenever this directory's contract changes. -->
 
-本目录保存可由统一 benchmark CLI 发现和运行的手工场景，也是故障行为、注入、修复与验证语义的重要参考实现。
+This directory is reserved for explicitly persisted user scenarios. The repository no longer ships a topology-specific default scenario and the CLI never infers one from an examples tree.
 
-## 结构
+Every scenario must choose one topology mode:
 
-- `base.py` / `strict_base.py`：场景生命周期、严格安全和验证基类。
-- `registry.py`：场景注册与 CLI 发现。
-- 其余模块：DNS、路由、容器、资源、服务配置及组合故障场景。
+- `python_discovered`: carries the `artifact_id`, `compose_path`, descriptor, and source path returned by `benchmark.topology.discover_python`;
+- `runtime_discovered`: binds an already running Compose project discovered by `benchmark.runtime.describe`.
 
-每个场景应明确健康基线、故障注入、blind 观测、允许的修复命令、独立恢复验证和清理行为。新增故障类型时，应评估是否同时补充 `generator/` 的 FaultDriver 或 bundle 绑定，避免手工场景与生成场景能力分叉。
-
-```bash
-cd /home/zvanadium/seed-emulator/benchmarks
-python3 benchmark_cli.py --list
-```
-
-场景接口或类别变化时同步更新本 README、注册表和相关测试。
+Python sources are materialized through the single `benchmark.topology.lifecycle` interface. Runtime scenarios do not own their project's lifecycle. Fault authoring, candidate grants, probes, scoring, and naming remain explicit scenario fields and are validated by `benchmark_agent.scenario`.

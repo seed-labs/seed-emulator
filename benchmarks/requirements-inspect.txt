@@ -1,0 +1,4 @@
+# Optional candidate-agent evaluation harness. Keep the core SEED package independent.
+inspect-ai>=0.3.260,<0.4
+# Required by Inspect's OpenAI-compatible provider (including MIMO).
+openai>=3.1,<4

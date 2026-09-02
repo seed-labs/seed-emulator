@@ -1,20 +1,19 @@
-# Runtime and build artifacts are retained locally, not versioned.
+# Generated topology, build and runtime artifacts.
 /generated/
 /logs/
 /backups/
+/reports/
 /meeting_reports/
+
+# Python and tool caches.
 __pycache__/
 *.py[cod]
 *.bak
+.pytest_cache/
 
-# Reports are runtime evidence. Keep only the generator pilot reports that
-# document the feature's checked-in validation evidence.
-/reports/*
-!/reports/README.md
-!/reports/GENERATOR_B00_GENERATOR_PILOT_LIFECYCLE_BATCH_0019.md
-!/reports/GENERATOR_PILOT_AI_BLIND_20260809.md
-!/reports/GENERATOR_PILOT_LIFECYCLE_20260809.md
-!/reports/GENERATOR_PILOT_LIFECYCLE_REUSE_20260809.md
-!/reports/GENERATOR_RANDOM_COMPLEX_CANARY_20260811.md
-!/reports/GENERATOR_RANDOM_COMPLEX_LIFECYCLE_20260811.md
-!/reports/GENERATOR_RANDOM_COMPLEX_AI_BLIND_20260811.md
+# Local sessions, snapshots and execution evidence.
+/.sessions/
+/.snapshots/
+/.artifacts/
+/runs/
+/nl_plans/

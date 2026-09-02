@@ -1,0 +1,4 @@
+# Core benchmark-agent dependencies (the Inspect AI harness is optional and
+# lives in requirements-inspect.txt).
+requests>=2.31,<3
+pydantic>=2.5,<3

@@ -1,0 +1,35 @@
+# Sandbox topology: the candidate container can only reach the Adapter; the
+# Adapter can only reach the Tool Service through the host gateway. The Adapter
+# holds no Docker socket, Docker CLI, or shell access.
+services:
+  adapter:
+    build:
+      context: ..
+      dockerfile: benchmark_adapter/Dockerfile
+    environment:
+      BENCHMARK_GRANT_SPEC: /run/grant-spec.json
+    volumes:
+      - ./grant-spec.example.json:/run/grant-spec.json:ro
+    ports:
+      - "8101:8101"
+    networks:
+      - eval
+      - sandbox
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  candidate:
+    image: python:3.12-slim
+    entrypoint: ["sleep", "infinity"]
+    networks:
+      - sandbox
+
+networks:
+  eval: {}
+  sandbox:
+    internal: true

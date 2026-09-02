@@ -1,0 +1,45 @@
+{
+  "id": "runtime_dns_test",
+  "topology": {"mode": "runtime_discovered", "project": "output"},
+  "capability_binding": {
+    "schema_version": 1,
+    "binding_id": "dns-fixture-binding",
+    "fault_kind": "dns_resolver_failure",
+    "target_service": "client",
+    "driver": "dns_resolver_failure",
+    "verified": true,
+    "baseline_probe": {"tool": "operation.dns.probe", "arguments": {"name": "example.test"}},
+    "inject_operation": {"tool": "operation.dns.set_nameserver", "arguments": {"nameserver": "192.0.2.1"}},
+    "recovery_operation": {"tool": "operation.dns.set_nameserver", "arguments": {"nameserver": "127.0.0.11"}},
+    "candidate_operations": [],
+    "evidence_snapshot": {},
+    "topology_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "evidence_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "project": "output",
+  "fault": {
+    "kind": "dns_resolver_failure",
+    "target_service": "client",
+    "probe_tool": "operation.dns.probe",
+    "inject_tool": "operation.dns.set_nameserver",
+    "recover_tool": "operation.dns.set_nameserver",
+    "probe_arguments": {"name": "example.test"},
+    "inject_arguments": {"bad_nameserver": "192.0.2.1"}
+  },
+  "seed": 1,
+  "grant": {
+    "max_calls": 6,
+    "ttl_seconds": 600,
+    "tools": ["operation.dns.inspect", "operation.dns.probe", "operation.dns.set_nameserver"]
+  },
+  "capabilities": ["inspect_dns", "probe_dns", "repair_dns"],
+  "actions": {
+    "inspect_dns": {"tool": "operation.dns.inspect", "description": "inspect", "fields": ["content"]},
+    "probe_dns": {"tool": "operation.dns.probe", "description": "probe", "fields": ["healthy"]},
+    "repair_dns": {"tool": "operation.dns.set_nameserver", "description": "repair", "fields": ["changed"], "arguments": {"nameserver": "127.0.0.11"}},
+    "finish": {"tool": null, "terminal": true, "description": "finish"}
+  },
+  "prompts": {"native_system": "native", "inspect_system": "inspect", "agent_view_objective": "objective"},
+  "scoring": {},
+  "naming": {"session_prefix": "test", "project_alias": "alias", "inspect_task_name": "task", "sample_id": "sample"}
+}

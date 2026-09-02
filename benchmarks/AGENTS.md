@@ -1,25 +1,30 @@
 # Benchmark Agent 工作要求
 
-本文件适用于 `benchmarks/` 下的所有开发与测试。完整场景规范见 `docs/NEW_SCENARIO_DEVELOPMENT_GUIDE.md`，开始工作前必须阅读。
+本文件适用于 `benchmarks/` 及其全部子目录。
 
-## 强制工作流
+## README 强制联级同步
 
-1. 修改范围只能位于 `benchmarks/`；临时脚本必须放入 `benchmarks/tests/`。
-2. 正式 MIMO 测试默认使用 `--blind`，不得向 Agent 暴露场景名称、描述、预期类别、注入命令、目标容器、标准修复或专属提示。
-3. `--no-blind` 只用于定向开发调试，不能作为最终自主修复成绩。
-4. Agent 多轮问询只能执行经过只读白名单审查的诊断命令；所有状态变更只能通过最终 `repair_commands` 和场景白名单执行。
-   修复命令中的重定向、管道、`;` 或 `&&` 必须完整位于 `docker exec <container> sh -c '<payload>'` 的引用参数内，禁止落到 VM 宿主 shell。
-5. 诊断与修复独立评分。类别错误不能阻止安全修复尝试；纯查询命令不能计作修复；至少一条命令实际执行且独立验证通过才算修复成功。
-6. 状态采集必须包含 stopped/exited 容器，不依赖容器顺序；盲测初始输入只提供健康基线与故障后状态的差异，每条观测必须记录采集命令、容器、资产/接口和输出来源。
-7. `--max-turns` 默认 20，允许范围 1–1000；不得在场景中另建不同上限的 Agent。高上限只用于用户明确要求的长时测试。
-8. 无论 Agent 成败都执行标准清理和拓扑重建；污染无法清除时停止批次。
-9. 报告必须由统一 CLI 生成，并记录 Prompt 模式、轮数上限、结构化根因字段、诊断命令审计、每次修复尝试、拒绝原因、白名单执行、独立验证和隔离结果。
-10. CLI 会自动将 stdout 和 stderr 同时输出到终端及 `benchmarks/logs/BENCHMARK_CLI_<timestamp>_<pid>.log`；不得关闭或绕过该审计日志。
+`README_SYNC_REQUIRED`
 
-## 完成前验证
+1. 修改任何 `.py`、声明式 `.json`、schema、CLI 或工具接口时，必须同步修改同目录
+   `README.md`，并逐级修改全部祖先 README，直到 `benchmarks/README.md`。
+2. 新增包含代码或声明式规范的目录时，必须同时创建含 `README_SYNC_REQUIRED` 标记的
+   `README.md`。
+3. 删除或移动代码时，必须更新原目录、目标目录以及祖先 README 中的模块索引和流程图。
+4. 跨层接口变更必须同步所有生产者、消费者和安全边界说明，不得只更新定义方。
+5. 根 README 必须同时维护“精简总体流程图”和“详尽总体流程图”：精简图保留模块职责与
+   健康基线→故障→观测→恢复的时序，详尽图保留接口、执行边界和实现细节；任一架构变更都必须
+   同步检查两图。未实现能力必须明确标为目标设计。
+6. 所有 Agent 只能通过 MCP 和 Agent Tool Service 访问或修改 SEED Python 与 Docker；禁止
+   在 Agent 控制面加入直接文件、Shell、Python subprocess 或 Docker 执行旁路。
+7. 面向大规模拓扑时必须使用服务端分页、聚合、子图和 TargetSelector，不得把完整拓扑送入
+   LLM 上下文。
+8. 新增代码后必须建立 README 覆盖与联级门禁，并在提交前运行相关测试及
+   `git diff --check -- benchmarks`。
 
-- 运行相关 `py_compile`；
-- 运行 `benchmarks/tests/` 中相关回归测试；
-- 运行 `benchmark_cli.py --list` 和参数边界测试；
-- 先做无 AI 生命周期测试，再做默认盲测；
-- 检查报告、日志、标准清理、拓扑隔离及 `git diff --check -- benchmarks`。
+## 安全边界
+
+- Agent 是不可信规划面；Benchmark 控制面和 Candidate Adapter 承担计划与授权策略；Agent Tool Service 只是确定性工具适配层。
+- Benchmark 控制面必须为写操作绑定 session、基础版本指纹、资源预算、幂等键、审计记录和回滚计划；Tool Service 只保留参数、目标、超时和执行正确性所需的最低校验。
+- Python 修改与 Docker 修改必须先 preview，后 apply；验证失败时必须恢复或标记污染。
+- 当前阶段不实现 benchmark 发布。
