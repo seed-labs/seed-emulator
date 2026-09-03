@@ -6,10 +6,16 @@ removed Agent Registrar, provisioning API, and managed customer-zone services
 are not part of this example.
 
 - Namingo Registrar (`10.150.0.73`) runs the upstream Registrar WHOIS/RDAP
-  components with a custom backend placeholder.
+  components with a custom backend placeholder and the official Namingo EPP
+  Client pinned to `v1.1.22`.
 - Namingo Registry (`10.154.0.73`) runs the upstream EPP service for `.com`,
   provisions the `seedemu` registrar account, and restricts that account to the
   Registrar node address.
+- Registrar connects to `epp.registry.com:700` with verified TLS 1.2, validates
+  the Registry certificate against the scenario CA, logs in with its EPP
+  credentials, runs a domain check, and logs out. The background health probe
+  writes `/run/seedemu-epp-health.json`; `seedemu-epp-client check NAME` exposes
+  the same authenticated path for interactive checks.
 - `epp.registry.com`, `whois.registrar.com`, and `rdap.registrar.com` are
   published through the `.com` authoritative infrastructure.
 
@@ -19,6 +25,11 @@ are not part of this example.
 - COM-B (`10.152.0.71`) is a public secondary inherited from B02.
 - COM-C (`10.153.0.73`) is an additional public secondary created by B02a.
 - COM-B and COM-C receive NOTIFY and AXFR/IXFR only from COM-A with TSIG.
+- Registry Zone Writer generates `/var/lib/bind/com.zone` and publishes it to
+  COM-A over SSH. COM-A pins its SSH host key, restricts the publisher key to
+  source `10.154.0.73` and one forced command, validates the candidate with
+  `named-checkzone`, rejects SOA serial rollback, atomically replaces the zone,
+  and reloads BIND. The SSH publisher key is separate from transfer TSIG.
 - Ordinary DNS containers and the inherited B02 zones keep their original
   behavior.
 
@@ -33,15 +44,47 @@ Run the complete Docker lifecycle:
 ```sh
 .venv/bin/python seedemu/testing/cli.py all \
   examples/internet/B02a_domain_registration/example.yaml \
-  --artifact-dir ci-artifacts/b02a-tld-dns
+  --artifact-dir ci-artifacts/b02a-namingo-e2e
 ```
 
-The runtime test verifies the Namingo processes and generated configuration,
-service-name resolution, BIND ACLs, TSIG-protected transfer relationship,
-COM-B/COM-C convergence, omission of COM-A from the root zone, and an inherited
-DNS resolution path.
+The `all` command removes the previous generated `output`, compiles and builds
+the emulation, starts it, runs readiness and runtime checks, then tears it down.
+The JSON summaries and command logs are retained under the artifact directory.
 
-The current `NamingoRegistrarService` provides upstream Registrar WHOIS/RDAP
-components; it is not yet an EPP client or customer billing portal. Registry
-Zone Writer delivery to the separate COM-A node remains a distinct integration
-step.
+The runtime test verifies the Namingo processes; mutual-TLS EPP login, check,
+contact create, domain create, host create, and domain nameserver update; the
+authenticated Zone Writer delivery; serial advancement and rollback rejection
+on COM-A; B/C transfer convergence; public delegation and glue; service-name
+resolution; BIND ACLs; omission of COM-A from the root zone; and an inherited
+DNS resolution path. Negative checks also require rejection of a wrong EPP
+password, an untrusted client certificate, and an unauthorized SSH key.
+
+The current `NamingoRegistrarService` is still not a customer billing portal;
+its EPP client is an authenticated provisioning interface that a later billing
+backend can call. It exposes Namingo's native `contactCreate`, `hostCreate`,
+`domainCreate`, and `domainUpdateNS` operations as `contact-create`,
+`host-create`, `domain-create`, and `domain-update`. Mutating operations accept
+one JSON object as the second command-line argument. For example:
+
+```sh
+seedemu-epp-client host-create \
+  '{"hostname":"ns1.example.com","ipaddress":"10.0.0.10"}'
+seedemu-epp-client domain-update \
+  '{"domainname":"example.com","nameservers":["ns1.example.com","ns2.example.com"]}'
+```
+
+Namingo Registry currently rejects RFC 1918 host addresses in `host:create`
+through its upstream PHP validation. Consequently, the runtime registration
+uses documentation-only public-looking glue addresses `11.150.0.71` and
+`11.150.0.73`; these are registry data, not addresses assigned to SeedEmu
+containers. Using `10.150.x.x` would fail before zone publication unless the
+upstream Namingo validation policy is changed.
+
+The command wrapper and its input validation are SeedEmu integration code; the
+EPP client methods and the Registry-side EPP processing are unmodified Namingo
+open-source components. The SSH zone receiver/publisher, health probe, fixed
+simulation credentials, and removal of Namingo's untouched `.test` and
+`.com.test` sample rows during bootstrap are also SeedEmu integration code.
+The compact EC TLS and Ed25519 SSH credentials are kept as one-line constants
+in `domain_registration.py`. Production deployments must inject separately
+managed secrets instead.

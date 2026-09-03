@@ -56,12 +56,15 @@ class NamingoRegistryServer(Server):
         self.__registrar_prefix = "SEED"
         self.__registrar_email = "registrar@seedemu.test"
         self.__registrar_whitelist: List[str] = ["10.0.0.0/8"]
+        self.__registrar_ssl_fingerprint: Optional[str] = None
 
         self.__enable_whois = False
         self.__enable_rdap = False
         self.__enable_das = False
         self.__zone_writer_config: Optional[str] = None
         self.__zone_writer_interval = 30
+        self.__zone_writer_custom_records: dict[str, str] = {}
+        self.__zone_publisher: Optional[dict] = None
 
         self.__certificate_pem: Optional[str] = None
         self.__private_key_pem: Optional[str] = None
@@ -138,6 +141,7 @@ class NamingoRegistryServer(Server):
         name: str = "SeedEmu Registrar",
         iana_id: int = 9999,
         email: str = "registrar@seedemu.test",
+        ssl_fingerprint: Optional[str] = None,
     ) -> NamingoRegistryServer:
         assert re.fullmatch(r"[A-Za-z0-9_.-]{1,16}", clid), "invalid registrar clid"
         assert password, "registrar EPP password cannot be empty"
@@ -153,6 +157,13 @@ class NamingoRegistryServer(Server):
             raise AssertionError("invalid registrar whitelist entry") from error
         assert 0 <= iana_id <= 99999, "invalid registrar IANA id"
         assert "@" in email, "invalid registrar email"
+        if ssl_fingerprint is not None:
+            normalized_fingerprint = ssl_fingerprint.replace(":", "").upper()
+            assert re.fullmatch(r"[0-9A-F]{64}", normalized_fingerprint), (
+                "registrar TLS fingerprint must be a SHA-256 fingerprint"
+            )
+        else:
+            normalized_fingerprint = None
         self.__registrar_name = name
         self.__registrar_iana_id = iana_id
         self.__registrar_clid = clid
@@ -160,6 +171,7 @@ class NamingoRegistryServer(Server):
         self.__registrar_prefix = prefix.upper()
         self.__registrar_email = email
         self.__registrar_whitelist = list(dict.fromkeys(whitelist))
+        self.__registrar_ssl_fingerprint = normalized_fingerprint
         return self
 
     def enableWhois(self, enabled: bool = True) -> NamingoRegistryServer:
@@ -182,6 +194,49 @@ class NamingoRegistryServer(Server):
         assert interval_seconds >= 5, "Zone Writer interval must be at least 5 seconds"
         self.__zone_writer_config = config_php
         self.__zone_writer_interval = interval_seconds
+        return self
+
+    def setZonePublisher(
+        self,
+        zonename: str,
+        primary_ip: str,
+        private_key: str,
+        primary_host_public_key: str,
+        zone_file: Optional[str] = None,
+    ) -> NamingoRegistryServer:
+        """Publish a Zone Writer output file to a restricted SSH receiver."""
+        zone = zonename.strip().lower().strip(".")
+        assert zone and all(
+            re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+            for label in zone.split(".")
+        ), "invalid publisher zone name"
+        ipaddress.ip_address(primary_ip)
+        assert "BEGIN OPENSSH PRIVATE KEY" in private_key, "invalid publisher private key"
+        assert primary_host_public_key.startswith("ssh-ed25519 "), (
+            "primary host key must be an Ed25519 public key"
+        )
+        output_path = zone_file or "/var/lib/bind/{}.zone".format(zone)
+        assert output_path.startswith("/"), "zone file path must be absolute"
+        assert "\n" not in output_path, "invalid zone file path"
+        self.__zone_publisher = {
+            "zone": zone + ".",
+            "primary_ip": primary_ip,
+            "private_key": private_key.strip() + "\n",
+            "host_public_key": primary_host_public_key.strip(),
+            "zone_file": output_path,
+        }
+        return self
+
+    def setZoneWriterCustomRecords(
+        self, tld: str, records_php: str
+    ) -> NamingoRegistryServer:
+        """Install a TLD-specific custom-record file used by Zone Writer."""
+        zone = tld.strip().lower().strip(".")
+        assert re.fullmatch(
+            r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", zone
+        ), "custom-record TLD must be a single DNS label"
+        assert records_php.strip().startswith("<?php"), "invalid custom records PHP"
+        self.__zone_writer_custom_records[zone] = records_php.strip() + "\n"
         return self
 
     def setTlsCertificate(
@@ -316,6 +371,7 @@ FLUSH PRIVILEGES;
             "registrar_prefix": self.__registrar_prefix,
             "registrar_email": self.__registrar_email,
             "registrar_whitelist": self.__registrar_whitelist,
+            "registrar_ssl_fingerprint": self.__registrar_ssl_fingerprint,
         }
         encoded = json.dumps(values, ensure_ascii=False).replace("</", "<\\/")
         return """<?php
@@ -338,6 +394,34 @@ try {{
     $disabled = password_hash(bin2hex(random_bytes(32)), PASSWORD_ARGON2ID);
     $stmt = $pdo->prepare('UPDATE registrar SET pw = :pw WHERE clid <> :clid');
     $stmt->execute(['pw' => $disabled, 'clid' => $settings['registrar_clid']]);
+
+    // The upstream schema also ships .test and .com.test demonstration TLDs.
+    // Remove only those untouched sample rows when this emulation did not ask
+    // for them, so the upstream Zone Writer does not emit unrelated zones.
+    $configuredTlds = array_map(
+        static fn(string $tld): string => '.' . ltrim(strtolower($tld), '.'),
+        $settings['tlds']
+    );
+    foreach (['.test', '.com.test'] as $sampleTld) {{
+        if (in_array($sampleTld, $configuredTlds, true)) {{
+            continue;
+        }}
+        $stmt = $pdo->prepare(
+            'SELECT id FROM domain_tld WHERE tld = :tld '
+            . 'AND NOT EXISTS (SELECT 1 FROM domain WHERE domain.tldid = domain_tld.id) '
+            . 'AND NOT EXISTS (SELECT 1 FROM application WHERE application.tldid = domain_tld.id)'
+        );
+        $stmt->execute(['tld' => $sampleTld]);
+        $sampleTldId = $stmt->fetchColumn();
+        if ($sampleTldId !== false) {{
+            $pdo->prepare('DELETE FROM domain_restore_price WHERE tldid = :id')
+                ->execute(['id' => $sampleTldId]);
+            $pdo->prepare('DELETE FROM domain_price WHERE tldid = :id')
+                ->execute(['id' => $sampleTldId]);
+            $pdo->prepare('DELETE FROM domain_tld WHERE id = :id')
+                ->execute(['id' => $sampleTldId]);
+        }}
+    }}
 
     $tldPattern = '/^(?!-)(?!.*--)[A-Z0-9-]{{1,63}}(?<!-)(\\.(?!-)(?!.*--)[A-Z0-9-]{{1,63}}(?<!-))*$/i';
     $insertTld = $pdo->prepare(
@@ -366,12 +450,13 @@ try {{
         'INSERT INTO registrar '
         . '(name, iana_id, clid, pw, prefix, email, whois_server, rdap_server, url, '
         . 'abuse_email, abuse_phone, accountBalance, creditLimit, creditThreshold, '
-        . 'thresholdType, currency, crdate) '
+        . 'thresholdType, currency, ssl_fingerprint, crdate) '
         . "VALUES (:name, :iana, :clid, :pw, :prefix, :email, 'whois.registrar.seedemu', "
         . "'rdap.registrar.seedemu', 'http://registrar.seedemu', :email, '+1.5550100', "
-        . "100000, 100000, 500, 'fixed', 'USD', CURRENT_TIMESTAMP) "
+        . "100000, 100000, 500, 'fixed', 'USD', :ssl_fingerprint, CURRENT_TIMESTAMP) "
         . 'ON DUPLICATE KEY UPDATE name = VALUES(name), iana_id = VALUES(iana_id), '
-        . 'pw = VALUES(pw), prefix = VALUES(prefix), email = VALUES(email)'
+        . 'pw = VALUES(pw), prefix = VALUES(prefix), email = VALUES(email), '
+        . 'ssl_fingerprint = VALUES(ssl_fingerprint)'
     );
     $stmt->execute([
         'name' => $settings['registrar_name'],
@@ -380,6 +465,7 @@ try {{
         'pw' => $registrarPassword,
         'prefix' => $settings['registrar_prefix'],
         'email' => $settings['registrar_email'],
+        'ssl_fingerprint' => $settings['registrar_ssl_fingerprint'],
     ]);
     $stmt = $pdo->prepare('SELECT id FROM registrar WHERE clid = :clid');
     $stmt->execute(['clid' => $settings['registrar_clid']]);
@@ -423,9 +509,13 @@ try {{
                 ">>/var/log/namingo/das.stdout.log 2>&1 &"
             )
         if self.__zone_writer_config is not None:
+            writer_command = "/usr/bin/php8.5 /opt/registry/automation/write-zone.php"
+            if self.__zone_publisher is not None:
+                writer_command = "/usr/local/bin/seedemu-publish-namingo-zone"
             commands.append(
-                "while true; do /usr/bin/php8.5 /opt/registry/automation/write-zone.php; "
+                "while true; do {} || echo 'zone publication failed; retrying'; "
                 "sleep {}; done >>/var/log/namingo/write-zone.stdout.log 2>&1 &".format(
+                    writer_command,
                     self.__zone_writer_interval
                 )
             )
@@ -433,6 +523,7 @@ try {{
 set -eu
 
 service mariadb start
+service redis-server start
 until mariadb-admin ping --silent; do sleep 1; done
 mariadb < /opt/seedemu/namingo/init.sql
 
@@ -486,19 +577,24 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
 
         software = (
             "ca-certificates curl git gnupg2 mariadb-client mariadb-server "
-            "openssl software-properties-common unzip"
+            "openssl redis-server software-properties-common unzip"
         )
         if self.__enable_rdap:
             software += " nginx-light"
         if self.__zone_writer_config is not None:
             software += " bind9-utils"
+        if self.__zone_publisher is not None:
+            assert self.__zone_writer_config is not None, (
+                "zone publisher requires enableZoneWriter()"
+            )
+            software += " openssh-client"
         node.addSoftware(software)
         node.addBuildCommand("add-apt-repository -y ppa:ondrej/php")
         node.addBuildCommand("apt-get update")
         php_packages = (
             "composer php8.5-cli php8.5-common php8.5-curl php8.5-gmp "
             "php8.5-intl php8.5-mbstring php8.5-mysql php8.5-swoole "
-            "php8.5-xml php8.5-zip"
+            "php8.5-redis php8.5-xml php8.5-zip"
         )
         if self.__zone_writer_config is not None:
             php_packages += " php8.5-bcmath php8.5-bz2 php8.5-gd php8.5-yaml"
@@ -552,6 +648,42 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
             node.setFile(
                 "/opt/registry/automation/config.php", self.__zone_writer_config
             )
+            for tld, records_php in self.__zone_writer_custom_records.items():
+                node.setFile(
+                    "/opt/registry/automation/{}.php".format(tld), records_php
+                )
+        if self.__zone_publisher is not None:
+            publisher = self.__zone_publisher
+            known_host_key = " ".join(publisher["host_public_key"].split()[:2])
+            node.setFile(
+                "/opt/seedemu/namingo/zone-publisher-key",
+                publisher["private_key"],
+            )
+            node.setFile(
+                "/opt/seedemu/namingo/known_hosts",
+                "{} {}\n".format(publisher["primary_ip"], known_host_key),
+            )
+            node.setFile(
+                "/usr/local/bin/seedemu-publish-namingo-zone",
+                '''#!/bin/sh
+set -eu
+
+/usr/bin/php8.5 /opt/registry/automation/write-zone.php
+test -s {zone_file}
+ssh -T -i /opt/seedemu/namingo/zone-publisher-key \\
+    -o BatchMode=yes \\
+    -o IdentitiesOnly=yes \\
+    -o StrictHostKeyChecking=yes \\
+    -o UserKnownHostsFile=/opt/seedemu/namingo/known_hosts \\
+    root@{primary_ip} {receiver_command} < {zone_file}
+'''.format(
+                    zone_file=publisher["zone_file"],
+                    primary_ip=publisher["primary_ip"],
+                    receiver_command="/usr/local/sbin/seedemu-install-zone-{}".format(
+                        publisher["zone"].rstrip(".")
+                    ),
+                ),
+            )
 
         node.setFile("/opt/seedemu/namingo/init.sql", self._database_init())
         node.setFile("/opt/seedemu/namingo/bootstrap.php", self._bootstrap_php())
@@ -568,6 +700,16 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
                 self.__client_ca_pem,
             )
         node.setFile("/usr/local/bin/seedemu-start-namingo-registry", self._start_script())
+        if self.__zone_publisher is not None:
+            node.appendStartCommand(
+                "chmod 0600 /opt/seedemu/namingo/zone-publisher-key"
+            )
+            node.appendStartCommand(
+                "chmod 0644 /opt/seedemu/namingo/known_hosts"
+            )
+            node.appendStartCommand(
+                "chmod 0755 /usr/local/bin/seedemu-publish-namingo-zone"
+            )
         node.addBuildCommandAtEnd(
             "chmod +x /usr/local/bin/seedemu-start-namingo-registry"
         )

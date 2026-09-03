@@ -246,6 +246,7 @@ class DomainNameServer(Server):
     __primary_ip: Optional[str]
     __transfer_key: Optional[Tuple[str, str]]
     __transfer_targets: List[str]
+    __zone_file_receiver: Optional[Tuple[str, str, str, str, str, int]]
 
     def __init__(self):
         """!
@@ -261,6 +262,7 @@ class DomainNameServer(Server):
         self.__primary_ip = None
         self.__transfer_key = None
         self.__transfer_targets = []
+        self.__zone_file_receiver = None
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -348,6 +350,44 @@ class DomainNameServer(Server):
         assert address not in self.__transfer_targets, 'duplicate transfer target'
         self.__transfer_targets.append(address)
 
+        return self
+
+    def enableZoneFileReceiver(
+        self,
+        zonename: str,
+        publisher_ip: str,
+        publisher_public_key: str,
+        ssh_host_private_key: str,
+        ssh_host_public_key: str,
+        max_bytes: int = 8 * 1024 * 1024,
+    ) -> DomainNameServer:
+        """!
+        @brief Accept one zone file through a restricted SSH forced command.
+
+        The receiver validates the candidate with named-checkzone, rejects SOA
+        serial rollback, atomically replaces the active file, and reloads BIND.
+        It is intended for an external Registry Zone Writer and is deliberately
+        independent of RFC 2136 updates and secondary-transfer TSIG keys.
+
+        @returns self, for chaining API calls.
+        """
+        if zonename != '.' and not zonename.endswith('.'):
+            zonename += '.'
+        assert fullmatch(r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+', zonename), 'invalid receiver zone name'
+        ip_address(publisher_ip)
+        assert publisher_public_key.startswith('ssh-ed25519 '), 'publisher key must be an Ed25519 public key'
+        assert 'BEGIN OPENSSH PRIVATE KEY' in ssh_host_private_key, 'invalid SSH host private key'
+        assert ssh_host_public_key.startswith('ssh-ed25519 '), 'host key must be an Ed25519 public key'
+        assert 1024 <= max_bytes <= 128 * 1024 * 1024, 'invalid maximum zone size'
+        assert self.__zone_file_receiver is None, 'zone file receiver already configured'
+        self.__zone_file_receiver = (
+            zonename,
+            publisher_ip,
+            publisher_public_key.strip(),
+            ssh_host_private_key.strip() + '\n',
+            ssh_host_public_key.strip() + '\n',
+            max_bytes,
+        )
         return self
 
     def setRealRootNS(self) -> DomainNameServer:
@@ -508,6 +548,9 @@ class DomainNameServer(Server):
         """
         assert node == self.__node, 'configured node differs from install node. Please check if there are conflict bindings'
         node.addSoftware('bind9')
+        if self.__zone_file_receiver is not None:
+            assert self.__is_hidden_primary, 'zone file receiver requires a hidden primary'
+            node.addSoftware('openssh-server')
         if not self.__usesIncludeConfig():
             node.setFile(
                 '/etc/bind/named.conf',
@@ -593,7 +636,7 @@ include "/etc/bind/named.conf.local";
                     else:
                         primary_entries = ' '.join('{};'.format(addr) for addr in master_ips)
                     node.appendFile('/etc/bind/named.conf.zones',
-                        'zone "{}" {{ type slave; masters {{ {} }}; file "{}"; allow-update {{ none; }}; }};\n'.format(zonename, primary_entries, zonepath)
+                        'zone "{}" {{ type slave; masters {{ {} }}; file "{}";  }};\n'.format(zonename, primary_entries, zonepath)
                     )
                 else:
                     node.appendFile('/etc/bind/named.conf.zones',
@@ -604,6 +647,116 @@ include "/etc/bind/named.conf.local";
             node.appendStartCommand('chown -R root:bind /etc/bind/keys')
             node.appendStartCommand('chmod 0750 /etc/bind/keys')
             node.appendStartCommand('chmod 0640 /etc/bind/keys/*.key')
+
+        if self.__zone_file_receiver is not None:
+            (
+                receiver_zone,
+                publisher_ip,
+                publisher_public_key,
+                host_private_key,
+                host_public_key,
+                max_bytes,
+            ) = self.__zone_file_receiver
+            assert receiver_zone in self.getZones(), 'receiver zone is not hosted on this server'
+            receiver_filename = receiver_zone.rstrip('.')
+            receiver_zone_path = '/etc/bind/zones/{}'.format(receiver_zone)
+            receiver_command = '/usr/local/sbin/seedemu-install-zone-{}'.format(receiver_filename)
+            node.setFile(
+                receiver_command,
+                '''#!/bin/sh
+set -eu
+
+zone={zone}
+zone_path={zone_path}
+max_bytes={max_bytes}
+candidate=$(mktemp "${{zone_path}}.incoming.XXXXXX")
+backup="${{zone_path}}.previous"
+trap 'rm -f "$candidate"' EXIT HUP INT TERM
+
+cat > "$candidate"
+size=$(wc -c < "$candidate")
+test "$size" -ge 1
+test "$size" -le "$max_bytes"
+named-checkzone "$zone" "$candidate" >/dev/null
+
+serial_of() {{
+    named-checkzone -D -o - "$zone" "$1" 2>/dev/null |
+        awk '$4 == "SOA" {{ print $7; exit }}'
+}}
+
+new_serial=$(serial_of "$candidate")
+test -n "$new_serial"
+case "$new_serial" in *[!0-9]*) exit 1 ;; esac
+
+if test -s "$zone_path"; then
+    if cmp -s "$candidate" "$zone_path"; then
+        exit 0
+    fi
+    old_serial=$(serial_of "$zone_path")
+    test -n "$old_serial"
+    case "$old_serial" in *[!0-9]*) exit 1 ;; esac
+    test "$new_serial" -gt "$old_serial"
+    cp -p "$zone_path" "$backup"
+fi
+
+chown bind:bind "$candidate"
+chmod 0640 "$candidate"
+mv -f "$candidate" "$zone_path"
+
+if ! rndc reload "$zone"; then
+    if test -s "$backup"; then
+        mv -f "$backup" "$zone_path"
+        chown bind:bind "$zone_path"
+        chmod 0640 "$zone_path"
+        rndc reload "$zone" || true
+    fi
+    exit 1
+fi
+
+rm -f "$backup"
+rndc notify "$zone"
+logger -t seedemu-zone-publisher "installed $zone serial $new_serial"
+'''.format(
+                    zone=receiver_zone,
+                    zone_path=receiver_zone_path,
+                    max_bytes=max_bytes,
+                ),
+            )
+            node.setFile('/etc/ssh/ssh_host_ed25519_key', host_private_key)
+            node.setFile('/etc/ssh/ssh_host_ed25519_key.pub', host_public_key)
+            node.setFile(
+                '/root/.ssh/authorized_keys',
+                'from="{}",restrict,command="{}" {}\n'.format(
+                    publisher_ip, receiver_command, publisher_public_key
+                ),
+            )
+            node.setFile(
+                '/etc/ssh/sshd_config.d/seedemu-zone-publisher.conf',
+                '''PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+Match User root Address {publisher_ip}
+    ForceCommand {receiver_command}
+'''.format(
+                    publisher_ip=publisher_ip,
+                    receiver_command=receiver_command,
+                ),
+            )
+            node.appendStartCommand('chmod 0755 {}'.format(receiver_command))
+            node.appendStartCommand('chmod 0600 /etc/ssh/ssh_host_ed25519_key')
+            node.appendStartCommand('chmod 0644 /etc/ssh/ssh_host_ed25519_key.pub')
+            node.appendStartCommand('mkdir -p /root/.ssh /run/sshd')
+            node.appendStartCommand('chmod 0700 /root/.ssh')
+            node.appendStartCommand('chmod 0600 /root/.ssh/authorized_keys')
+            # This node's SSH endpoint is dedicated to zone publication.  Use
+            # the receiver as the login shell as well as a forced command so
+            # base images that discard SSH exec requests cannot feed the zone
+            # text to an interactive shell.
+            node.appendStartCommand(
+                'usermod --shell {} root'.format(receiver_command)
+            )
+            node.appendStartCommand('service ssh start')
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')

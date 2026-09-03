@@ -35,6 +35,55 @@ REGISTRY_IP = "10.154.0.73"
 REGISTRY_EPP_HOSTNAME = "epp.registry.com"
 REGISTRAR_EPP_CLID = "seedemu"
 REGISTRAR_EPP_PASSWORD = "seedemu-epp"
+EPP_CA_CERTIFICATE = "-----BEGIN CERTIFICATE-----\nMIIBlzCCAT2gAwIBAgIUO6WTWlXpqz/YVLGiEIBzLYt31SUwCgYIKoZIzj0EAwIw\nGTEXMBUGA1UEAwwOU2VlZEVtdSBFUFAgQ0EwHhcNMjYwOTAyMDc1MjQ1WhcNMzYw\nODMwMDc1MjQ1WjAZMRcwFQYDVQQDDA5TZWVkRW11IEVQUCBDQTBZMBMGByqGSM49\nAgEGCCqGSM49AwEHA0IABMVJHZOVUAKg/2p76dI8rPslQJCf6k6ZEFaHUJfX4O1R\n7fNzmIjaNvnD7RY0txOLSsaJUu2RwBB91se8ipzE2vOjYzBhMB0GA1UdDgQWBBQX\nO0akWixlPZ7SG4ZN4m+O0xer6TAfBgNVHSMEGDAWgBQXO0akWixlPZ7SG4ZN4m+O\n0xer6TAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAKBggqhkjOPQQD\nAgNIADBFAiEApmHB1zca7bFIrAUE06J2KNXwoaSizGWg4PZZQswTshoCICk/NQzO\nJh713PHaHGTFT1SOfGSH9vh5nYd7K9cyS3fe\n-----END CERTIFICATE-----\n"
+EPP_SERVER_CERTIFICATE = "-----BEGIN CERTIFICATE-----\nMIIBljCCATugAwIBAgIUfjN/wg5Te93W+rAlb8fDizC4XXMwCgYIKoZIzj0EAwIw\nGTEXMBUGA1UEAwwOU2VlZEVtdSBFUFAgQ0EwHhcNMjYwOTAyMDc1MjQ1WhcNMzYw\nODMwMDc1MjQ1WjAbMRkwFwYDVQQDDBBlcHAucmVnaXN0cnkuY29tMFkwEwYHKoZI\nzj0CAQYIKoZIzj0DAQcDQgAEunPc/OZftZK9o8Xm8sV9rXmtXdCNq6LX/v02r3vy\nJQCX2i/nqKmL388TMvcCchH57n3hy+QnE/43ZqtzHfN6baNfMF0wGwYDVR0RBBQw\nEoIQZXBwLnJlZ2lzdHJ5LmNvbTAdBgNVHQ4EFgQUy5ej0Mrvvi+zSctLBvAZNNjS\nGq0wHwYDVR0jBBgwFoAUFztGpFosZT2e0huGTeJvjtMXq+kwCgYIKoZIzj0EAwID\nSQAwRgIhAM/IPdaRojken97CPPjaR/5nD7/nNVRFIEUa642NYM3bAiEAn13cGxLF\nLYZrfzPskxPjb9xBfpVL7BsnRGEdOQP/DCs=\n-----END CERTIFICATE-----\n"
+EPP_SERVER_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIEkPEwYS2amesQYGh3/0qQvUvZJajUOx8DB4Za1c0y3goAoGCCqGSM49\nAwEHoUQDQgAEunPc/OZftZK9o8Xm8sV9rXmtXdCNq6LX/v02r3vyJQCX2i/nqKmL\n388TMvcCchH57n3hy+QnE/43ZqtzHfN6bQ==\n-----END EC PRIVATE KEY-----\n"
+EPP_CLIENT_CERTIFICATE = "-----BEGIN CERTIFICATE-----\nMIIBsDCCAVWgAwIBAgIUAMABH+B1tlG54ns/XKG+3mlc8qgwCgYIKoZIzj0EAwIw\nHDEaMBgGA1UEAwwRc2VlZGVtdS1yZWdpc3RyYXIwHhcNMjYwOTAzMDM0NzM0WhcN\nMzYwODMxMDM0NzM0WjAcMRowGAYDVQQDDBFzZWVkZW11LXJlZ2lzdHJhcjBZMBMG\nByqGSM49AgEGCCqGSM49AwEHA0IABBaY5aeSEGg9nIcsfZCwxQIgsC/myKfZwhey\nxa9lbx6+l42XW4FQTBj/eeryCoZbypOqGfjarR7OQWVLjJrX70ejdTBzMB0GA1Ud\nDgQWBBRyVg24LyxKivHtdf1PNXrzh+5zwDAfBgNVHSMEGDAWgBRyVg24LyxKivHt\ndf1PNXrzh+5zwDAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUE\nDDAKBggrBgEFBQcDAjAKBggqhkjOPQQDAgNJADBGAiEAztAkowt7R2xHa5HXa56t\nBE/Mm/VtaxtwW/GMV15FQg0CIQC0h37IkxjG701Qzok7SrPSeq2N8Eail6i3MqA5\nFsVAvA==\n-----END CERTIFICATE-----\n"
+EPP_CLIENT_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgoKPpxpgm2N1Og6Ck\ngJRs7a5tBC1zw5h3dIkI80GTiqmhRANCAAQWmOWnkhBoPZyHLH2QsMUCILAv5sin\n2cIXssWvZW8evpeNl1uBUEwY/3nq8gqGW8qTqhn42q0ezkFlS4ya1+9H\n-----END PRIVATE KEY-----\n"
+EPP_CLIENT_SHA256_FINGERPRINT = "FF27554CE85BDBF56F45770518C5CF7C9133E5184BF541EBA245061C821CB4A8"
+ZONE_PUBLISHER_PRIVATE_KEY = "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACC7opid8eb++pvN5qQMZvIzzJCjhKaVTeneTeNcKFFQ6AAAAJhdaEkSXWhJ\nEgAAAAtzc2gtZWQyNTUxOQAAACC7opid8eb++pvN5qQMZvIzzJCjhKaVTeneTeNcKFFQ6A\nAAAECvO1WXJlpLMB2WMWeGrJO+7R4v7zWdwbYVGOMaYB4AZruimJ3x5v76m83mpAxm8jPM\nkKOEppVN6d5N41woUVDoAAAAE2IwMmEtem9uZS1wdWJsaXNoZXIBAg==\n-----END OPENSSH PRIVATE KEY-----\n"
+ZONE_PUBLISHER_PUBLIC_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILuimJ3x5v76m83mpAxm8jPMkKOEppVN6d5N41woUVDo b02a-zone-publisher"
+COM_PRIMARY_SSH_HOST_PRIVATE_KEY = "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACBic6dnfsurUnrx3YDk722YO2he3xPOcn/zMBs9PW6t5gAAAJh4LdPReC3T\n0QAAAAtzc2gtZWQyNTUxOQAAACBic6dnfsurUnrx3YDk722YO2he3xPOcn/zMBs9PW6t5g\nAAAEC6HcbLSNYYXBK5FqaWFUxXmIbFfrqPxfGPlOIWXLHZu2Jzp2d+y6tSevHdgOTvbZg7\naF7fE85yf/MwGz09bq3mAAAAD2IwMmEtY29tLWEtaG9zdAECAwQFBg==\n-----END OPENSSH PRIVATE KEY-----\n"
+COM_PRIMARY_SSH_HOST_PUBLIC_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGJzp2d+y6tSevHdgOTvbZg7aF7fE85yf/MwGz09bq3m b02a-com-a-host"
+
+def registry_zone_writer_config() -> str:
+    """Return Namingo automation settings for the COM source zone."""
+    return """<?php
+return [
+    'db_type' => 'mysql',
+    'db_host' => '127.0.0.1',
+    'db_port' => 3306,
+    'db_database' => 'registry',
+    'db_username' => 'registryuser',
+    'db_password' => 'seedemu-registry',
+    'dns_server' => 'bind',
+    'ns' => [
+        'ns1' => 'ns1.com',
+        'ns2' => 'ns2.com',
+    ],
+    'dns_soa' => 'hostmaster.com',
+    'dns_serial' => 1,
+    'dns_reload' => false,
+    'zone_mode' => 'default',
+];
+"""
+
+
+def registry_com_custom_records() -> str:
+    """Keep B02 delegations and Namingo endpoints in Zone Writer output."""
+    return """<?php
+return [
+    ['name' => 'ns1', 'type' => 'A', 'parameters' => ['10.152.0.71']],
+    ['name' => 'ns2', 'type' => 'A', 'parameters' => ['10.153.0.73']],
+    ['name' => 'epp.registry', 'type' => 'A', 'parameters' => ['10.154.0.73']],
+    ['name' => 'whois.registrar', 'type' => 'A', 'parameters' => ['10.150.0.73']],
+    ['name' => 'rdap.registrar', 'type' => 'A', 'parameters' => ['10.150.0.73']],
+    ['name' => 'twitter', 'type' => 'NS', 'parameters' => ['ns1.twitter.com.']],
+    ['name' => 'ns1.twitter', 'type' => 'A', 'parameters' => ['10.161.0.71']],
+    ['name' => 'google', 'type' => 'NS', 'parameters' => ['ns1.google.com.']],
+    ['name' => 'ns1.google', 'type' => 'A', 'parameters' => ['10.162.0.71']],
+];
+"""
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,6 +118,12 @@ def configure_com_authoritative_topology(
 
     a_com.setHiddenPrimary().setTransferKey(
         COM_TRANSFER_KEY_NAME, COM_TRANSFER_KEY_SECRET
+    ).enableZoneFileReceiver(
+        "com.",
+        REGISTRY_IP,
+        ZONE_PUBLISHER_PUBLIC_KEY,
+        COM_PRIMARY_SSH_HOST_PRIVATE_KEY,
+        COM_PRIMARY_SSH_HOST_PUBLIC_KEY,
     )
     for secondary_ip in COM_PUBLIC_SECONDARY_IPS:
         a_com.addTransferTarget(secondary_ip)
@@ -96,6 +151,10 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
     # exposes EPP/TLS and provisions the Registrar account, but the current
     # Registrar wrapper does not yet initiate EPP transactions.
     com_zone = dns.getZone("com.")
+    # A low deterministic initial serial lets the first Zone Writer snapshot
+    # pass the receiver's anti-rollback check.
+    if not com_zone.findRecords("SOA"):
+        com_zone.addRecord("@ SOA ns1.com. hostmaster.com. 1 900 900 1800 60")
     com_zone.addRecord("epp.registry A {}".format(REGISTRY_IP))
     com_zone.addRecord("whois.registrar A {}".format(REGISTRAR_IP))
     com_zone.addRecord("rdap.registrar A {}".format(REGISTRAR_IP))
@@ -109,6 +168,15 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
         rdap_url="http://rdap.registrar.com",
         abuse_email="abuse@registrar.com",
         abuse_phone="+1.5550100",
+    ).enableEppClient(
+        hostname=REGISTRY_EPP_HOSTNAME,
+        port=700,
+        clid=REGISTRAR_EPP_CLID,
+        password=REGISTRAR_EPP_PASSWORD,
+        ca_certificate_pem=EPP_CA_CERTIFICATE,
+        client_certificate_pem=EPP_CLIENT_CERTIFICATE,
+        client_private_key_pem=EPP_CLIENT_PRIVATE_KEY,
+        probe_domain="seedemu-epp-probe.com",
     )
 
     registry = NamingoRegistryService()
@@ -122,6 +190,20 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
         name="SeedEmu Namingo Registrar",
         iana_id=9999,
         email="registrar@registrar.com",
+        ssl_fingerprint=EPP_CLIENT_SHA256_FINGERPRINT,
+    ).enableZoneWriter(
+        registry_zone_writer_config(), interval_seconds=30
+    ).setZoneWriterCustomRecords(
+        "com", registry_com_custom_records()
+    ).setZonePublisher(
+        "com.",
+        COM_HIDDEN_PRIMARY_IP,
+        ZONE_PUBLISHER_PRIVATE_KEY,
+        COM_PRIMARY_SSH_HOST_PUBLIC_KEY,
+    ).setTlsCertificate(
+        EPP_SERVER_CERTIFICATE,
+        EPP_SERVER_PRIVATE_KEY,
+        client_ca_pem=EPP_CLIENT_CERTIFICATE,
     )
 
     emu.addBinding(

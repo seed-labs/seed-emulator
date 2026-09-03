@@ -118,7 +118,7 @@ class ComposeRuntimeTest:
         name: str,
         service: ComposeService | str,
         command: str,
-        retries: int = 20,
+        retries: int = 3,
         interval: int = 3,
         timeout: int = 45,
     ) -> Dict[str, object]:

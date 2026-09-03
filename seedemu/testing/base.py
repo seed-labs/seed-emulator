@@ -490,15 +490,28 @@ class TestRunner:
         timeout: Optional[int] = None,
     ) -> subprocess.CompletedProcess[str]:
         self.log("cwd={} cmd={}".format(cwd, " ".join(cmd)))
-        result = subprocess.run(
-            list(cmd),
-            cwd=str(cwd),
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                list(cmd),
+                cwd=str(cwd),
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            stdout = error.stdout or ""
+            stderr = error.stderr or ""
+            if isinstance(stdout, bytes):
+                stdout = stdout.decode(errors="replace")
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode(errors="replace")
+            timeout_message = "command timed out after {} seconds".format(timeout)
+            stderr = "{}\n{}".format(stderr.rstrip(), timeout_message).lstrip()
+            result = subprocess.CompletedProcess(
+                list(cmd), 124, stdout=stdout, stderr=stderr
+            )
         self.write_command_log(name, cmd, cwd, result)
         return result
 
