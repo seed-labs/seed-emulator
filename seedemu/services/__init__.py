@@ -3,6 +3,7 @@ from .BotnetService import BotnetClientService, BotnetClientServer, BotnetServic
 from .DomainRegistrarService import DomainRegistrarService, DomainRegistrarServer
 from .NamingoRegistrarService import NamingoRegistrarService, NamingoRegistrarServer
 from .NamingoRegistryService import NamingoRegistryService, NamingoRegistryServer
+from .LoomRegistrarService import LoomRegistrarService, LoomRegistrarServer
 from .DomainNameService import DomainNameServer, DomainNameService, Zone
 from .TorService import TorService, TorServer, TorNodeType
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService

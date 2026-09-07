@@ -6,8 +6,13 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+import base64
+import hashlib
+import secrets
+import subprocess
 import sys
+import tempfile
+from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -21,6 +26,7 @@ from seedemu.core import Binding, Emulator, Filter
 from seedemu.layers import Base
 from seedemu.services import (
     DomainNameService,
+    LoomRegistrarService,
     NamingoRegistrarService,
     NamingoRegistryService,
 )
@@ -31,7 +37,15 @@ COM_TRANSFER_KEY_SECRET = "c2VlZGVtdS1jb20tdHJhbnNmZXIta2V5"
 COM_HIDDEN_PRIMARY_IP = "10.151.0.71"
 COM_PUBLIC_SECONDARY_IPS = ["10.152.0.71", "10.153.0.73"]
 REGISTRAR_IP = "10.150.0.73"
+LOOM_IP = "10.150.0.74"
 REGISTRY_IP = "10.154.0.73"
+OWNER_DNS_NETWORK = "owner-dns-net"
+OWNER_DNS_PREFIX = "11.160.0.0/24"
+OWNER_DNS_ROUTER_IP = "11.160.0.254"
+OWNER_DNS_PRIMARY_IP = "11.160.0.53"
+OWNER_DNS_SECONDARY_IP = "11.160.0.54"
+OWNER_DNS_SERVICE_ID = "b02a.source-owned-dns"
+LOOM_COMMIT = "212410852c821b14bfc9603043ab0a61632bd576"
 REGISTRY_EPP_HOSTNAME = "epp.registry.com"
 REGISTRAR_EPP_CLID = "seedemu"
 REGISTRAR_EPP_PASSWORD = "seedemu-epp"
@@ -45,6 +59,89 @@ ZONE_PUBLISHER_PRIVATE_KEY = "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZ
 ZONE_PUBLISHER_PUBLIC_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILuimJ3x5v76m83mpAxm8jPMkKOEppVN6d5N41woUVDo b02a-zone-publisher"
 COM_PRIMARY_SSH_HOST_PRIVATE_KEY = "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACBic6dnfsurUnrx3YDk722YO2he3xPOcn/zMBs9PW6t5gAAAJh4LdPReC3T\n0QAAAAtzc2gtZWQyNTUxOQAAACBic6dnfsurUnrx3YDk722YO2he3xPOcn/zMBs9PW6t5g\nAAAEC6HcbLSNYYXBK5FqaWFUxXmIbFfrqPxfGPlOIWXLHZu2Jzp2d+y6tSevHdgOTvbZg7\naF7fE85yf/MwGz09bq3mAAAAD2IwMmEtY29tLWEtaG9zdAECAwQFBg==\n-----END OPENSSH PRIVATE KEY-----\n"
 COM_PRIMARY_SSH_HOST_PUBLIC_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGJzp2d+y6tSevHdgOTvbZg7aF7fE85yf/MwGz09bq3m b02a-com-a-host"
+
+
+def loom_environment() -> str:
+    """Return the pinned Loom version's complete runtime environment."""
+    return f"""APP_NAME='SeedEmu Loom Registrar'
+APP_ENV=local
+APP_URL=https://{LOOM_IP}
+APP_DOMAIN=registrar.com
+WHOIS_SERVER=whois.registrar.com
+RDAP_SERVER=rdap.registrar.com
+LANG=en_US
+UI_LANG=us
+DEFAULT_CURRENCY=USD
+WEB_AUTHN_ENABLED=false
+WEBAUTHN_DUMMY_SECRET=seedemu-loom-webauthn
+DB_DRIVER=mysql
+DB_HOST=127.0.0.1
+DB_DATABASE=loom
+DB_USERNAME=loom
+DB_PASSWORD=seedemu-loom
+DB_PORT=3306
+MAIL_DRIVER=none
+ENABLED_GATEWAYS=balance
+PASSWORD_EXPIRATION_SKIP_USERS=admin
+COMPANY_NAME='SeedEmu Registrar'
+COMPANY_ADDRESS='150 Simulation Road'
+COMPANY_ADDRESS2=''
+COMPANY_COUNTRY_CODE=US
+COMPANY_VAT_NUMBER=''
+COMPANY_PHONE='+1.5550100'
+COMPANY_EMAIL=registrar@registrar.com
+TLS=1.2
+VERIFY_PEER=true
+VERIFY_PEER_NAME=true
+VERIFY_HOST=true
+SELF_SIGNED=false
+BIND=false
+BIND_IP={LOOM_IP}
+VALIDATE_PHONE=false
+VALIDATE_EMAIL=false
+VALIDATE_POSTAL=false
+IANA_ID=9999
+MOSAPI_USERNAME=''
+MOSAPI_PASSWORD=''
+"""
+
+
+def loom_provider_sql() -> str:
+    """Provision Loom's Namingo EPP provider without changing Loom code."""
+    return """INSERT INTO providers
+(name,type,api_endpoint,credentials,pricing,status,tld)
+VALUES
+('SeedEmu Namingo Registry','domain','epp.registry.com:700',
+ JSON_OBJECT('ssl',true,'cert_file','/opt/loom-epp/client.crt',
+ 'key_file','/opt/loom-epp/client.key','cafile','/opt/loom-epp/ca.crt',
+ 'passphrase','','auth',JSON_OBJECT('username','seedemu','password','seedemu-epp'),
+ 'client_id','seedemu','contactRoles',JSON_ARRAY('registrant','admin','tech','billing'),
+ 'contactType','int','autoCreateHosts',true),
+ JSON_OBJECT('.com',JSON_OBJECT('register',JSON_OBJECT('1',10),
+ 'renew',JSON_OBJECT('1',10),'transfer',JSON_OBJECT('1',10),
+ 'restore',JSON_OBJECT('1',30))),'active','.com')
+ON DUPLICATE KEY UPDATE api_endpoint=VALUES(api_endpoint),
+credentials=VALUES(credentials),pricing=VALUES(pricing),status=VALUES(status);
+"""
+
+
+def loom_epp_probe() -> str:
+    """Exercise Loom's own provider lookup and EPP client implementation."""
+    return """<?php
+require '/opt/loom/vendor/autoload.php';
+Dotenv\\Dotenv::createImmutable('/opt/loom')->load();
+require '/opt/loom/bootstrap/helper.php';
+$pdo = new PDO('mysql:host=' . $_ENV['DB_HOST'] . ';dbname=' . $_ENV['DB_DATABASE'], $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD']);
+$provider = $pdo->query("SELECT * FROM providers WHERE tld = '.com' AND status = 'active'")->fetch(PDO::FETCH_ASSOC);
+if (!$provider) { throw new RuntimeException('Loom Namingo provider not found'); }
+$credentials = json_decode($provider['credentials'], true, 512, JSON_THROW_ON_ERROR);
+[$host, $port] = explode(':', $provider['api_endpoint'], 2);
+$epp = connectEpp('generic', $host, (int)$port, $credentials['cafile'], $credentials['cert_file'], $credentials['key_file'], $credentials['passphrase'], $credentials['auth']['username'], $credentials['auth']['password']);
+$reply = $epp->domainCheck(['domains' => ['loom-runtime-check.com']]);
+$epp->logout();
+if (isset($reply['error'])) { throw new RuntimeException($reply['error']); }
+file_put_contents('/run/seedemu-loom-epp-health.json', json_encode(['status' => 'ok', 'transport' => 'epp-over-tls', 'domain' => 'loom-runtime-check.com'], JSON_THROW_ON_ERROR));
+"""
 
 def registry_zone_writer_config() -> str:
     """Return Namingo automation settings for the COM source zone."""
@@ -108,6 +205,19 @@ def resolve_platform(name: str) -> Platform:
     return Platform.AMD64 if name == "amd" else Platform.ARM64
 
 
+def generate_ssh_keypair(comment: str) -> tuple[str, str]:
+    """Generate one deployment-local Ed25519 identity."""
+    with tempfile.TemporaryDirectory() as work:
+        key_path = Path(work) / "id_ed25519"
+        subprocess.run(
+            ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", comment,
+             "-f", str(key_path)],
+            check=True,
+            capture_output=True,
+        )
+        return key_path.read_text(), key_path.with_suffix(".pub").read_text().strip()
+
+
 def configure_com_authoritative_topology(
     dns: DomainNameService,
 ) -> None:
@@ -146,6 +256,14 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
     base.getAutonomousSystem(154).createHost("namingo-registry").joinNetwork(
         "net0", address=REGISTRY_IP
     ).setDisplayName("Namingo Registry")
+    loom_node = base.getAutonomousSystem(150).createHost("loom-registrar").joinNetwork(
+        "net0", address=LOOM_IP
+    ).setDisplayName("Loom Registrar Frontend")
+    loom_node.setFile("/opt/loom-epp/ca.crt", EPP_CA_CERTIFICATE)
+    loom_node.setFile("/opt/loom-epp/client.crt", EPP_CLIENT_CERTIFICATE)
+    loom_node.setFile("/opt/loom-epp/client.key", EPP_CLIENT_PRIVATE_KEY)
+    loom_node.setFile("/opt/seedemu/loom/provider.sql", loom_provider_sql())
+    loom_node.setFile("/opt/seedemu/loom/epp-probe.php", loom_epp_probe())
 
     # Publish stable service names through the existing COM zone. The Registry
     # exposes EPP/TLS and provisions the Registrar account, but the current
@@ -186,7 +304,7 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
         clid=REGISTRAR_EPP_CLID,
         password=REGISTRAR_EPP_PASSWORD,
         prefix="SEED",
-        whitelist=[REGISTRAR_IP],
+        whitelist=[REGISTRAR_IP, LOOM_IP],
         name="SeedEmu Namingo Registrar",
         iana_id=9999,
         email="registrar@registrar.com",
@@ -206,6 +324,52 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
         client_ca_pem=EPP_CLIENT_CERTIFICATE,
     )
 
+    # Only this example client receives an identity. Its ID is not a secret.
+    source = base.getAutonomousSystem(150).getHost("host_1")
+    source_id = "b02a.as150.host_1"
+    source_token = secrets.token_hex(32)
+    origin = f"https://{LOOM_IP}:443"
+    credential_dir = "/opt/seedemu/registrar/" + hashlib.sha256(origin.encode()).hexdigest()
+    # Generate a deployment-local trust anchor without retaining temporary files.
+    with tempfile.TemporaryDirectory() as work:
+        key_path, cert_path = Path(work) / "key.pem", Path(work) / "cert.pem"
+        subprocess.run([
+            "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+            "-keyout", str(key_path), "-out", str(cert_path), "-days", "3650",
+            "-subj", "/CN=SeedEmu Loom", "-addext", f"subjectAltName=IP:{LOOM_IP}",
+        ], check=True, capture_output=True)
+        web_key, web_certificate = key_path.read_text(), cert_path.read_text()
+    source.setFile(credential_dir + "/source-id", source_id)
+    source.setFile(credential_dir + "/token", source_token)
+    source.setFile(credential_dir + "/ca.crt", web_certificate)
+    source.appendStartCommand(f"chmod 0700 {credential_dir}; chmod 0600 {credential_dir}/*")
+
+    loom = LoomRegistrarService()
+    loom.install("loom-registrar").setCommit(LOOM_COMMIT).setEnvironment(
+        loom_environment()
+    ).setWebTls(web_certificate, web_key).addSourceAccount(
+        source_id=source_id, address="10.150.0.72",
+        token_sha256=hashlib.sha256(source_token.encode()).hexdigest(),
+        email="b02a-host1@example.com", username="b02a_host1", credit_limit=1000.0,
+    ).addBootstrapCommand(
+        "    mariadb -e \"CREATE DATABASE IF NOT EXISTS loom CHARACTER SET utf8mb4 "
+        "COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'loom'@'127.0.0.1' "
+        "IDENTIFIED BY 'seedemu-loom'; GRANT ALL PRIVILEGES ON loom.* TO "
+        "'loom'@'127.0.0.1'; FLUSH PRIVILEGES;\""
+    ).addBootstrapCommand(
+        "    php /opt/loom/bin/install-db.php"
+    ).addBootstrapCommand(
+        "    mariadb -h 127.0.0.1 -uloom -pseedemu-loom loom "
+        "< /opt/seedemu/loom/provider.sql"
+    ).addBootstrapCommand(
+        "    php /opt/loom/bin/create-admin-user.php"
+    ).addBootstrapCommand(
+        "    chown root:www-data /opt/loom-epp/client.key; "
+        "chmod 0640 /opt/loom-epp/client.key; i=0; "
+        "until php /opt/seedemu/loom/epp-probe.php; do i=$((i + 1)); "
+        "test \"$i\" -lt 60; sleep 2; done"
+    )
+
     emu.addBinding(
         Binding(
             "namingo-registrar",
@@ -218,8 +382,75 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
             filter=Filter(asn=154, nodeName="namingo-registry"),
         )
     )
+    emu.addBinding(
+        Binding(
+            "loom-registrar",
+            filter=Filter(asn=150, nodeName="loom-registrar"),
+        )
+    )
     emu.addLayer(registrar)
     emu.addLayer(registry)
+    emu.addLayer(loom)
+
+
+def configure_source_owned_dns(emu: Emulator, base: Base, dns: DomainNameService) -> None:
+    """Add two authoritative DNS nodes controlled only by B02a's source."""
+    owner_as = base.getAutonomousSystem(160)
+    owner_as.createNetwork(OWNER_DNS_NETWORK, OWNER_DNS_PREFIX)
+    owner_as.getRouter("router0").joinNetwork(
+        OWNER_DNS_NETWORK, address=OWNER_DNS_ROUTER_IP
+    )
+    owner_as.createHost("owner-dns-primary").joinNetwork(
+        OWNER_DNS_NETWORK, address=OWNER_DNS_PRIMARY_IP
+    ).setDisplayName("Source-owned DNS Primary")
+    owner_as.createHost("owner-dns-secondary").joinNetwork(
+        OWNER_DNS_NETWORK, address=OWNER_DNS_SECONDARY_IP
+    ).setDisplayName("Source-owned DNS Secondary")
+
+    source = base.getAutonomousSystem(150).getHost("host_1")
+    source_address = "10.150.0.72"
+    control_private, control_public = generate_ssh_keypair("b02a-source-dns-control")
+    primary_host_private, primary_host_public = generate_ssh_keypair("b02a-owner-dns-primary")
+    secondary_host_private, secondary_host_public = generate_ssh_keypair(
+        "b02a-owner-dns-secondary"
+    )
+    credential_dir = f"/opt/seedemu/dns/{OWNER_DNS_SERVICE_ID}"
+    source.setFile(credential_dir + "/control.key", control_private)
+    source.setFile(
+        credential_dir + "/known_hosts",
+        f"{OWNER_DNS_PRIMARY_IP} {primary_host_public}\n"
+        f"{OWNER_DNS_SECONDARY_IP} {secondary_host_public}\n",
+    )
+    source.appendStartCommand(
+        f"chmod 0700 {credential_dir}; chmod 0600 {credential_dir}/control.key; "
+        f"chmod 0644 {credential_dir}/known_hosts"
+    )
+    source.addSoftware("openssh-client dnsutils")
+
+    update_secret = base64.b64encode(secrets.token_bytes(32)).decode()
+    transfer_secret = base64.b64encode(secrets.token_bytes(32)).decode()
+    common = {
+        "service_id": OWNER_DNS_SERVICE_ID,
+        "primary": OWNER_DNS_PRIMARY_IP,
+        "secondary": OWNER_DNS_SECONDARY_IP,
+        "source_address": source_address,
+        "source_public_key": control_public,
+        "update_secret": update_secret,
+        "transfer_secret": transfer_secret,
+        "zones": ["example.com"],
+    }
+    dns.install("source-owned-dns-primary").enableRuntimeZoneManagement(
+        role="primary", ssh_host_private_key=primary_host_private,
+        ssh_host_public_key=primary_host_public, **common
+    )
+    dns.install("source-owned-dns-secondary").enableRuntimeZoneManagement(
+        role="secondary", ssh_host_private_key=secondary_host_private,
+        ssh_host_public_key=secondary_host_public, **common
+    )
+    emu.addBinding(Binding("source-owned-dns-primary", filter=Filter(
+        asn=160, nodeName="owner-dns-primary")))
+    emu.addBinding(Binding("source-owned-dns-secondary", filter=Filter(
+        asn=160, nodeName="owner-dns-secondary")))
 
 
 def build_emulator() -> Emulator:
@@ -252,6 +483,7 @@ def build_emulator() -> Emulator:
     )
 
     configure_namingo_services(emu, base, dns)
+    configure_source_owned_dns(emu, base, dns)
 
     return emu
 

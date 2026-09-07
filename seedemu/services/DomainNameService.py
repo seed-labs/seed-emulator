@@ -5,10 +5,66 @@ from typing import List, Dict, Tuple, Set, Optional
 from ipaddress import ip_address
 from re import fullmatch, sub
 from random import randint
+import json
 import requests
 
 DomainNameServiceFileTemplates: Dict[str, str] = {}
 ROOT_ZONE_URL = 'https://www.internic.net/domain/root.zone'
+
+SOURCE_OWNED_DNS_CONTROL_SCRIPT = r'''#!/bin/sh
+set -eu
+request=$(printf %s "$SSH_ORIGINAL_COMMAND" | base64 -d)
+zone=$(printf %s "$request" | jq -r '.zone')
+operation=$(printf %s "$request" | jq -r '.operation')
+case "$zone" in *[!A-Za-z0-9._-]*|'') exit 64 ;; esac
+zone=${zone%.}
+jq -e --arg zone "$zone" '.zones | index($zone) != null' /etc/seedemu-owned-dns/policy.json >/dev/null
+role=$(jq -r .role /etc/seedemu-owned-dns/policy.json)
+primary=$(jq -r .primary /etc/seedemu-owned-dns/policy.json)
+secondary=$(jq -r .secondary /etc/seedemu-owned-dns/policy.json)
+conf=/etc/bind/seedemu-owned-${zone}.conf
+zone_file=/var/lib/bind/seedemu-owned-${zone}.zone
+if [ "$operation" = provision ]; then
+    if [ ! -e "$conf" ]; then
+        if [ "$role" = primary ]; then
+            serial=$(date +%s)
+            cat > "$zone_file" <<EOF
+\$TTL 300
+@ IN SOA ns1.$zone. hostmaster.$zone. $serial 300 60 86400 60
+@ IN NS ns1.$zone.
+@ IN NS ns2.$zone.
+ns1 IN A $primary
+ns2 IN A $secondary
+EOF
+            chown bind:bind "$zone_file"
+            cat > "$conf" <<EOF
+zone "$zone" { type master; file "$zone_file"; notify yes; also-notify { $secondary key "seedemu-transfer"; }; allow-transfer { key "seedemu-transfer"; }; allow-update { key "seedemu-update"; }; };
+EOF
+        else
+            cat > "$conf" <<EOF
+zone "$zone" { type slave; masters { $primary key "seedemu-transfer"; }; file "$zone_file"; };
+EOF
+        fi
+        printf 'include "%s";\n' "$conf" >> /etc/bind/named.conf.local
+        rndc reconfig
+    fi
+    printf '{"status":"provisioned","role":"%s","zone":"%s"}\n' "$role" "$zone"
+    exit 0
+fi
+[ "$role" = primary ] || exit 65
+[ "$operation" = apply ] || exit 64
+[ -e "$conf" ] || exit 66
+updates=$(printf %s "$request" | jq -r '
+  .changes[] |
+  if .operation == "delete" then "update delete \(.name) \(.record_type)"
+  else "update delete \(.name) \(.record_type)\nupdate add \(.name) \(.ttl) \(.record_type) \(.value)" end')
+{
+    printf 'server 127.0.0.1\nzone %s\n' "$zone"
+    printf '%s\n' "$updates"
+    printf 'send\n'
+} | nsupdate -k /etc/bind/keys/seedemu-update.key
+printf '{"status":"applied","role":"primary","zone":"%s"}\n' "$zone"
+'''
 
 DomainNameServiceFileTemplates['named_options'] = '''\
 options {
@@ -263,6 +319,7 @@ class DomainNameServer(Server):
         self.__transfer_key = None
         self.__transfer_targets = []
         self.__zone_file_receiver = None
+        self.__runtime_zone_management = None
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -388,6 +445,55 @@ class DomainNameServer(Server):
             ssh_host_public_key.strip() + '\n',
             max_bytes,
         )
+        return self
+
+    def enableRuntimeZoneManagement(
+        self,
+        *,
+        role: str,
+        service_id: str,
+        primary: str,
+        secondary: str,
+        source_address: str,
+        source_public_key: str,
+        ssh_host_private_key: str,
+        ssh_host_public_key: str,
+        update_secret: str,
+        transfer_secret: str,
+        zones: List[str],
+    ) -> DomainNameServer:
+        """Enable source-authenticated runtime provisioning on this BIND node."""
+        assert role in {'primary', 'secondary'}, 'invalid runtime DNS role'
+        assert fullmatch(r'[A-Za-z0-9_.-]{1,64}', service_id), 'invalid DNS service id'
+        ip_address(primary)
+        ip_address(secondary)
+        ip_address(source_address)
+        assert source_public_key.startswith('ssh-ed25519 '), 'source key must be Ed25519'
+        assert 'BEGIN OPENSSH PRIVATE KEY' in ssh_host_private_key, 'invalid SSH host key'
+        assert ssh_host_public_key.startswith('ssh-ed25519 '), 'host key must be Ed25519'
+        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', update_secret), 'invalid update secret'
+        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', transfer_secret), 'invalid transfer secret'
+        assert zones, 'at least one authorized runtime zone is required'
+        assert self.__runtime_zone_management is None, 'runtime zone management already configured'
+        assert self.__zone_file_receiver is None, 'runtime management conflicts with zone receiver'
+        normalized_zones = []
+        for zone in zones:
+            normalized = zone.rstrip('.').lower()
+            assert fullmatch(r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9-]+', normalized), 'invalid runtime zone'
+            normalized_zones.append(normalized)
+        self.__runtime_zone_management = {
+            'role': role,
+            'service_id': service_id,
+            'primary': primary,
+            'secondary': secondary,
+            'source_address': source_address,
+            'source_public_key': source_public_key.strip(),
+            'host_private_key': ssh_host_private_key.strip() + '\n',
+            'host_public_key': ssh_host_public_key.strip() + '\n',
+            'update_secret': update_secret,
+            'transfer_secret': transfer_secret,
+            'zones': normalized_zones,
+        }
         return self
 
     def setRealRootNS(self) -> DomainNameServer:
@@ -755,6 +861,91 @@ Match User root Address {publisher_ip}
             # text to an interactive shell.
             node.appendStartCommand(
                 'usermod --shell {} root'.format(receiver_command)
+            )
+            node.appendStartCommand('service ssh start')
+
+        if self.__runtime_zone_management is not None:
+            runtime = self.__runtime_zone_management
+            service_id = runtime['service_id']
+            node.appendClassName('RuntimeManagedDomainNameServer')
+            node.setLabel('agent.exposed.dns.service_id', service_id)
+            node.setLabel('agent.exposed.dns.role', runtime['role'])
+            node.setLabel('agent.exposed.dns.primary', runtime['primary'])
+            node.setLabel('agent.exposed.dns.secondary', runtime['secondary'])
+            node.setLabel(
+                'agent.exposed.dns.credential_ref',
+                '{}.source-control'.format(service_id),
+            )
+            node.addSoftware('bind9-utils dnsutils jq openssh-server')
+            node.setFile(
+                '/usr/local/sbin/seedemu-owned-dns-control',
+                SOURCE_OWNED_DNS_CONTROL_SCRIPT,
+            )
+            node.setFile(
+                '/etc/seedemu-owned-dns/policy.json',
+                json.dumps({
+                    'role': runtime['role'],
+                    'primary': runtime['primary'],
+                    'secondary': runtime['secondary'],
+                    'zones': runtime['zones'],
+                }),
+            )
+            node.setFile(
+                '/etc/bind/keys/seedemu-update.key',
+                'key "seedemu-update" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
+                    runtime['update_secret']
+                ),
+            )
+            node.setFile(
+                '/etc/bind/keys/seedemu-transfer.key',
+                'key "seedemu-transfer" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
+                    runtime['transfer_secret']
+                ),
+            )
+            node.appendFile(
+                '/etc/bind/named.conf.local',
+                'include "/etc/bind/keys/seedemu-update.key";\n'
+                'include "/etc/bind/keys/seedemu-transfer.key";\n',
+            )
+            node.setFile(
+                '/etc/ssh/ssh_host_ed25519_key', runtime['host_private_key']
+            )
+            node.setFile(
+                '/etc/ssh/ssh_host_ed25519_key.pub', runtime['host_public_key']
+            )
+            node.setFile(
+                '/root/.ssh/authorized_keys',
+                'from="{}",restrict,command="/usr/local/sbin/seedemu-owned-dns-control" {}\n'.format(
+                    runtime['source_address'], runtime['source_public_key']
+                ),
+            )
+            node.setFile(
+                '/etc/ssh/sshd_config.d/seedemu-owned-dns.conf',
+                '''PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+Match User root Address {source_address}
+    ForceCommand /usr/local/sbin/seedemu-owned-dns-control
+'''.format(source_address=runtime['source_address']),
+            )
+            node.appendStartCommand(
+                'chmod 0755 /usr/local/sbin/seedemu-owned-dns-control'
+            )
+            node.appendStartCommand('mkdir -p /root/.ssh /run/sshd /var/lib/bind')
+            node.appendStartCommand('chmod 0700 /root/.ssh')
+            node.appendStartCommand(
+                'chmod 0600 /etc/ssh/ssh_host_ed25519_key /root/.ssh/authorized_keys'
+            )
+            node.appendStartCommand(
+                'chown -R root:bind /etc/bind/keys && chmod 0750 /etc/bind/keys '
+                '&& chmod 0640 /etc/bind/keys/*.key'
+            )
+            # Some SeedEmu base images wrap the root shell and discard SSH exec
+            # requests.  Keep the authorized-key and sshd forced commands, and
+            # use the restricted controller as the login shell as well.
+            node.appendStartCommand(
+                'usermod --shell /usr/local/sbin/seedemu-owned-dns-control root'
             )
             node.appendStartCommand('service ssh start')
 

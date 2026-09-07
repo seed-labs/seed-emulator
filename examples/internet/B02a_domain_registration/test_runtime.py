@@ -12,8 +12,45 @@ def main() -> int:
     c_com = test.require_service(153, "c-com", "COM-C public secondary is generated")
     root = test.require_service(171, "host_0", "root primary is generated")
     client = test.require_service(150, "host_1", "representative DNS client is generated")
+    resolver = test.require_service(153, "local-dns-2", "recursive DNS resolver is generated")
     registrar = test.require_service(150, "namingo-registrar", "Namingo Registrar is generated")
+    loom = test.require_service(150, "loom-registrar", "Loom Registrar frontend is generated")
     registry = test.require_service(154, "namingo-registry", "Namingo Registry is generated")
+    owner_primary = test.require_service(
+        160, "owner-dns-primary", "source-owned DNS Primary is generated"
+    )
+    owner_secondary = test.require_service(
+        160, "owner-dns-secondary", "source-owned DNS Secondary is generated"
+    )
+
+    if loom:
+        test.exec_check(
+            "Loom serves its customer-facing web application",
+            loom,
+            "curl -fsS --cacert /opt/seedemu/loom/web.crt https://10.150.0.74/ | grep -q 'Loom'",
+            retries=5,
+            interval=3,
+        )
+        test.exec_check(
+            "Loom initializes its Namingo provider and completes verified EPP over TLS",
+            loom,
+            "test \"$(mariadb -h 127.0.0.1 -uloom -pseedemu-loom -N loom "
+            "-e \"SELECT CONCAT(type,':',api_endpoint,':',status) FROM providers "
+            "WHERE tld='.com'\")\" = 'domain:epp.registry.com:700:active' "
+            "&& grep -q '\"status\":\"ok\"' /run/seedemu-loom-epp-health.json "
+            "&& grep -q '\"transport\":\"epp-over-tls\"' "
+            "/run/seedemu-loom-epp-health.json",
+            retries=3,
+            interval=3,
+        )
+        test.exec_check(
+            "Loom keeps its configuration and EPP private key out of process environment",
+            loom,
+            "! env | grep -q 'seedemu-epp' "
+            "&& test -s /opt/loom/.env && test \"$(stat -c %a /opt/loom/.env)\" = 640 "
+            "&& test \"$(stat -c %G /opt/loom/.env)\" = www-data",
+            retries=1,
+        )
 
     if a_com:
         test.exec_check(
@@ -100,6 +137,66 @@ def main() -> int:
             "&& getent hosts whois.registrar.com | grep -q '10.150.0.73'",
         )
 
+    if client and owner_primary and owner_secondary:
+        ssh_prefix = (
+            "cred=/opt/seedemu/dns/b02a.source-owned-dns; "
+            "ssh -i $cred/control.key -o BatchMode=yes -o IdentitiesOnly=yes "
+            "-o UserKnownHostsFile=$cred/known_hosts "
+            "-o StrictHostKeyChecking=yes -o ConnectTimeout=10"
+        )
+        provision = (
+            "$(printf '%s' '{\"operation\":\"provision\","
+            "\"zone\":\"example.com\"}' | base64 -w0)"
+        )
+        test.exec_check(
+            "authorized source reaches its owner DNS SSH endpoints",
+            client,
+            "timeout 5 bash -c '</dev/tcp/11.160.0.53/22' "
+            "&& timeout 5 bash -c '</dev/tcp/11.160.0.54/22'",
+            retries=5,
+            interval=3,
+        )
+        test.exec_check(
+            "authorized source provisions its owner DNS secondary",
+            client,
+            f"{ssh_prefix} root@11.160.0.54 \"{provision}\" "
+            "| grep -q '\"status\":\"provisioned\"'",
+            retries=3,
+            interval=3,
+        )
+        test.exec_check(
+            "authorized source provisions its owner DNS primary",
+            client,
+            f"{ssh_prefix} root@11.160.0.53 \"{provision}\" "
+            "| grep -q '\"status\":\"provisioned\"'",
+            retries=3,
+            interval=3,
+        )
+        test.exec_check(
+            "authorized source updates and verifies its owner DNS pair",
+            client,
+            "cred=/opt/seedemu/dns/b02a.source-owned-dns; "
+            "apply=$(printf '%s' '{\"operation\":\"apply\",\"zone\":"
+            "\"example.com\",\"changes\":[{\"name\":\"www.example.com\","
+            "\"record_type\":\"A\",\"operation\":\"replace\",\"ttl\":"
+            "300,\"value\":\"11.160.0.80\"}]}' | base64 -w0); "
+            "ssh -i $cred/control.key -o BatchMode=yes -o IdentitiesOnly=yes "
+            "-o UserKnownHostsFile=$cred/known_hosts "
+            "-o StrictHostKeyChecking=yes -o ConnectTimeout=10 "
+            "root@11.160.0.53 \"$apply\" "
+            "&& for i in 1 2 3 4 5 6 7 8 9 10; do "
+            "test \"$(dig +short @11.160.0.54 www.example.com A)\" = 11.160.0.80 "
+            "&& test \"$(dig +short @11.160.0.53 example.com SOA)\" "
+            "= \"$(dig +short @11.160.0.54 example.com SOA)\" && break; "
+            "sleep 1; done "
+            "&& test \"$(dig +short @11.160.0.53 www.example.com A)\" = 11.160.0.80 "
+            "&& test \"$(dig +short @11.160.0.54 www.example.com A)\" = 11.160.0.80 "
+            "&& test \"$(dig +short @11.160.0.53 example.com SOA)\" "
+            "= \"$(dig +short @11.160.0.54 example.com SOA)\"",
+            retries=3,
+            interval=3,
+        )
+
     if registrar:
         test.exec_check(
             "Namingo Registrar starts WHOIS/RDAP and completes verified EPP over TLS",
@@ -126,17 +223,17 @@ def main() -> int:
             "\"fullphonenumber\":\"+1.5550100\",\"email\":\"runtime@registrar.com\","
             "\"authInfoPw\":\"Contact-Runtime-1\"}' "
             "&& /usr/local/bin/seedemu-epp-client domain-create "
-            "'{\"domainname\":\"runtime-registration.com\",\"period\":1,"
+            "'{\"domainname\":\"example.com\",\"period\":1,"
             "\"registrant\":\"SEED-RUNTIME\",\"contacts\":{\"admin\":\"SEED-RUNTIME\","
             "\"tech\":\"SEED-RUNTIME\",\"billing\":\"SEED-RUNTIME\"},"
             "\"authInfoPw\":\"Domain-Runtime-1\"}' "
             "&& /usr/local/bin/seedemu-epp-client host-create "
-            "'{\"hostname\":\"ns1.runtime-registration.com\",\"ipaddress\":\"11.150.0.71\"}' "
+            "'{\"hostname\":\"ns1.example.com\",\"ipaddress\":\"11.160.0.53\"}' "
             "&& /usr/local/bin/seedemu-epp-client host-create "
-            "'{\"hostname\":\"ns2.runtime-registration.com\",\"ipaddress\":\"11.150.0.73\"}' "
+            "'{\"hostname\":\"ns2.example.com\",\"ipaddress\":\"11.160.0.54\"}' "
             "&& /usr/local/bin/seedemu-epp-client domain-update "
-            "'{\"domainname\":\"runtime-registration.com\",\"nameservers\":["
-            "\"ns1.runtime-registration.com\",\"ns2.runtime-registration.com\"]}' "
+            "'{\"domainname\":\"example.com\",\"nameservers\":["
+            "\"ns1.example.com\",\"ns2.example.com\"]}' "
             "| grep -q '\"status\":\"ok\"'",
             retries=1,
             interval=3,
@@ -169,15 +266,40 @@ def main() -> int:
             retries=1,
         )
 
-    if b_com:
+    if b_com and c_com:
         test.exec_check(
-            "Registry registration reaches the public COM delegation",
+            "Registry registration reaches both public COM secondaries",
             b_com,
-            "dig @127.0.0.1 runtime-registration.com NS +norecurse +noall +authority "
-            "| awk '$4 == \"NS\" {print $5}' | grep -q 'ns1.runtime-registration.com.' "
-            "&& dig @127.0.0.1 runtime-registration.com NS +norecurse +noall +additional "
-            "| awk '$1 == \"ns1.runtime-registration.com.\" && $4 == \"A\" {print $5}' "
-            "| grep -q '11.150.0.71'",
+            "for server in 10.152.0.71 10.153.0.73; do "
+            "ns=$(dig @$server example.com NS +norecurse +noall +authority); "
+            "glue=$(dig @$server example.com NS +norecurse +noall +additional); "
+            "printf '%s\\n' \"$ns\" | awk '$4 == \"NS\" {print $5}' "
+            "| grep -qx 'ns1.example.com.' "
+            "&& printf '%s\\n' \"$ns\" | awk '$4 == \"NS\" {print $5}' "
+            "| grep -qx 'ns2.example.com.' "
+            "&& printf '%s\\n' \"$glue\" "
+            "| awk '$1 == \"ns1.example.com.\" && $4 == \"A\" {print $5}' "
+            "| grep -qx '11.160.0.53' "
+            "&& printf '%s\\n' \"$glue\" "
+            "| awk '$1 == \"ns2.example.com.\" && $4 == \"A\" {print $5}' "
+            "| grep -qx '11.160.0.54' || exit 1; done",
+            retries=15,
+            interval=3,
+        )
+
+    if resolver:
+        test.exec_check(
+            "recursive resolver expires its pre-registration failure cache",
+            resolver,
+            "rndc flush",
+            retries=1,
+        )
+
+    if client and resolver:
+        test.exec_check(
+            "registered domain resolves through COM delegation and owner DNS",
+            client,
+            "test \"$(dig +short www.example.com A | tail -n1)\" = 11.160.0.80",
             retries=15,
             interval=3,
         )
