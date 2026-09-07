@@ -49,6 +49,8 @@ LOOM_COMMIT = "212410852c821b14bfc9603043ab0a61632bd576"
 REGISTRY_EPP_HOSTNAME = "epp.registry.com"
 REGISTRAR_EPP_CLID = "seedemu"
 REGISTRAR_EPP_PASSWORD = "seedemu-epp"
+LOOM_RDDS_DB_USER = "loom_rdds"
+LOOM_RDDS_DB_PASSWORD = "seedemu-loom-rdds"
 EPP_CA_CERTIFICATE = "-----BEGIN CERTIFICATE-----\nMIIBlzCCAT2gAwIBAgIUO6WTWlXpqz/YVLGiEIBzLYt31SUwCgYIKoZIzj0EAwIw\nGTEXMBUGA1UEAwwOU2VlZEVtdSBFUFAgQ0EwHhcNMjYwOTAyMDc1MjQ1WhcNMzYw\nODMwMDc1MjQ1WjAZMRcwFQYDVQQDDA5TZWVkRW11IEVQUCBDQTBZMBMGByqGSM49\nAgEGCCqGSM49AwEHA0IABMVJHZOVUAKg/2p76dI8rPslQJCf6k6ZEFaHUJfX4O1R\n7fNzmIjaNvnD7RY0txOLSsaJUu2RwBB91se8ipzE2vOjYzBhMB0GA1UdDgQWBBQX\nO0akWixlPZ7SG4ZN4m+O0xer6TAfBgNVHSMEGDAWgBQXO0akWixlPZ7SG4ZN4m+O\n0xer6TAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAKBggqhkjOPQQD\nAgNIADBFAiEApmHB1zca7bFIrAUE06J2KNXwoaSizGWg4PZZQswTshoCICk/NQzO\nJh713PHaHGTFT1SOfGSH9vh5nYd7K9cyS3fe\n-----END CERTIFICATE-----\n"
 EPP_SERVER_CERTIFICATE = "-----BEGIN CERTIFICATE-----\nMIIBljCCATugAwIBAgIUfjN/wg5Te93W+rAlb8fDizC4XXMwCgYIKoZIzj0EAwIw\nGTEXMBUGA1UEAwwOU2VlZEVtdSBFUFAgQ0EwHhcNMjYwOTAyMDc1MjQ1WhcNMzYw\nODMwMDc1MjQ1WjAbMRkwFwYDVQQDDBBlcHAucmVnaXN0cnkuY29tMFkwEwYHKoZI\nzj0CAQYIKoZIzj0DAQcDQgAEunPc/OZftZK9o8Xm8sV9rXmtXdCNq6LX/v02r3vy\nJQCX2i/nqKmL388TMvcCchH57n3hy+QnE/43ZqtzHfN6baNfMF0wGwYDVR0RBBQw\nEoIQZXBwLnJlZ2lzdHJ5LmNvbTAdBgNVHQ4EFgQUy5ej0Mrvvi+zSctLBvAZNNjS\nGq0wHwYDVR0jBBgwFoAUFztGpFosZT2e0huGTeJvjtMXq+kwCgYIKoZIzj0EAwID\nSQAwRgIhAM/IPdaRojken97CPPjaR/5nD7/nNVRFIEUa642NYM3bAiEAn13cGxLF\nLYZrfzPskxPjb9xBfpVL7BsnRGEdOQP/DCs=\n-----END CERTIFICATE-----\n"
 EPP_SERVER_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIEkPEwYS2amesQYGh3/0qQvUvZJajUOx8DB4Za1c0y3goAoGCCqGSM49\nAwEHoUQDQgAEunPc/OZftZK9o8Xm8sV9rXmtXdCNq6LX/v02r3vyJQCX2i/nqKmL\n388TMvcCchH57n3hy+QnE/43ZqtzHfN6bQ==\n-----END EC PRIVATE KEY-----\n"
@@ -265,9 +267,9 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
     loom_node.setFile("/opt/seedemu/loom/provider.sql", loom_provider_sql())
     loom_node.setFile("/opt/seedemu/loom/epp-probe.php", loom_epp_probe())
 
-    # Publish stable service names through the existing COM zone. The Registry
-    # exposes EPP/TLS and provisions the Registrar account, but the current
-    # Registrar wrapper does not yet initiate EPP transactions.
+    # Publish stable service names through the existing COM zone. Loom owns the
+    # order-driven EPP path; Namingo Registrar reads Loom through its upstream
+    # backend adapter to provide the Registrar WHOIS/RDAP services.
     com_zone = dns.getZone("com.")
     # A low deterministic initial serial lets the first Zone Writer snapshot
     # pass the receiver's anti-rollback check.
@@ -278,7 +280,13 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
     com_zone.addRecord("rdap.registrar A {}".format(REGISTRAR_IP))
 
     registrar = NamingoRegistrarService()
-    registrar.install("namingo-registrar").setBackend("custom").setIdentity(
+    registrar.install("namingo-registrar").setBackend("loom").setExternalDatabase(
+        host=LOOM_IP,
+        port=3306,
+        name="loom",
+        username=LOOM_RDDS_DB_USER,
+        password=LOOM_RDDS_DB_PASSWORD,
+    ).setIdentity(
         name="SeedEmu Namingo Registrar",
         iana_id="9999",
         url="http://registrar.com",
@@ -345,6 +353,13 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
     source.appendStartCommand(f"chmod 0700 {credential_dir}; chmod 0600 {credential_dir}/*")
 
     loom = LoomRegistrarService()
+    # Namingo Registrar's upstream Loom adapter reads the Loom service database.
+    # Bind MariaDB to the emulated interface; database grants below restrict the
+    # integration account to read-only access from the Registrar node.
+    loom_node.appendStartCommand(
+        "sed -i 's/^bind-address[[:space:]]*=.*/bind-address = 0.0.0.0/' "
+        "/etc/mysql/mariadb.conf.d/50-server.cnf"
+    )
     loom.install("loom-registrar").setCommit(LOOM_COMMIT).setEnvironment(
         loom_environment()
     ).setWebTls(web_certificate, web_key).addSourceAccount(
@@ -355,7 +370,9 @@ def configure_namingo_services(emu: Emulator, base: Base, dns: DomainNameService
         "    mariadb -e \"CREATE DATABASE IF NOT EXISTS loom CHARACTER SET utf8mb4 "
         "COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'loom'@'127.0.0.1' "
         "IDENTIFIED BY 'seedemu-loom'; GRANT ALL PRIVILEGES ON loom.* TO "
-        "'loom'@'127.0.0.1'; FLUSH PRIVILEGES;\""
+        "'loom'@'127.0.0.1'; CREATE USER IF NOT EXISTS 'loom_rdds'@'10.150.0.73' "
+        "IDENTIFIED BY 'seedemu-loom-rdds'; GRANT SELECT ON loom.* TO "
+        "'loom_rdds'@'10.150.0.73'; FLUSH PRIVILEGES;\""
     ).addBootstrapCommand(
         "    php /opt/loom/bin/install-db.php"
     ).addBootstrapCommand(
@@ -425,7 +442,7 @@ def configure_source_owned_dns(emu: Emulator, base: Base, dns: DomainNameService
         f"chmod 0700 {credential_dir}; chmod 0600 {credential_dir}/control.key; "
         f"chmod 0644 {credential_dir}/known_hosts"
     )
-    source.addSoftware("openssh-client dnsutils")
+    source.addSoftware("openssh-client dnsutils whois")
 
     update_secret = base64.b64encode(secrets.token_bytes(32)).decode()
     transfer_secret = base64.b64encode(secrets.token_bytes(32)).decode()

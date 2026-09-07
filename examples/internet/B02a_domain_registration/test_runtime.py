@@ -199,6 +199,17 @@ def main() -> int:
 
     if registrar:
         test.exec_check(
+            "Namingo Registrar uses its upstream Loom backend adapter",
+            registrar,
+            "grep -q '\"backend\" => \"loom\"' /opt/registrar/whois/config.php "
+            "&& grep -q '\"db_host\" => \"10.150.0.74\"' /opt/registrar/whois/config.php "
+            "&& grep -q '\"backend\" => \"loom\"' /opt/registrar/rdap/config.php "
+            "&& mariadb -h 10.150.0.74 -P 3306 -uloom_rdds -pseedemu-loom-rdds "
+            "-N loom -e 'SELECT COUNT(*) FROM providers' | grep -qx 1",
+            retries=10,
+            interval=3,
+        )
+        test.exec_check(
             "Namingo Registrar starts WHOIS/RDAP and completes verified EPP over TLS",
             registrar,
             "pgrep -f start_whois.php >/dev/null "

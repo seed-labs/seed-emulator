@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from typing import Optional
 
 from seedemu.core import Node, Server, Service
@@ -17,6 +18,23 @@ NAMINGO_EPP_CLIENT_REPOSITORY = "https://github.com/getnamingo/epp-client.git"
 NAMINGO_EPP_CLIENT_VERSION = "v1.1.22"
 NAMINGO_EPP_CLIENT_COMMIT = "2a7610d286f75b74462b51dc2a6cf1a470ef863e"
 NAMINGO_EPP_CLIENT_INSTALL_DIR = "/opt/namingo-epp-client"
+
+LOOM_SCHEMA_COMPATIBILITY = r'''<?php
+$files = [
+    '/opt/registrar/whois/src/WHOIS/LOOM.php' => 2,
+    '/opt/registrar/rdap/src/RDAP/LOOM.php' => 3,
+];
+foreach ($files as $path => $expected) {
+    $contents = file_get_contents($path);
+    if ($contents === false || substr_count($contents, 'service_type') !== $expected) {
+        throw new RuntimeException("Pinned Namingo Loom adapter context mismatch: {$path}");
+    }
+    $contents = str_replace('service_type', 'type', $contents);
+    if (file_put_contents($path, $contents) === false) {
+        throw new RuntimeException("Cannot update Namingo Loom adapter: {$path}");
+    }
+}
+'''
 
 
 def _php(value) -> str:
@@ -45,6 +63,9 @@ class NamingoRegistrarServer(Server):
         self.__db_name = "registrar"
         self.__db_user = "registraruser"
         self.__db_password = "seedemu-namingo"
+        self.__db_host = "127.0.0.1"
+        self.__db_port = 3306
+        self.__manage_database = True
         self.__schema_sql = ""
         self.__registrar_name = "SeedEmu Namingo Registrar"
         self.__registrar_iana = "9999"
@@ -91,6 +112,18 @@ class NamingoRegistrarServer(Server):
         self.__db_name = name
         self.__db_user = username
         self.__db_password = password
+        return self
+
+    def setExternalDatabase(
+        self, host: str, port: int, name: str, username: str, password: str
+    ) -> NamingoRegistrarServer:
+        """Use a billing platform database managed by another service."""
+        assert re.fullmatch(r"[A-Za-z0-9.-]{1,253}", host), "invalid database host"
+        assert 1 <= port <= 65535, "invalid database port"
+        self.setDatabase(name, username, password)
+        self.__db_host = host
+        self.__db_port = port
+        self.__manage_database = False
         return self
 
     def setSchemaSql(self, sql: str) -> NamingoRegistrarServer:
@@ -423,8 +456,8 @@ try {
     def _rdds_config(self, rdap: bool) -> str:
         settings = {
             "db_type": "mysql",
-            "db_host": "127.0.0.1",
-            "db_port": 3306,
+            "db_host": self.__db_host,
+            "db_port": self.__db_port,
             "db_database": self.__db_name,
             "db_username": self.__db_user,
             "db_password": self.__db_password,
@@ -487,24 +520,37 @@ FLUSH PRIVILEGES;
                 "else rm -f /run/seedemu-epp-health.json.tmp /run/seedemu-epp-health.json; fi; "
                 "sleep {}; done &".format(self.__epp_config["probe_interval"])
             )
-        return """#!/bin/sh
-set -eu
-
-service mariadb start
+        if self.__manage_database:
+            database_setup = """service mariadb start
 until mariadb-admin ping --silent; do sleep 1; done
 mariadb < /opt/seedemu/namingo/init.sql
 
 if [ -s /opt/seedemu/namingo/schema.sql ] && [ ! -e /var/lib/mysql/.seedemu-namingo-schema ]; then
     mariadb {database} < /opt/seedemu/namingo/schema.sql
     touch /var/lib/mysql/.seedemu-namingo-schema
-fi
+fi""".format(database=self.__db_name)
+        else:
+            database_setup = (
+                "until mariadb -h {host} -P {port} -u {user} -p{password} "
+                "{database} -e 'SELECT 1' >/dev/null 2>&1; do sleep 1; done"
+            ).format(
+                host=shlex.quote(self.__db_host),
+                port=self.__db_port,
+                user=shlex.quote(self.__db_user),
+                password=shlex.quote(self.__db_password),
+                database=shlex.quote(self.__db_name),
+            )
+        return """#!/bin/sh
+set -eu
+
+{database_setup}
 
 mkdir -p /var/log/namingo /run/php
 {services}
 {automation}
 {epp_probe}
 """.format(
-            database=self.__db_name,
+            database_setup=database_setup,
             services="\n".join(services),
             automation=automation,
             epp_probe=epp_probe,
@@ -534,10 +580,9 @@ mkdir -p /var/log/namingo /run/php
             NAMINGO_LABEL_META.format(key="components"), ",".join(components)
         )
 
-        software = (
-            "ca-certificates curl git gnupg2 mariadb-client mariadb-server "
-            "software-properties-common unzip"
-        )
+        software = "ca-certificates curl git gnupg2 mariadb-client software-properties-common unzip"
+        if self.__manage_database:
+            software += " mariadb-server"
         if self.__enable_rdap:
             software += " nginx-light"
         node.addSoftware(software)
@@ -579,6 +624,14 @@ mkdir -p /var/log/namingo /run/php
                     NAMINGO_INSTALL_DIR, component
                 )
             )
+        if self.__backend == "loom":
+            node.setFile(
+                "/opt/seedemu/namingo/loom-schema-compatibility.php",
+                LOOM_SCHEMA_COMPATIBILITY,
+            )
+            node.addBuildCommandAtEnd(
+                "php /opt/seedemu/namingo/loom-schema-compatibility.php"
+            )
         if self.__epp_config is not None:
             node.addBuildCommand(
                 "git clone --filter=blob:none {} {} && "
@@ -605,8 +658,9 @@ mkdir -p /var/log/namingo /run/php
             )
         if self.__enable_rdap:
             node.setFile("/opt/registrar/rdap/config.php", self._rdds_config(True))
-        node.setFile("/opt/seedemu/namingo/init.sql", self._database_init())
-        node.setFile("/opt/seedemu/namingo/schema.sql", self.__schema_sql)
+        if self.__manage_database:
+            node.setFile("/opt/seedemu/namingo/init.sql", self._database_init())
+            node.setFile("/opt/seedemu/namingo/schema.sql", self.__schema_sql)
         if self.__enable_rdap:
             node.setFile(
                 "/etc/nginx/sites-available/default",
