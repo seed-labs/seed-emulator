@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from functools import lru_cache
 from typing import List
 
 
+@lru_cache(maxsize=1)
 def docker_compose_command() -> List[str]:
     docker = shutil.which("docker")
     if docker is not None:

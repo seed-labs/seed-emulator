@@ -2,12 +2,69 @@ from __future__ import annotations
 from seedemu.core import Node, Printable, Emulator, Service, Server
 from seedemu.core.enums import NetworkType
 from typing import List, Dict, Tuple, Set, Optional
-from re import sub
+from ipaddress import ip_address
+from re import fullmatch, sub
 from random import randint
+import json
 import requests
 
 DomainNameServiceFileTemplates: Dict[str, str] = {}
 ROOT_ZONE_URL = 'https://www.internic.net/domain/root.zone'
+
+SOURCE_OWNED_DNS_CONTROL_SCRIPT = r'''#!/bin/sh
+set -eu
+request=$(printf %s "$SSH_ORIGINAL_COMMAND" | base64 -d)
+zone=$(printf %s "$request" | jq -r '.zone')
+operation=$(printf %s "$request" | jq -r '.operation')
+case "$zone" in *[!A-Za-z0-9._-]*|'') exit 64 ;; esac
+zone=${zone%.}
+jq -e --arg zone "$zone" '.zones | index($zone) != null' /etc/seedemu-owned-dns/policy.json >/dev/null
+role=$(jq -r .role /etc/seedemu-owned-dns/policy.json)
+primary=$(jq -r .primary /etc/seedemu-owned-dns/policy.json)
+secondary=$(jq -r .secondary /etc/seedemu-owned-dns/policy.json)
+conf=/etc/bind/seedemu-owned-${zone}.conf
+zone_file=/var/lib/bind/seedemu-owned-${zone}.zone
+if [ "$operation" = provision ]; then
+    if [ ! -e "$conf" ]; then
+        if [ "$role" = primary ]; then
+            serial=$(date +%s)
+            cat > "$zone_file" <<EOF
+\$TTL 300
+@ IN SOA ns1.$zone. hostmaster.$zone. $serial 300 60 86400 60
+@ IN NS ns1.$zone.
+@ IN NS ns2.$zone.
+ns1 IN A $primary
+ns2 IN A $secondary
+EOF
+            chown bind:bind "$zone_file"
+            cat > "$conf" <<EOF
+zone "$zone" { type master; file "$zone_file"; notify yes; also-notify { $secondary key "seedemu-transfer"; }; allow-transfer { key "seedemu-transfer"; }; allow-update { key "seedemu-update"; }; };
+EOF
+        else
+            cat > "$conf" <<EOF
+zone "$zone" { type slave; masters { $primary key "seedemu-transfer"; }; file "$zone_file"; };
+EOF
+        fi
+        printf 'include "%s";\n' "$conf" >> /etc/bind/named.conf.local
+        rndc reconfig
+    fi
+    printf '{"status":"provisioned","role":"%s","zone":"%s"}\n' "$role" "$zone"
+    exit 0
+fi
+[ "$role" = primary ] || exit 65
+[ "$operation" = apply ] || exit 64
+[ -e "$conf" ] || exit 66
+updates=$(printf %s "$request" | jq -r '
+  .changes[] |
+  if .operation == "delete" then "update delete \(.name) \(.record_type)"
+  else "update delete \(.name) \(.record_type)\nupdate add \(.name) \(.ttl) \(.record_type) \(.value)" end')
+{
+    printf 'server 127.0.0.1\nzone %s\n' "$zone"
+    printf '%s\n' "$updates"
+    printf 'send\n'
+} | nsupdate -k /etc/bind/keys/seedemu-update.key
+printf '{"status":"applied","role":"primary","zone":"%s"}\n' "$zone"
+'''
 
 DomainNameServiceFileTemplates['named_options'] = '''\
 options {
@@ -28,8 +85,7 @@ class Zone(Printable):
     __subzones: Dict[str, Zone]
     __records: List[str]
     __gules: List[str]
-    # TODO: maybe make it a Dict[str, List[str]], so a name can point to multiple vnodes?
-    __pending_records: Dict[str, str]
+    __pending_records: Dict[str, List[str]]
 
     def __init__(self, name: str):
         """!
@@ -154,7 +210,7 @@ class Zone(Printable):
 
         @returns self, for chaining API calls.
         """
-        self.__pending_records[name] = vnode
+        self.__pending_records.setdefault(name, []).append(vnode)
 
         return self
 
@@ -164,20 +220,21 @@ class Zone(Printable):
 
         @param emulator emulator object.
         """
-        for (domain_name, vnode_name) in self.__pending_records.items():
-            pnode = emulator.resolvVnode(vnode_name)
+        for domain_name, vnode_names in self.__pending_records.items():
+            for vnode_name in vnode_names:
+                pnode = emulator.resolvVnode(vnode_name)
 
-            ifaces = pnode.getInterfaces()
-            assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
-            addr = ifaces[0].getAddress()
+                ifaces = pnode.getInterfaces()
+                assert len(ifaces) > 0, 'resolvePendingRecords(): node as{}/{} has no interfaces'.format(pnode.getAsn(), pnode.getName())
+                addr = ifaces[0].getAddress()
 
-            self.addRecord('{} A {}'.format(domain_name, addr))
+                self.addRecord('{} A {}'.format(domain_name, addr))
 
-    def getPendingRecords(self) -> Dict[str, str]:
+    def getPendingRecords(self) -> Dict[str, List[str]]:
         """!
         @brief Get pending records.
 
-        @returns dict, where key is domain name, and value is vnode name.
+        @returns dict, where key is domain name, and value is a list of vnode names.
         """
         return self.__pending_records
 
@@ -241,6 +298,11 @@ class DomainNameServer(Server):
     __is_master: bool
     __is_real_root: bool
     __include_paths: Dict[str, str]
+    __is_hidden_primary: bool
+    __primary_ip: Optional[str]
+    __transfer_key: Optional[Tuple[str, str]]
+    __transfer_targets: List[str]
+    __zone_file_receiver: Optional[Tuple[str, str, str, str, str, int]]
 
     def __init__(self):
         """!
@@ -252,6 +314,12 @@ class DomainNameServer(Server):
         self.__is_master = False
         self.__is_real_root = False
         self.__include_paths = {}
+        self.__is_hidden_primary = False
+        self.__primary_ip = None
+        self.__transfer_key = None
+        self.__transfer_targets = []
+        self.__zone_file_receiver = None
+        self.__runtime_zone_management = None
 
     def addZone(self, zonename: str, createNsAndSoa: bool = True) -> DomainNameServer:
         """!
@@ -277,6 +345,155 @@ class DomainNameServer(Server):
         """
         self.__is_master = True
 
+        return self
+
+    def setHiddenPrimary(self) -> DomainNameServer:
+        """!
+        @brief Make this server a hidden authoritative primary.
+
+        A hidden primary is not published in parent-zone NS/glue records, does
+        not answer ordinary queries for its hosted zones, and rejects dynamic
+        updates. Zone data is expected to be delivered as a validated zone file
+        by an external publisher such as Namingo Registry's Zone Writer.
+
+        @returns self, for chaining API calls.
+        """
+        self.__is_master = True
+        self.__is_hidden_primary = True
+
+        return self
+
+    def isHiddenPrimary(self) -> bool:
+        """! @brief Return whether this server is a hidden primary. """
+        return self.__is_hidden_primary
+
+    def setSecondary(self, primary_ip: str) -> DomainNameServer:
+        """!
+        @brief Explicitly configure this server as a secondary.
+
+        @param primary_ip hidden/public primary address used for AXFR/IXFR.
+
+        @returns self, for chaining API calls.
+        """
+        ip_address(primary_ip)
+        self.__is_master = False
+        self.__primary_ip = primary_ip
+
+        return self
+
+    def setTransferKey(self, name: str, secret: str) -> DomainNameServer:
+        """!
+        @brief Configure the TSIG key used for NOTIFY and AXFR/IXFR.
+
+        The same key must be configured on the primary and its secondaries.
+        This key is deliberately separate from Registrar/Registry EPP
+        credentials and from any dynamic-update key.
+
+        @returns self, for chaining API calls.
+        """
+        assert fullmatch(r'[A-Za-z0-9_.-]{1,63}', name), 'invalid TSIG key name'
+        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', secret), 'invalid TSIG secret'
+        self.__transfer_key = (name, secret)
+
+        return self
+
+    def addTransferTarget(self, address: str) -> DomainNameServer:
+        """!
+        @brief Authorize and notify a secondary at the given address.
+
+        @returns self, for chaining API calls.
+        """
+        ip_address(address)
+        assert address not in self.__transfer_targets, 'duplicate transfer target'
+        self.__transfer_targets.append(address)
+
+        return self
+
+    def enableZoneFileReceiver(
+        self,
+        zonename: str,
+        publisher_ip: str,
+        publisher_public_key: str,
+        ssh_host_private_key: str,
+        ssh_host_public_key: str,
+        max_bytes: int = 8 * 1024 * 1024,
+    ) -> DomainNameServer:
+        """!
+        @brief Accept one zone file through a restricted SSH forced command.
+
+        The receiver validates the candidate with named-checkzone, rejects SOA
+        serial rollback, atomically replaces the active file, and reloads BIND.
+        It is intended for an external Registry Zone Writer and is deliberately
+        independent of RFC 2136 updates and secondary-transfer TSIG keys.
+
+        @returns self, for chaining API calls.
+        """
+        if zonename != '.' and not zonename.endswith('.'):
+            zonename += '.'
+        assert fullmatch(r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+', zonename), 'invalid receiver zone name'
+        ip_address(publisher_ip)
+        assert publisher_public_key.startswith('ssh-ed25519 '), 'publisher key must be an Ed25519 public key'
+        assert 'BEGIN OPENSSH PRIVATE KEY' in ssh_host_private_key, 'invalid SSH host private key'
+        assert ssh_host_public_key.startswith('ssh-ed25519 '), 'host key must be an Ed25519 public key'
+        assert 1024 <= max_bytes <= 128 * 1024 * 1024, 'invalid maximum zone size'
+        assert self.__zone_file_receiver is None, 'zone file receiver already configured'
+        self.__zone_file_receiver = (
+            zonename,
+            publisher_ip,
+            publisher_public_key.strip(),
+            ssh_host_private_key.strip() + '\n',
+            ssh_host_public_key.strip() + '\n',
+            max_bytes,
+        )
+        return self
+
+    def enableRuntimeZoneManagement(
+        self,
+        *,
+        role: str,
+        service_id: str,
+        primary: str,
+        secondary: str,
+        source_address: str,
+        source_public_key: str,
+        ssh_host_private_key: str,
+        ssh_host_public_key: str,
+        update_secret: str,
+        transfer_secret: str,
+        zones: List[str],
+    ) -> DomainNameServer:
+        """Enable source-authenticated runtime provisioning on this BIND node."""
+        assert role in {'primary', 'secondary'}, 'invalid runtime DNS role'
+        assert fullmatch(r'[A-Za-z0-9_.-]{1,64}', service_id), 'invalid DNS service id'
+        ip_address(primary)
+        ip_address(secondary)
+        ip_address(source_address)
+        assert source_public_key.startswith('ssh-ed25519 '), 'source key must be Ed25519'
+        assert 'BEGIN OPENSSH PRIVATE KEY' in ssh_host_private_key, 'invalid SSH host key'
+        assert ssh_host_public_key.startswith('ssh-ed25519 '), 'host key must be Ed25519'
+        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', update_secret), 'invalid update secret'
+        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', transfer_secret), 'invalid transfer secret'
+        assert zones, 'at least one authorized runtime zone is required'
+        assert self.__runtime_zone_management is None, 'runtime zone management already configured'
+        assert self.__zone_file_receiver is None, 'runtime management conflicts with zone receiver'
+        normalized_zones = []
+        for zone in zones:
+            normalized = zone.rstrip('.').lower()
+            assert fullmatch(r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9-]+', normalized), 'invalid runtime zone'
+            normalized_zones.append(normalized)
+        self.__runtime_zone_management = {
+            'role': role,
+            'service_id': service_id,
+            'primary': primary,
+            'secondary': secondary,
+            'source_address': source_address,
+            'source_public_key': source_public_key.strip(),
+            'host_private_key': ssh_host_private_key.strip() + '\n',
+            'host_public_key': ssh_host_public_key.strip() + '\n',
+            'update_secret': update_secret,
+            'transfer_secret': transfer_secret,
+            'zones': normalized_zones,
+        }
         return self
 
     def setRealRootNS(self) -> DomainNameServer:
@@ -401,6 +618,11 @@ class DomainNameServer(Server):
                 if len(zone.findRecords('SOA')) == 0:
                     zone.addRecord('@ SOA {} {} {} 900 900 1800 60'.format('ns1.{}'.format(zonename), 'admin.{}'.format(zonename), randint(1, 0xffffffff)))
 
+                # A hidden primary is an unpublished distribution endpoint.
+                # Public secondaries add the NS and glue records instead.
+                if self.__is_hidden_primary:
+                    continue
+
                 existing_ns_addr = False
                 for record in zone.getRecords():
                     if record.endswith(' A {}'.format(addr)) and record.startswith('ns'):
@@ -431,8 +653,10 @@ class DomainNameServer(Server):
         @brief Handle the installation.
         """
         assert node == self.__node, 'configured node differs from install node. Please check if there are conflict bindings'
-
         node.addSoftware('bind9')
+        if self.__zone_file_receiver is not None:
+            assert self.__is_hidden_primary, 'zone file receiver requires a hidden primary'
+            node.addSoftware('openssh-server')
         if not self.__usesIncludeConfig():
             node.setFile(
                 '/etc/bind/named.conf',
@@ -455,7 +679,21 @@ include "/etc/bind/named.conf.local";
             DomainNameServiceFileTemplates['named_options']
         )
 
+        transfer_key_name = None
+        transfer_key_path = None
+        if self.__transfer_key is not None:
+            transfer_key_name, transfer_key_secret = self.__transfer_key
+            transfer_key_path = '/etc/bind/keys/{}.key'.format(transfer_key_name)
+            node.setFile(
+                transfer_key_path,
+                'key "{}" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
+                    transfer_key_name, transfer_key_secret
+                )
+            )
+
         named_conf_local_parts = []
+        if transfer_key_path is not None:
+            named_conf_local_parts.append('include "{}";\n'.format(transfer_key_path))
         if not self.__usesIncludeConfig():
             named_conf_local_parts.append('include "/etc/bind/named.conf.zones";\n')
         for include_path in dict.fromkeys(self.__include_paths.values()).keys():
@@ -475,18 +713,241 @@ include "/etc/bind/named.conf.local";
                 node.setFile(zonepath, '\n'.join(zone.getRecords()))
 
                 if self.__is_master:
-                    node.appendFile('/etc/bind/named.conf.zones',
-                            'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                    if self.__is_hidden_primary:
+                        assert transfer_key_name is not None, 'hidden primary requires a TSIG transfer key'
+                        assert self.__transfer_targets, 'hidden primary requires at least one transfer target'
+                        notify_targets = ' '.join(
+                            '{} key "{}";'.format(addr, transfer_key_name)
+                            for addr in self.__transfer_targets
                         )
-                elif zone.getName() in dns.getMasterIp().keys(): # Check if there are some master servers
-                    master_ips = ';'.join(dns.getMasterIp()[zone.getName()])
+                        node.appendFile(
+                            '/etc/bind/named.conf.zones',
+                            'zone "{}" {{ type master; notify yes; also-notify {{ {} }}; '
+                            'allow-transfer {{ key "{}"; }}; allow-query {{ none; }}; '
+                            'allow-update {{ none; }}; file "{}"; }};\n'.format(
+                                zonename, notify_targets, transfer_key_name, zonepath
+                            )
+                        )
+                    else:
+                        node.appendFile('/etc/bind/named.conf.zones',
+                                'zone "{}" {{ type master; notify yes; allow-transfer {{ any; }}; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
+                            )
+                elif self.__primary_ip is not None or zone.getName() in dns.getMasterIp().keys():
+                    master_ips = [self.__primary_ip] if self.__primary_ip is not None else dns.getMasterIp()[zone.getName()]
+                    if transfer_key_name is not None:
+                        primary_entries = ' '.join(
+                            '{} key "{}";'.format(addr, transfer_key_name)
+                            for addr in master_ips
+                        )
+                    else:
+                        primary_entries = ' '.join('{};'.format(addr) for addr in master_ips)
                     node.appendFile('/etc/bind/named.conf.zones',
-                        'zone "{}" {{ type slave; masters {{ {}; }}; file "{}"; }};\n'.format(zonename, master_ips, zonepath)
+                        'zone "{}" {{ type slave; masters {{ {} }}; file "{}";  }};\n'.format(zonename, primary_entries, zonepath)
                     )
                 else:
                     node.appendFile('/etc/bind/named.conf.zones',
                         'zone "{}" {{ type master; file "{}"; allow-update {{ any; }}; }};\n'.format(zonename, zonepath)
                     )
+
+        if self.__transfer_key is not None:
+            node.appendStartCommand('chown -R root:bind /etc/bind/keys')
+            node.appendStartCommand('chmod 0750 /etc/bind/keys')
+            node.appendStartCommand('chmod 0640 /etc/bind/keys/*.key')
+
+        if self.__zone_file_receiver is not None:
+            (
+                receiver_zone,
+                publisher_ip,
+                publisher_public_key,
+                host_private_key,
+                host_public_key,
+                max_bytes,
+            ) = self.__zone_file_receiver
+            assert receiver_zone in self.getZones(), 'receiver zone is not hosted on this server'
+            receiver_filename = receiver_zone.rstrip('.')
+            receiver_zone_path = '/etc/bind/zones/{}'.format(receiver_zone)
+            receiver_command = '/usr/local/sbin/seedemu-install-zone-{}'.format(receiver_filename)
+            node.setFile(
+                receiver_command,
+                '''#!/bin/sh
+set -eu
+
+zone={zone}
+zone_path={zone_path}
+max_bytes={max_bytes}
+candidate=$(mktemp "${{zone_path}}.incoming.XXXXXX")
+backup="${{zone_path}}.previous"
+trap 'rm -f "$candidate"' EXIT HUP INT TERM
+
+cat > "$candidate"
+size=$(wc -c < "$candidate")
+test "$size" -ge 1
+test "$size" -le "$max_bytes"
+named-checkzone "$zone" "$candidate" >/dev/null
+
+serial_of() {{
+    named-checkzone -D -o - "$zone" "$1" 2>/dev/null |
+        awk '$4 == "SOA" {{ print $7; exit }}'
+}}
+
+new_serial=$(serial_of "$candidate")
+test -n "$new_serial"
+case "$new_serial" in *[!0-9]*) exit 1 ;; esac
+
+if test -s "$zone_path"; then
+    if cmp -s "$candidate" "$zone_path"; then
+        exit 0
+    fi
+    old_serial=$(serial_of "$zone_path")
+    test -n "$old_serial"
+    case "$old_serial" in *[!0-9]*) exit 1 ;; esac
+    test "$new_serial" -gt "$old_serial"
+    cp -p "$zone_path" "$backup"
+fi
+
+chown bind:bind "$candidate"
+chmod 0640 "$candidate"
+mv -f "$candidate" "$zone_path"
+
+if ! rndc reload "$zone"; then
+    if test -s "$backup"; then
+        mv -f "$backup" "$zone_path"
+        chown bind:bind "$zone_path"
+        chmod 0640 "$zone_path"
+        rndc reload "$zone" || true
+    fi
+    exit 1
+fi
+
+rm -f "$backup"
+rndc notify "$zone"
+logger -t seedemu-zone-publisher "installed $zone serial $new_serial"
+'''.format(
+                    zone=receiver_zone,
+                    zone_path=receiver_zone_path,
+                    max_bytes=max_bytes,
+                ),
+            )
+            node.setFile('/etc/ssh/ssh_host_ed25519_key', host_private_key)
+            node.setFile('/etc/ssh/ssh_host_ed25519_key.pub', host_public_key)
+            node.setFile(
+                '/root/.ssh/authorized_keys',
+                'from="{}",restrict,command="{}" {}\n'.format(
+                    publisher_ip, receiver_command, publisher_public_key
+                ),
+            )
+            node.setFile(
+                '/etc/ssh/sshd_config.d/seedemu-zone-publisher.conf',
+                '''PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+Match User root Address {publisher_ip}
+    ForceCommand {receiver_command}
+'''.format(
+                    publisher_ip=publisher_ip,
+                    receiver_command=receiver_command,
+                ),
+            )
+            node.appendStartCommand('chmod 0755 {}'.format(receiver_command))
+            node.appendStartCommand('chmod 0600 /etc/ssh/ssh_host_ed25519_key')
+            node.appendStartCommand('chmod 0644 /etc/ssh/ssh_host_ed25519_key.pub')
+            node.appendStartCommand('mkdir -p /root/.ssh /run/sshd')
+            node.appendStartCommand('chmod 0700 /root/.ssh')
+            node.appendStartCommand('chmod 0600 /root/.ssh/authorized_keys')
+            # This node's SSH endpoint is dedicated to zone publication.  Use
+            # the receiver as the login shell as well as a forced command so
+            # base images that discard SSH exec requests cannot feed the zone
+            # text to an interactive shell.
+            node.appendStartCommand(
+                'usermod --shell {} root'.format(receiver_command)
+            )
+            node.appendStartCommand('service ssh start')
+
+        if self.__runtime_zone_management is not None:
+            runtime = self.__runtime_zone_management
+            service_id = runtime['service_id']
+            node.appendClassName('RuntimeManagedDomainNameServer')
+            node.setLabel('agent.exposed.dns.service_id', service_id)
+            node.setLabel('agent.exposed.dns.role', runtime['role'])
+            node.setLabel('agent.exposed.dns.primary', runtime['primary'])
+            node.setLabel('agent.exposed.dns.secondary', runtime['secondary'])
+            node.setLabel(
+                'agent.exposed.dns.credential_ref',
+                '{}.source-control'.format(service_id),
+            )
+            node.addSoftware('bind9-utils dnsutils jq openssh-server')
+            node.setFile(
+                '/usr/local/sbin/seedemu-owned-dns-control',
+                SOURCE_OWNED_DNS_CONTROL_SCRIPT,
+            )
+            node.setFile(
+                '/etc/seedemu-owned-dns/policy.json',
+                json.dumps({
+                    'role': runtime['role'],
+                    'primary': runtime['primary'],
+                    'secondary': runtime['secondary'],
+                    'zones': runtime['zones'],
+                }),
+            )
+            node.setFile(
+                '/etc/bind/keys/seedemu-update.key',
+                'key "seedemu-update" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
+                    runtime['update_secret']
+                ),
+            )
+            node.setFile(
+                '/etc/bind/keys/seedemu-transfer.key',
+                'key "seedemu-transfer" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
+                    runtime['transfer_secret']
+                ),
+            )
+            node.appendFile(
+                '/etc/bind/named.conf.local',
+                'include "/etc/bind/keys/seedemu-update.key";\n'
+                'include "/etc/bind/keys/seedemu-transfer.key";\n',
+            )
+            node.setFile(
+                '/etc/ssh/ssh_host_ed25519_key', runtime['host_private_key']
+            )
+            node.setFile(
+                '/etc/ssh/ssh_host_ed25519_key.pub', runtime['host_public_key']
+            )
+            node.setFile(
+                '/root/.ssh/authorized_keys',
+                'from="{}",restrict,command="/usr/local/sbin/seedemu-owned-dns-control" {}\n'.format(
+                    runtime['source_address'], runtime['source_public_key']
+                ),
+            )
+            node.setFile(
+                '/etc/ssh/sshd_config.d/seedemu-owned-dns.conf',
+                '''PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+Match User root Address {source_address}
+    ForceCommand /usr/local/sbin/seedemu-owned-dns-control
+'''.format(source_address=runtime['source_address']),
+            )
+            node.appendStartCommand(
+                'chmod 0755 /usr/local/sbin/seedemu-owned-dns-control'
+            )
+            node.appendStartCommand('mkdir -p /root/.ssh /run/sshd /var/lib/bind')
+            node.appendStartCommand('chmod 0700 /root/.ssh')
+            node.appendStartCommand(
+                'chmod 0600 /etc/ssh/ssh_host_ed25519_key /root/.ssh/authorized_keys'
+            )
+            node.appendStartCommand(
+                'chown -R root:bind /etc/bind/keys && chmod 0750 /etc/bind/keys '
+                '&& chmod 0640 /etc/bind/keys/*.key'
+            )
+            # Some SeedEmu base images wrap the root shell and discard SSH exec
+            # requests.  Keep the authorized-key and sshd forced commands, and
+            # use the restricted controller as the login shell as well.
+            node.appendStartCommand(
+                'usermod --shell /usr/local/sbin/seedemu-owned-dns-control root'
+            )
+            node.appendStartCommand('service ssh start')
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')
@@ -576,12 +1037,13 @@ class DomainNameService(Service):
         """
         return self.__rootZone
 
-    def getZoneServerNames(self, domain: str) -> List[str]:
+    def getZoneServerNames(self, domain: str, includeHidden: bool = False) -> List[str]:
         """!
         @brief Get the names of servers hosting the given zone. This only works
         if the server was installed by using the "installByName" call.
 
         @param domain domain.
+        @param includeHidden include hidden primary servers in the result.
 
         @returns list of tuple of (node name, asn)
         """
@@ -591,10 +1053,15 @@ class DomainNameService(Service):
         for (vnode, sobj) in targets.items():
             server: DomainNameServer = sobj
 
+            if server.isHiddenPrimary() and not includeHidden:
+                continue
+
             hit = False
 
+            normalized_domain = domain if domain == '.' or domain.endswith('.') else domain + '.'
             for zone in server.getZones():
-                if zone.getName() == domain:
+                normalized_zone = zone if zone == '.' or zone.endswith('.') else zone + '.'
+                if normalized_zone == normalized_domain:
                     info.append(vnode)
                     hit = True
                     break

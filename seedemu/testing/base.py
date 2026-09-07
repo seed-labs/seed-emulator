@@ -490,15 +490,28 @@ class TestRunner:
         timeout: Optional[int] = None,
     ) -> subprocess.CompletedProcess[str]:
         self.log("cwd={} cmd={}".format(cwd, " ".join(cmd)))
-        result = subprocess.run(
-            list(cmd),
-            cwd=str(cwd),
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                list(cmd),
+                cwd=str(cwd),
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            stdout = error.stdout or ""
+            stderr = error.stderr or ""
+            if isinstance(stdout, bytes):
+                stdout = stdout.decode(errors="replace")
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode(errors="replace")
+            timeout_message = "command timed out after {} seconds".format(timeout)
+            stderr = "{}\n{}".format(stderr.rstrip(), timeout_message).lstrip()
+            result = subprocess.CompletedProcess(
+                list(cmd), 124, stdout=stdout, stderr=stderr
+            )
         self.write_command_log(name, cmd, cwd, result)
         return result
 
@@ -574,11 +587,10 @@ class TestRunner:
 
     @staticmethod
     def docker_env() -> Dict[str, str]:
-        env = TestRunner.merged_env({})
-        env.setdefault("DOCKER_BUILDKIT", "0")
-        env.setdefault("COMPOSE_BAKE", "false")
-        env.setdefault("COMPOSE_PARALLEL_LIMIT", "1")
-        return env
+        # Use the caller's normal Docker/Compose configuration. In particular,
+        # do not force serial service operations or disable BuildKit/Bake: that
+        # makes test builds much slower than the equivalent interactive command.
+        return TestRunner.merged_env({})
 
     @staticmethod
     def parse_compose_ps_output(output: str) -> List[Dict[str, Any]]:
