@@ -11,7 +11,7 @@ class ScapyGenerator(TrafficGenerator):
         @param filename the file name
         @return the content of the file
         """
-        with open(filename, "r") as file:
+        with open(filename, "r", encoding="utf-8") as file:
             return file.read()
 
     def install_softwares(self, node: Node):
