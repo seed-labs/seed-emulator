@@ -9,15 +9,10 @@ Also change the `FROM` entry to use our customized Ubuntu image.
 
 ## Containers for nodes 
 
-The files in the `base` folder will be used to replace the 
-`dummies` folder. This is the base image for all the containers. 
-The other container's `Dockerfile` has only the following content:
-
-```
-FROM cfee3a34e9c68ac1d16035a81a926786
-
-CMD ["/start.sh"]
-```
+Run `z_build.sh` in the generated output folder. It builds `morris-worm-base`,
+the intermediate images in `dummies/`, and then the node images.
+The intermediate images must be built first because Compose does not infer
+build dependencies from Dockerfile `FROM` instructions.
 
 ## The server folder
 

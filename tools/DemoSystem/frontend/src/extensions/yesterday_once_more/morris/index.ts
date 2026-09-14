@@ -1,6 +1,6 @@
 export const baseInfo = {
   "name": "Morris worm 蠕虫",
-  "path": "./yesterday_once_more/02_morris_worm"
+  "path": "../../examples/yesterday_once_more/Y02_morris_worm"
 }
 
 export const config = [
@@ -13,7 +13,7 @@ export const config = [
           {
             "type": "command_only",
             "action": "host_exec",
-            "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/emulator/demo_output && ./z_start.sh"
+            "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/emulator/demo_output && ./z_start.sh"
           }
         ]
       }
@@ -28,7 +28,7 @@ export const config = [
         "cmdKwargs": [
           {
             "action": "host_exec",
-            "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm/ && /bin/bash setup.sh"
+            "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm/ && /bin/bash setup.sh"
           },
           {
             "action": "host_exec",
@@ -43,11 +43,11 @@ export const config = [
     "text": [
       {
         "shortText": "执行攻击",
-        "innerHtml": "<div>执行 ./yesterday_once_more/02_morris_worm/worm/first_attack.py 发起攻击</div>",
+        "innerHtml": "<div>执行 ../../examples/yesterday_once_more/Y02_morris_worm/worm/first_attack.py 发起攻击</div>",
         "cmdKwargs": [
           {
             "action": "host_exec",
-            "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /usr/bin/python3 first_attack.py"
+            "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm && /usr/bin/python3 first_attack.py"
           }
         ]
       }
@@ -58,7 +58,7 @@ export const config = [
     "text": [
       {
         "shortText": "蠕虫控制",
-        "innerHtml": "<div>通过项目根目录下的 ./yesterday_once_more/02_morris_worm/worm/control_worm.sh 控制蠕虫</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\">control_worm.sh\n  run\n  stop\n  pause\n  show\n  off</pre>\n</div>",
+        "innerHtml": "<div>通过项目根目录下的 ../../examples/yesterday_once_more/Y02_morris_worm/worm/control_worm.sh 控制蠕虫</div>\n<div class=\"code-block\">\n    <div class=\"code-header\">\n        <span class=\"code-title\">命令</span>\n    </div>\n    <pre class=\"code-content\">control_worm.sh\n  run\n  stop\n  pause\n  show\n  off</pre>\n</div>",
         "cmdGroupKwargs": [
           {
             "title": "run",
@@ -66,7 +66,7 @@ export const config = [
             "cmdKwargs": [
               {
                 "action": "host_exec",
-                "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /bin/bash ./control_worm.sh run"
+                "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm && /bin/bash ./control_worm.sh run"
               }
             ]
           },
@@ -76,7 +76,7 @@ export const config = [
             "cmdKwargs": [
               {
                 "action": "host_exec",
-                "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /bin/bash ./control_worm.sh stop"
+                "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm && /bin/bash ./control_worm.sh stop"
               }
             ]
           },
@@ -86,7 +86,7 @@ export const config = [
             "cmdKwargs": [
               {
                 "action": "host_exec",
-                "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /bin/bash ./control_worm.sh pause"
+                "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm && /bin/bash ./control_worm.sh pause"
               }
             ]
           },
@@ -96,7 +96,7 @@ export const config = [
             "cmdKwargs": [
               {
                 "action": "host_exec",
-                "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /bin/bash ./control_worm.sh show"
+                "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm && /bin/bash ./control_worm.sh show"
               }
             ]
           },
@@ -106,7 +106,7 @@ export const config = [
             "cmdKwargs": [
               {
                 "action": "host_exec",
-                "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/worm && /bin/bash ./control_worm.sh off"
+                "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/worm && /bin/bash ./control_worm.sh off"
               }
             ]
           }
@@ -123,7 +123,7 @@ export const config = [
           {
             "type": "command_only",
             "action": "host_exec",
-            "cmd": "cd $hostProjectPath/yesterday_once_more/02_morris_worm/emulator/demo_output && docker compose down"
+            "cmd": "cd $hostProjectPath/../../examples/yesterday_once_more/Y02_morris_worm/emulator/demo_output && docker compose down"
           }
         ]
       }
