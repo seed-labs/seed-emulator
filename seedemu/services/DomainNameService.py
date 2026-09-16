@@ -7,6 +7,9 @@ from re import fullmatch, sub
 from random import randint
 import json
 import requests
+import subprocess
+import tempfile
+from pathlib import Path
 
 DomainNameServiceFileTemplates: Dict[str, str] = {}
 ROOT_ZONE_URL = 'https://www.internic.net/domain/root.zone'
@@ -783,10 +786,10 @@ cat > "$candidate"
 size=$(wc -c < "$candidate")
 test "$size" -ge 1
 test "$size" -le "$max_bytes"
-named-checkzone "$zone" "$candidate" >/dev/null
+named-checkzone -i local "$zone" "$candidate" >/dev/null
 
 serial_of() {{
-    named-checkzone -D -o - "$zone" "$1" 2>/dev/null |
+    named-checkzone -i none -D -o - "$zone" "$1" 2>/dev/null |
         awk '$4 == "SOA" {{ print $7; exit }}'
 }}
 
@@ -972,6 +975,25 @@ class DomainNameService(Service):
         self.__rootZone = Zone('.')
         self.__masters = {}
         self.addDependency('Base', False, False)
+
+    @staticmethod
+    def generateSshKeyPair(comment: str) -> Tuple[str, str]:
+        """Generate a deployment-local Ed25519 private/public key pair."""
+        assert comment.strip(), 'SSH key comment cannot be empty'
+        with tempfile.TemporaryDirectory() as work:
+            key_path = Path(work) / 'id_ed25519'
+            subprocess.run(
+                [
+                    'ssh-keygen', '-q', '-t', 'ed25519', '-N', '',
+                    '-C', comment, '-f', str(key_path),
+                ],
+                check=True,
+                capture_output=True,
+            )
+            return (
+                key_path.read_text(),
+                key_path.with_suffix('.pub').read_text().strip(),
+            )
     
     def __autoNameServer(self, zone: Zone):
         """!

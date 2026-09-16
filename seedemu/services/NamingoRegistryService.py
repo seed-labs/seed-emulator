@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import ipaddress
+import hashlib
 import json
 import re
-from typing import List, Optional
+import ssl
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import List, NamedTuple, Optional
+from urllib.parse import urlparse
 
 from seedemu.core import Node, Server, Service
+from seedemu.services.RegistrarIdentity import RegistrarIdentity
 
 
 NAMINGO_REGISTRY_REPOSITORY = "https://github.com/getnamingo/registry.git"
@@ -13,13 +20,32 @@ NAMINGO_REGISTRY_VERSION = "v1.0.33"
 NAMINGO_REGISTRY_COMMIT = "a783a3c37a5614827f7141f07028e9a6a2d4f5cb"
 NAMINGO_REGISTRY_INSTALL_DIR = "/opt/registry"
 NAMINGO_REGISTRY_LABEL_META = "namingo.{key}"
+AGENT_RDDS_LABEL_META = "agent.exposed.rdds.{key}"
+
+
+class EppTlsCredentials(NamedTuple):
+    """One CA and a matching EPP server/client mutual-TLS identity set."""
+
+    ca_certificate: str
+    server_certificate: str
+    server_private_key: str
+    client_certificate: str
+    client_private_key: str
+    client_sha256_fingerprint: str
 
 
 def _php(value) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, int):
+    if isinstance(value, (int, float)):
         return str(value)
+    if isinstance(value, dict):
+        return "[{}]".format(
+            ", ".join("{} => {}".format(_php(key), _php(item))
+                      for key, item in value.items())
+        )
+    if isinstance(value, (list, tuple)):
+        return "[{}]".format(", ".join(_php(item) for item in value))
     return json.dumps(str(value), ensure_ascii=False)
 
 
@@ -55,15 +81,23 @@ class NamingoRegistryServer(Server):
         self.__registrar_password = "seedemu-epp"
         self.__registrar_prefix = "SEED"
         self.__registrar_email = "registrar@seedemu.test"
+        self.__registrar_whois = "whois.registrar.seedemu"
+        self.__registrar_rdap = "rdap.registrar.seedemu"
+        self.__registrar_url = "http://registrar.seedemu"
+        self.__registrar_abuse_email = "registrar@seedemu.test"
+        self.__registrar_abuse_phone = "+1.5550100"
         self.__registrar_whitelist: List[str] = ["10.0.0.0/8"]
         self.__registrar_ssl_fingerprint: Optional[str] = None
 
         self.__enable_whois = False
         self.__enable_rdap = False
         self.__enable_das = False
-        self.__zone_writer_config: Optional[str] = None
+        self.__whois_host = "whois.registry.seedemu"
+        self.__rdap_url = "http://rdap.registry.seedemu"
+        self.__expose_rdds_to_agent = False
+        self.__zone_writer_config: Optional[dict] = None
         self.__zone_writer_interval = 30
-        self.__zone_writer_custom_records: dict[str, str] = {}
+        self.__zone_writer_custom_records: dict[str, List[dict]] = {}
         self.__zone_publisher: Optional[dict] = None
 
         self.__certificate_pem: Optional[str] = None
@@ -134,13 +168,11 @@ class NamingoRegistryServer(Server):
 
     def setRegistrar(
         self,
+        identity: RegistrarIdentity,
         clid: str,
         password: str,
         prefix: str,
         whitelist: List[str],
-        name: str = "SeedEmu Registrar",
-        iana_id: int = 9999,
-        email: str = "registrar@seedemu.test",
         ssl_fingerprint: Optional[str] = None,
     ) -> NamingoRegistryServer:
         assert re.fullmatch(r"[A-Za-z0-9_.-]{1,16}", clid), "invalid registrar clid"
@@ -155,8 +187,6 @@ class NamingoRegistryServer(Server):
                     ipaddress.ip_address(item)
         except ValueError as error:
             raise AssertionError("invalid registrar whitelist entry") from error
-        assert 0 <= iana_id <= 99999, "invalid registrar IANA id"
-        assert "@" in email, "invalid registrar email"
         if ssl_fingerprint is not None:
             normalized_fingerprint = ssl_fingerprint.replace(":", "").upper()
             assert re.fullmatch(r"[0-9A-F]{64}", normalized_fingerprint), (
@@ -164,79 +194,19 @@ class NamingoRegistryServer(Server):
             )
         else:
             normalized_fingerprint = None
-        self.__registrar_name = name
-        self.__registrar_iana_id = iana_id
+        self.__registrar_name = identity.name
+        self.__registrar_iana_id = identity.iana_id
         self.__registrar_clid = clid
         self.__registrar_password = password
         self.__registrar_prefix = prefix.upper()
-        self.__registrar_email = email
+        self.__registrar_email = identity.email
+        self.__registrar_whois = identity.whois_host
+        self.__registrar_rdap = identity.rdap_host
+        self.__registrar_url = identity.url.rstrip("/")
+        self.__registrar_abuse_email = identity.abuse_email
+        self.__registrar_abuse_phone = identity.abuse_phone
         self.__registrar_whitelist = list(dict.fromkeys(whitelist))
         self.__registrar_ssl_fingerprint = normalized_fingerprint
-        return self
-
-    def enableWhois(self, enabled: bool = True) -> NamingoRegistryServer:
-        self.__enable_whois = enabled
-        return self
-
-    def enableRdap(self, enabled: bool = True) -> NamingoRegistryServer:
-        self.__enable_rdap = enabled
-        return self
-
-    def enableDas(self, enabled: bool = True) -> NamingoRegistryServer:
-        self.__enable_das = enabled
-        return self
-
-    def enableZoneWriter(
-        self, config_php: str, interval_seconds: int = 30
-    ) -> NamingoRegistryServer:
-        """Enable the upstream writer that produces local TLD zone files."""
-        assert config_php.strip(), "Zone Writer config cannot be empty"
-        assert interval_seconds >= 5, "Zone Writer interval must be at least 5 seconds"
-        self.__zone_writer_config = config_php
-        self.__zone_writer_interval = interval_seconds
-        return self
-
-    def setZonePublisher(
-        self,
-        zonename: str,
-        primary_ip: str,
-        private_key: str,
-        primary_host_public_key: str,
-        zone_file: Optional[str] = None,
-    ) -> NamingoRegistryServer:
-        """Publish a Zone Writer output file to a restricted SSH receiver."""
-        zone = zonename.strip().lower().strip(".")
-        assert zone and all(
-            re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
-            for label in zone.split(".")
-        ), "invalid publisher zone name"
-        ipaddress.ip_address(primary_ip)
-        assert "BEGIN OPENSSH PRIVATE KEY" in private_key, "invalid publisher private key"
-        assert primary_host_public_key.startswith("ssh-ed25519 "), (
-            "primary host key must be an Ed25519 public key"
-        )
-        output_path = zone_file or "/var/lib/bind/{}.zone".format(zone)
-        assert output_path.startswith("/"), "zone file path must be absolute"
-        assert "\n" not in output_path, "invalid zone file path"
-        self.__zone_publisher = {
-            "zone": zone + ".",
-            "primary_ip": primary_ip,
-            "private_key": private_key.strip() + "\n",
-            "host_public_key": primary_host_public_key.strip(),
-            "zone_file": output_path,
-        }
-        return self
-
-    def setZoneWriterCustomRecords(
-        self, tld: str, records_php: str
-    ) -> NamingoRegistryServer:
-        """Install a TLD-specific custom-record file used by Zone Writer."""
-        zone = tld.strip().lower().strip(".")
-        assert re.fullmatch(
-            r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", zone
-        ), "custom-record TLD must be a single DNS label"
-        assert records_php.strip().startswith("<?php"), "invalid custom records PHP"
-        self.__zone_writer_custom_records[zone] = records_php.strip() + "\n"
         return self
 
     def setTlsCertificate(
@@ -255,6 +225,194 @@ class NamingoRegistryServer(Server):
         self.__client_ca_pem = client_ca_pem
         return self
 
+    def enableWhois(self, enabled: bool = True) -> NamingoRegistryServer:
+        self.__enable_whois = enabled
+        return self
+
+    def enableRdap(self, enabled: bool = True) -> NamingoRegistryServer:
+        self.__enable_rdap = enabled
+        return self
+
+    def setRddsEndpoints(
+        self, whois_host: str, rdap_url: str
+    ) -> NamingoRegistryServer:
+        """Set the public names advertised by Registry WHOIS and RDAP."""
+        hostname = re.compile(
+            r"(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*"
+            r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+        )
+        assert hostname.fullmatch(whois_host), "invalid WHOIS hostname"
+        parsed_rdap = urlparse(rdap_url)
+        assert (
+            parsed_rdap.scheme in {"http", "https"}
+            and parsed_rdap.netloc
+            and parsed_rdap.username is None
+            and parsed_rdap.password is None
+            and not parsed_rdap.query
+            and not parsed_rdap.fragment
+        ), "invalid RDAP base URL"
+        self.__whois_host = whois_host.lower()
+        self.__rdap_url = rdap_url.rstrip("/")
+        return self
+
+    def exposeRddsToAgent(self, enabled: bool = True) -> NamingoRegistryServer:
+        """Publish enabled Registry RDDS endpoints for metadata-driven Agent lookup."""
+        self.__expose_rdds_to_agent = enabled
+        return self
+
+    def enableDas(self, enabled: bool = True) -> NamingoRegistryServer:
+        self.__enable_das = enabled
+        return self
+
+    def configureZoneWriter(
+        self,
+        nameservers: dict[str, str],
+        soa_contact: str,
+        interval_seconds: int = 30,
+        initial_serial: int = 1,
+        reload_dns: bool = False,
+        zone_mode: str = "default",
+        dns_server: str = "bind",
+    ) -> NamingoRegistryServer:
+        """Configure the upstream writer using this Registry's database."""
+        assert self.__zone_writer_config is None, "Zone Writer is already configured"
+        assert nameservers, "at least one Zone Writer nameserver is required"
+        hostname = re.compile(
+            r"(?=.{1,253}\.?$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}"
+            r"[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.?"
+        )
+        assert all(re.fullmatch(r"[A-Za-z0-9_-]{1,63}", name)
+                   for name in nameservers), "invalid Zone Writer nameserver name"
+        assert all(hostname.fullmatch(value) for value in nameservers.values()), (
+            "invalid Zone Writer nameserver hostname"
+        )
+        assert hostname.fullmatch(soa_contact), "invalid Zone Writer SOA contact"
+        assert interval_seconds >= 5, "Zone Writer interval must be at least 5 seconds"
+        assert initial_serial >= 1, "Zone Writer serial must be positive"
+        assert re.fullmatch(r"[A-Za-z0-9_-]{1,32}", zone_mode), (
+            "invalid Zone Writer mode"
+        )
+        assert re.fullmatch(r"[A-Za-z0-9_-]{1,32}", dns_server), (
+            "invalid Zone Writer DNS server"
+        )
+        self.__zone_writer_config = {
+            "dns_server": dns_server,
+            "ns": dict(nameservers),
+            "dns_soa": soa_contact,
+            "dns_serial": initial_serial,
+            "dns_reload": reload_dns,
+            "zone_mode": zone_mode,
+        }
+        self.__zone_writer_interval = interval_seconds
+        return self
+
+    def addZoneWriterRecord(
+        self, tld: str, name: str, record_type: str, parameters: List[str]
+    ) -> NamingoRegistryServer:
+        """Add one static record retained in a Zone Writer TLD snapshot."""
+        zone = tld.strip().lower().strip(".")
+        assert re.fullmatch(
+            r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", zone
+        ), "Zone Writer record TLD must be a single DNS label"
+        normalized_name = name.strip().lower().rstrip(".")
+        assert normalized_name == "@" or all(
+            re.fullmatch(r"[a-z0-9_*](?:[a-z0-9_*-]{0,61}[a-z0-9_*])?", label)
+            for label in normalized_name.split(".")
+        ), "invalid Zone Writer record name"
+        normalized_type = record_type.strip().upper()
+        assert re.fullmatch(r"[A-Z][A-Z0-9]{0,15}", normalized_type), (
+            "invalid Zone Writer record type"
+        )
+        assert parameters and all(
+            isinstance(value, str) and value and "\n" not in value and "\r" not in value
+            for value in parameters
+        ), "invalid Zone Writer record parameters"
+        if normalized_type in {"A", "AAAA"}:
+            assert len(parameters) == 1, "address records require one parameter"
+            address = ipaddress.ip_address(parameters[0])
+            assert (normalized_type == "A") == (address.version == 4), (
+                "Zone Writer address family does not match record type"
+            )
+        self.__zone_writer_custom_records.setdefault(zone, []).append({
+            "name": normalized_name,
+            "type": normalized_type,
+            "parameters": list(parameters),
+        })
+        return self
+
+    def setZonePublisher(
+        self,
+        zonename: str,
+        primary_ip: str,
+        private_key: str,
+        primary_host_public_key: str,
+        zone_file: Optional[str] = None,
+        secondary_ips: Optional[List[str]] = None,
+        secondary_wait_seconds: int = 90,
+    ) -> NamingoRegistryServer:
+        """Publish a zone and optionally wait for authoritative secondaries."""
+        zone = zonename.strip().lower().strip(".")
+        assert zone and all(
+            re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+            for label in zone.split(".")
+        ), "invalid publisher zone name"
+        ipaddress.ip_address(primary_ip)
+        assert "BEGIN OPENSSH PRIVATE KEY" in private_key, "invalid publisher private key"
+        assert primary_host_public_key.startswith("ssh-ed25519 "), (
+            "primary host key must be an Ed25519 public key"
+        )
+        output_path = zone_file or "/var/lib/bind/{}.zone".format(zone)
+        assert output_path.startswith("/"), "zone file path must be absolute"
+        assert "\n" not in output_path, "invalid zone file path"
+        secondaries = list(dict.fromkeys(secondary_ips or []))
+        for address in secondaries:
+            ipaddress.ip_address(address)
+        assert primary_ip not in secondaries, "primary cannot also be a secondary"
+        assert secondary_wait_seconds >= 1, "secondary wait must be positive"
+        self.__zone_publisher = {
+            "zone": zone + ".",
+            "primary_ip": primary_ip,
+            "private_key": private_key.strip() + "\n",
+            "host_public_key": primary_host_public_key.strip(),
+            "zone_file": output_path,
+            "secondary_ips": secondaries,
+            "secondary_wait_seconds": secondary_wait_seconds,
+        }
+        return self
+
+    @staticmethod
+    def _secondary_wait_script(publisher: dict) -> str:
+        """Render direct SOA polling for configured public secondaries."""
+        addresses = publisher["secondary_ips"]
+        if not addresses:
+            return ""
+        return '''secondary_addresses='{addresses}'
+remaining={wait_seconds}
+while true; do
+    all_ready=true
+    for server in $secondary_addresses; do
+        observed_serial=$(dig +short +time=2 +tries=1 "@$server" {zone} SOA |
+            awk '{{ print $3; exit }}')
+        if [ "$observed_serial" != "$expected_serial" ]; then
+            all_ready=false
+        fi
+    done
+    if "$all_ready"; then
+        echo "public secondaries reached {zone} serial $expected_serial"
+        break
+    fi
+    remaining=$((remaining - 1))
+    if [ "$remaining" -le 0 ]; then
+        echo "public secondaries did not reach {zone} serial $expected_serial" >&2
+        exit 1
+    fi
+    sleep 1
+done'''.format(
+            addresses=" ".join(addresses),
+            wait_seconds=publisher["secondary_wait_seconds"],
+            zone=publisher["zone"],
+        )
+
     def _database_config(self) -> dict:
         return {
             "db_type": "mysql",
@@ -271,6 +429,15 @@ class NamingoRegistryServer(Server):
             for key, value in settings.items()
         )
         return "<?php\nreturn [\n{}\n];\n".format(body)
+
+    def _zone_writer_config(self) -> str:
+        assert self.__zone_writer_config is not None
+        settings = self._database_config()
+        settings.update(self.__zone_writer_config)
+        return self._php_config(settings)
+
+    def _zone_writer_records(self, records: List[dict]) -> str:
+        return "<?php\nreturn {};\n".format(_php(records))
 
     def _epp_config(self) -> str:
         settings = self._database_config()
@@ -325,7 +492,7 @@ class NamingoRegistryServer(Server):
                 "minimum_data": self.__minimum_data,
                 "limited_rdap": False,
                 "registry_url": "http://registry.seedemu/rdap-terms",
-                "rdap_url": "http://rdap.registry.seedemu",
+                "rdap_url": self.__rdap_url,
                 "rately": False,
                 "limit": 1000,
                 "period": 60,
@@ -370,6 +537,11 @@ FLUSH PRIVILEGES;
             "registrar_password": self.__registrar_password,
             "registrar_prefix": self.__registrar_prefix,
             "registrar_email": self.__registrar_email,
+            "registrar_whois": self.__registrar_whois,
+            "registrar_rdap": self.__registrar_rdap,
+            "registrar_url": self.__registrar_url,
+            "registrar_abuse_email": self.__registrar_abuse_email,
+            "registrar_abuse_phone": self.__registrar_abuse_phone,
             "registrar_whitelist": self.__registrar_whitelist,
             "registrar_ssl_fingerprint": self.__registrar_ssl_fingerprint,
         }
@@ -451,11 +623,14 @@ try {{
         . '(name, iana_id, clid, pw, prefix, email, whois_server, rdap_server, url, '
         . 'abuse_email, abuse_phone, accountBalance, creditLimit, creditThreshold, '
         . 'thresholdType, currency, ssl_fingerprint, crdate) '
-        . "VALUES (:name, :iana, :clid, :pw, :prefix, :email, 'whois.registrar.seedemu', "
-        . "'rdap.registrar.seedemu', 'http://registrar.seedemu', :email, '+1.5550100', "
+        . "VALUES (:name, :iana, :clid, :pw, :prefix, :email, :whois, "
+        . ":rdap, :url, :abuse_email, :abuse_phone, "
         . "100000, 100000, 500, 'fixed', 'USD', :ssl_fingerprint, CURRENT_TIMESTAMP) "
         . 'ON DUPLICATE KEY UPDATE name = VALUES(name), iana_id = VALUES(iana_id), '
         . 'pw = VALUES(pw), prefix = VALUES(prefix), email = VALUES(email), '
+        . 'whois_server = VALUES(whois_server), rdap_server = VALUES(rdap_server), '
+        . 'url = VALUES(url), abuse_email = VALUES(abuse_email), '
+        . 'abuse_phone = VALUES(abuse_phone), '
         . 'ssl_fingerprint = VALUES(ssl_fingerprint)'
     );
     $stmt->execute([
@@ -465,6 +640,11 @@ try {{
         'pw' => $registrarPassword,
         'prefix' => $settings['registrar_prefix'],
         'email' => $settings['registrar_email'],
+        'whois' => $settings['registrar_whois'],
+        'rdap' => $settings['registrar_rdap'],
+        'url' => $settings['registrar_url'],
+        'abuse_email' => $settings['registrar_abuse_email'],
+        'abuse_phone' => $settings['registrar_abuse_phone'],
         'ssl_fingerprint' => $settings['registrar_ssl_fingerprint'],
     ]);
     $stmt = $pdo->prepare('SELECT id FROM registrar WHERE clid = :clid');
@@ -550,6 +730,12 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
         )
 
     def install(self, node: Node):
+        assert not self.__zone_writer_custom_records or self.__zone_writer_config is not None, (
+            "Zone Writer records require configureZoneWriter()"
+        )
+        assert all(tld in self.__tlds for tld in self.__zone_writer_custom_records), (
+            "Zone Writer records require a configured Registry TLD"
+        )
         components = ["epp"]
         if self.__enable_whois:
             components.append("whois/port43")
@@ -574,6 +760,16 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
             NAMINGO_REGISTRY_LABEL_META.format(key="tlds"),
             ",".join(self.__tlds),
         )
+        if self.__expose_rdds_to_agent:
+            node.setLabel(AGENT_RDDS_LABEL_META.format(key="authority"), "registry")
+            if self.__enable_whois:
+                node.setLabel(
+                    AGENT_RDDS_LABEL_META.format(key="whois_server"), self.__whois_host
+                )
+            if self.__enable_rdap:
+                node.setLabel(
+                    AGENT_RDDS_LABEL_META.format(key="rdap_url"), self.__rdap_url
+                )
 
         software = (
             "ca-certificates curl git gnupg2 mariadb-client mariadb-server "
@@ -585,7 +781,7 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
             software += " bind9-utils"
         if self.__zone_publisher is not None:
             assert self.__zone_writer_config is not None, (
-                "zone publisher requires enableZoneWriter()"
+                "zone publisher requires configureZoneWriter()"
             )
             software += " openssh-client"
         node.addSoftware(software)
@@ -612,6 +808,16 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
                 NAMINGO_REGISTRY_VERSION,
                 NAMINGO_REGISTRY_INSTALL_DIR,
                 NAMINGO_REGISTRY_COMMIT,
+            )
+        )
+        node.addBuildCommand(
+            "sed -i "
+            "'s/named-checkzone {{$escapedZone}} {{$escapedPath}}/"
+            "named-checkzone -i local {{$escapedZone}} {{$escapedPath}}/' "
+            "{}/automation/helpers.php && "
+            "grep -Fq 'named-checkzone -i local' {}/automation/helpers.php".format(
+                NAMINGO_REGISTRY_INSTALL_DIR,
+                NAMINGO_REGISTRY_INSTALL_DIR,
             )
         )
         for component in components:
@@ -646,11 +852,12 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
             node.setFile("/opt/registry/das/config.php", self._das_config())
         if self.__zone_writer_config is not None:
             node.setFile(
-                "/opt/registry/automation/config.php", self.__zone_writer_config
+                "/opt/registry/automation/config.php", self._zone_writer_config()
             )
-            for tld, records_php in self.__zone_writer_custom_records.items():
+            for tld, records in self.__zone_writer_custom_records.items():
                 node.setFile(
-                    "/opt/registry/automation/{}.php".format(tld), records_php
+                    "/opt/registry/automation/{}.php".format(tld),
+                    self._zone_writer_records(records),
                 )
         if self.__zone_publisher is not None:
             publisher = self.__zone_publisher
@@ -670,18 +877,24 @@ set -eu
 
 /usr/bin/php8.5 /opt/registry/automation/write-zone.php
 test -s {zone_file}
+expected_serial=$(named-checkzone -i none -D -o - {zone} {zone_file} 2>/dev/null |
+    awk '$4 == "SOA" {{ print $7; exit }}')
+test -n "$expected_serial"
 ssh -T -i /opt/seedemu/namingo/zone-publisher-key \\
     -o BatchMode=yes \\
     -o IdentitiesOnly=yes \\
     -o StrictHostKeyChecking=yes \\
     -o UserKnownHostsFile=/opt/seedemu/namingo/known_hosts \\
     root@{primary_ip} {receiver_command} < {zone_file}
+{secondary_wait}
 '''.format(
                     zone_file=publisher["zone_file"],
                     primary_ip=publisher["primary_ip"],
                     receiver_command="/usr/local/sbin/seedemu-install-zone-{}".format(
                         publisher["zone"].rstrip(".")
                     ),
+                    zone=publisher["zone"],
+                    secondary_wait=self._secondary_wait_script(publisher),
                 ),
             )
 
@@ -725,6 +938,107 @@ class NamingoRegistryService(Service):
     def __init__(self):
         super().__init__()
         self.addDependency("Base", False, False)
+
+    @staticmethod
+    def generateEppTlsCredentials(
+        server_hostname: str,
+        client_name: str,
+        validity_days: int = 3650,
+    ) -> EppTlsCredentials:
+        """Generate a CA-signed EPP server/client mutual-TLS credential set."""
+        hostname_pattern = (
+            r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+            r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+"
+        )
+        assert re.fullmatch(hostname_pattern, server_hostname), (
+            "invalid EPP server hostname"
+        )
+        assert re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", client_name), (
+            "invalid EPP client name"
+        )
+        assert validity_days >= 1, "TLS validity must be at least one day"
+
+        with tempfile.TemporaryDirectory() as work:
+            directory = Path(work)
+            ca_key = directory / "ca.key"
+            ca_cert = directory / "ca.crt"
+            server_key = directory / "server.key"
+            server_csr = directory / "server.csr"
+            server_cert = directory / "server.crt"
+            server_ext = directory / "server.ext"
+            client_key = directory / "client.key"
+            client_csr = directory / "client.csr"
+            client_cert = directory / "client.crt"
+            client_ext = directory / "client.ext"
+
+            def run_openssl(*arguments: str) -> None:
+                subprocess.run(
+                    ["openssl", *arguments], check=True, capture_output=True
+                )
+
+            run_openssl(
+                "ecparam", "-name", "prime256v1", "-genkey", "-noout",
+                "-out", str(ca_key),
+            )
+            run_openssl(
+                "req", "-new", "-x509", "-sha256", "-days", str(validity_days),
+                "-key", str(ca_key), "-out", str(ca_cert),
+                "-subj", "/CN=SeedEmu EPP CA",
+                "-addext", "basicConstraints=critical,CA:TRUE",
+                "-addext", "keyUsage=critical,keyCertSign,cRLSign",
+            )
+
+            server_ext.write_text(
+                "basicConstraints=critical,CA:FALSE\n"
+                "keyUsage=critical,digitalSignature,keyAgreement\n"
+                "extendedKeyUsage=serverAuth\n"
+                "subjectAltName=DNS:{}\n".format(server_hostname)
+            )
+            run_openssl(
+                "ecparam", "-name", "prime256v1", "-genkey", "-noout",
+                "-out", str(server_key),
+            )
+            run_openssl(
+                "req", "-new", "-sha256", "-key", str(server_key),
+                "-out", str(server_csr), "-subj", "/CN={}".format(server_hostname),
+            )
+            run_openssl(
+                "x509", "-req", "-sha256", "-days", str(validity_days),
+                "-in", str(server_csr), "-CA", str(ca_cert),
+                "-CAkey", str(ca_key), "-CAcreateserial",
+                "-out", str(server_cert), "-extfile", str(server_ext),
+            )
+
+            client_ext.write_text(
+                "basicConstraints=critical,CA:FALSE\n"
+                "keyUsage=critical,digitalSignature,keyAgreement\n"
+                "extendedKeyUsage=clientAuth\n"
+            )
+            run_openssl(
+                "ecparam", "-name", "prime256v1", "-genkey", "-noout",
+                "-out", str(client_key),
+            )
+            run_openssl(
+                "req", "-new", "-sha256", "-key", str(client_key),
+                "-out", str(client_csr), "-subj", "/CN={}".format(client_name),
+            )
+            run_openssl(
+                "x509", "-req", "-sha256", "-days", str(validity_days),
+                "-in", str(client_csr), "-CA", str(ca_cert),
+                "-CAkey", str(ca_key), "-CAcreateserial",
+                "-out", str(client_cert), "-extfile", str(client_ext),
+            )
+
+            client_certificate = client_cert.read_text()
+            client_der = ssl.PEM_cert_to_DER_cert(client_certificate)
+            return EppTlsCredentials(
+                ca_certificate=ca_cert.read_text(),
+                server_certificate=server_cert.read_text(),
+                server_private_key=server_key.read_text(),
+                client_certificate=client_certificate,
+                client_private_key=client_key.read_text(),
+                client_sha256_fingerprint=hashlib.sha256(client_der).hexdigest().upper(),
+            )
 
     def getName(self) -> str:
         return "NamingoRegistryService"

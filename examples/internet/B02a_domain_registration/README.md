@@ -5,23 +5,23 @@ Registry nodes plus a Namingo-compatible `.com` authoritative topology. The
 removed Agent Registrar, provisioning API, and managed customer-zone services
 are not part of this example.
 
-- Namingo Registrar (`10.150.0.73`) runs the upstream Registrar WHOIS/RDAP
-  components with a custom backend placeholder and the official Namingo EPP
-  Client pinned to `v1.1.22`.
+- Namingo Registrar (`10.150.0.73`) runs only the upstream WHOIS/RDAP
+  components. Its Loom backend uses a read-only connection to the Loom
+  database; this node does not install or run an EPP client.
 - Loom (`10.150.0.74`) is the customer-facing Registrar web application. Its
   source is pinned to commit `212410852c821b14bfc9603043ab0a61632bd576`, and
   its `.com` provider connects directly to the Namingo Registry over mutually
   authenticated EPP/TLS. The discovery label publishes
   `http://10.150.0.74:80` and an opaque `b02a.loom.admin` credential reference.
-- Namingo Registry (`10.154.0.73`) runs the upstream EPP service for `.com`,
+- Namingo Registry (`10.154.0.73`) runs the upstream EPP, WHOIS, and RDAP services for `.com`,
   provisions the `seedemu` registrar account, and restricts that account to the
-  Registrar node address.
-- Registrar connects to `epp.registry.com:700` with verified TLS 1.2, validates
-  the Registry certificate against the scenario CA, logs in with its EPP
-  credentials, runs a domain check, and logs out. The background health probe
-  writes `/run/seedemu-epp-health.json`; `seedemu-epp-client check NAME` exposes
-  the same authenticated path for interactive checks.
-- `epp.registry.com`, `whois.registrar.com`, and `rdap.registrar.com` are
+  Loom node address.
+- Loom connects to `epp.registry.com:700` with mutual TLS, reads the active
+  `.com` provider from its own database, runs a periodic domain check through
+  Loom's native EPP path, and writes
+  `/run/seedemu-loom-epp-health.json` atomically.
+- `epp.registry.com`, `whois.registrar.com`, `rdap.registrar.com`,
+  `whois.registry.com`, and `rdap.registry.com` are
   published through the `.com` authoritative infrastructure.
 
 - COM-A (`10.151.0.71`) is the hidden primary. It is absent from the root
@@ -41,7 +41,8 @@ are not part of this example.
 - AS160 advertises the dedicated `11.160.0.0/24` owner DNS network.
   `owner-dns-primary` (`11.160.0.53`) and `owner-dns-secondary`
   (`11.160.0.54`) form a `DomainNameService` source-owned authoritative DNS pair. The Agent uses
-  `dns.configure` through AS150 `host_1` to provision the allowlisted
+  `dns.authoritative_find` with AS150 `host_1` to discover the pair, then uses
+  `dns.configure` through that source to provision the allowlisted
   `example.com` zone and maintain its records. A deployment-local SSH identity
   is stored only in that source. Both DNS nodes enforce the public key, the
   source address, a forced command, and the zone allowlist. Runtime updates use
@@ -66,39 +67,19 @@ the emulation, starts it, runs readiness and runtime checks, then tears it down.
 The JSON summaries and command logs are retained under the artifact directory.
 
 The runtime test verifies the Loom web page, database/provider initialization,
-Loom-originated mutual-TLS EPP login/check/logout, the Namingo processes;
-mutual-TLS EPP login, check,
-contact create, domain create, host create, and domain nameserver update; the
-authenticated Zone Writer delivery; serial advancement and rollback rejection
-on COM-A; B/C transfer convergence; public delegation and glue; service-name
-resolution; BIND ACLs; omission of COM-A from the root zone; and an inherited
-DNS resolution path. Negative checks also require rejection of a wrong EPP
-password, an untrusted client certificate, and an unauthorized SSH key.
+Loom-originated mutual-TLS EPP login/check/logout, the Namingo WHOIS/RDAP
+processes and read-only Loom database connection, authenticated Zone Writer
+delivery, serial advancement and rollback rejection on COM-A, B/C transfer
+convergence, service-name resolution, BIND ACLs, omission of COM-A from the
+root zone, and an inherited DNS resolution path.
 
-`NamingoRegistrarService` is still not itself a customer billing portal; Loom
-provides that customer-facing role. The supporting service's EPP client remains
-an authenticated provisioning interface and exposes Namingo's native `contactCreate`,
-`domainCreate`, and `domainUpdateNS` operations as `contact-create`,
-`host-create`, `domain-create`, and `domain-update`. Mutating operations accept
-one JSON object as the second command-line argument. For example:
+`NamingoRegistrarService` is not a customer billing portal; Loom owns customer
+accounts, orders, payment, and all EPP provisioning. Namingo Registrar only
+completes Loom with WHOIS/RDAP service.
 
-```sh
-seedemu-epp-client host-create \
-  '{"hostname":"ns1.example.com","ipaddress":"11.160.0.53"}'
-seedemu-epp-client domain-update \
-  '{"domainname":"example.com","nameservers":["ns1.example.com","ns2.example.com"]}'
-```
-
-Namingo Registry currently rejects RFC 1918 host addresses in `host:create`
-through its upstream PHP validation. Consequently, the runtime registration
-uses documentation-only public-looking glue addresses `11.150.0.71` and
-`11.150.0.73`; these are registry data, not addresses assigned to SeedEmu
-containers. Using `10.150.x.x` would fail before zone publication unless the
-upstream Namingo validation policy is changed.
-
-The command wrapper and its input validation are SeedEmu integration code; the
-EPP client methods and the Registry-side EPP processing are unmodified Namingo
-open-source components. The SSH zone receiver/publisher, health probe, fixed
+The Loom health probe is SeedEmu integration code and uses Loom's native EPP
+helper. Registry-side EPP processing remains an unmodified Namingo component.
+The SSH zone receiver/publisher, fixed
 simulation credentials, and removal of Namingo's untouched `.test` and
 `.com.test` sample rows during bootstrap are also SeedEmu integration code.
 The compact EC TLS and Ed25519 SSH credentials are kept as one-line constants

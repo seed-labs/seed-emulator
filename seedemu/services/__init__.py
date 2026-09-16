@@ -1,9 +1,10 @@
 from .WebService import WebService, WebServer
 from .BotnetService import BotnetClientService, BotnetClientServer, BotnetService, BotnetServer
 from .DomainRegistrarService import DomainRegistrarService, DomainRegistrarServer
+from .RegistrarIdentity import RegistrarIdentity
 from .NamingoRegistrarService import NamingoRegistrarService, NamingoRegistrarServer
-from .NamingoRegistryService import NamingoRegistryService, NamingoRegistryServer
-from .LoomRegistrarService import LoomRegistrarService, LoomRegistrarServer
+from .NamingoRegistryService import EppTlsCredentials, NamingoRegistryService, NamingoRegistryServer
+from .LoomRegistrarService import LoomRegistrarService, LoomRegistrarServer, LoomWebTlsCredentials
 from .DomainNameService import DomainNameServer, DomainNameService, Zone
 from .TorService import TorService, TorServer, TorNodeType
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService

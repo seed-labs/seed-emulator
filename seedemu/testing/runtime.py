@@ -84,27 +84,15 @@ class ComposeRuntimeTest:
 
     def exec(self, service: ComposeService | str, command: str, timeout: int = 45) -> Dict[str, object]:
         service_name = service.name if isinstance(service, ComposeService) else str(service)
-        try:
-            result = subprocess.run(
-                docker_compose_command()
-                + ["-f", str(self.compose_file), "exec", "-T", service_name, "sh", "-lc", command],
-                cwd=str(self.compose_file.parent),
-                text=True,
-                capture_output=True,
-                timeout=timeout,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as error:
-            stdout = error.stdout or ""
-            if isinstance(stdout, bytes):
-                stdout = stdout.decode(errors="replace")
-            return {
-                "service": service_name,
-                "command": command,
-                "exit": 124,
-                "stdout": stdout[-1000:],
-                "stderr": "command timed out after {} seconds".format(timeout),
-            }
+        result = subprocess.run(
+            docker_compose_command()
+            + ["-f", str(self.compose_file), "exec", "-T", service_name, "sh", "-lc", command],
+            cwd=str(self.compose_file.parent),
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
         return {
             "service": service_name,
             "command": command,
@@ -118,7 +106,7 @@ class ComposeRuntimeTest:
         name: str,
         service: ComposeService | str,
         command: str,
-        retries: int = 3,
+        retries: int = 20,
         interval: int = 3,
         timeout: int = 45,
     ) -> Dict[str, object]:

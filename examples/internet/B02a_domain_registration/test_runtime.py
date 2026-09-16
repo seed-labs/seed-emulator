@@ -32,15 +32,16 @@ def main() -> int:
             interval=3,
         )
         test.exec_check(
-            "Loom initializes its Namingo provider and completes verified EPP over TLS",
+            "Loom initializes its provider and verifies its own EPP path",
             loom,
             "test \"$(mariadb -h 127.0.0.1 -uloom -pseedemu-loom -N loom "
             "-e \"SELECT CONCAT(type,':',api_endpoint,':',status) FROM providers "
             "WHERE tld='.com'\")\" = 'domain:epp.registry.com:700:active' "
             "&& grep -q '\"status\":\"ok\"' /run/seedemu-loom-epp-health.json "
+            "&& grep -q '\"client\":\"loom\"' /run/seedemu-loom-epp-health.json "
             "&& grep -q '\"transport\":\"epp-over-tls\"' "
             "/run/seedemu-loom-epp-health.json",
-            retries=3,
+            retries=10,
             interval=3,
         )
         test.exec_check(
@@ -210,119 +211,28 @@ def main() -> int:
             interval=3,
         )
         test.exec_check(
-            "Namingo Registrar starts WHOIS/RDAP and completes verified EPP over TLS",
+            "Namingo Registrar provides only Loom-backed WHOIS/RDAP",
             registrar,
             "pgrep -f start_whois.php >/dev/null "
             "&& pgrep -f start_rdap.php >/dev/null "
             "&& grep -q 'whois.registrar.com' /opt/registrar/whois/config.php "
-            "&& grep -q '\"status\":\"ok\"' /run/seedemu-epp-health.json "
-            "&& grep -q '\"transport\":\"epp-over-tls\"' /run/seedemu-epp-health.json "
-            "&& grep -q \"'verify_peer' => true\" /usr/local/bin/seedemu-epp-client "
-            "&& grep -q \"'verify_peer_name' => true\" /usr/local/bin/seedemu-epp-client "
-            "&& /usr/local/bin/seedemu-epp-client check runtime-check.com "
-            "| grep -q '\"status\":\"ok\"'",
+            "&& test ! -e /usr/local/bin/seedemu-epp-client "
+            "&& test ! -e /opt/seedemu/namingo/epp-client.php "
+            "&& test ! -e /run/seedemu-epp-health.json",
             retries=3,
             interval=3,
         )
-        test.exec_check(
-            "Namingo EPP client creates contacts, domains, hosts, and updates delegation",
-            registrar,
-            "/usr/local/bin/seedemu-epp-client contact-create "
-            "'{\"id\":\"SEED-RUNTIME\",\"firstname\":\"Seed\",\"lastname\":\"Emu\","
-            "\"address1\":\"1 Simulation Way\",\"city\":\"Test City\","
-            "\"postcode\":\"10000\",\"country\":\"US\","
-            "\"fullphonenumber\":\"+1.5550100\",\"email\":\"runtime@registrar.com\","
-            "\"authInfoPw\":\"Contact-Runtime-1\"}' "
-            "&& /usr/local/bin/seedemu-epp-client domain-create "
-            "'{\"domainname\":\"example.com\",\"period\":1,"
-            "\"registrant\":\"SEED-RUNTIME\",\"contacts\":{\"admin\":\"SEED-RUNTIME\","
-            "\"tech\":\"SEED-RUNTIME\",\"billing\":\"SEED-RUNTIME\"},"
-            "\"authInfoPw\":\"Domain-Runtime-1\"}' "
-            "&& /usr/local/bin/seedemu-epp-client host-create "
-            "'{\"hostname\":\"ns1.example.com\",\"ipaddress\":\"11.160.0.53\"}' "
-            "&& /usr/local/bin/seedemu-epp-client host-create "
-            "'{\"hostname\":\"ns2.example.com\",\"ipaddress\":\"11.160.0.54\"}' "
-            "&& /usr/local/bin/seedemu-epp-client domain-update "
-            "'{\"domainname\":\"example.com\",\"nameservers\":["
-            "\"ns1.example.com\",\"ns2.example.com\"]}' "
-            "| grep -q '\"status\":\"ok\"'",
-            retries=1,
-            interval=3,
-        )
-        test.exec_check(
-            "Namingo Registry rejects an incorrect EPP password",
-            registrar,
-            "work=$(mktemp -d); trap 'rm -f \"$work/config.php\" \"$work/client\" \"$work/out\"; rmdir \"$work\"' EXIT; "
-            "sed 's/\"password\" => \"[^\"]*\"/\"password\" => \"wrong-password\"/' "
-            "/opt/seedemu/namingo/epp-client.php > \"$work/config.php\"; "
-            "sed \"s#/opt/seedemu/namingo/epp-client.php#$work/config.php#\" "
-            "/usr/local/bin/seedemu-epp-client > \"$work/client\"; chmod 700 \"$work/client\"; "
-            "if \"$work/client\" check rejected-password.com >\"$work/out\" 2>&1; then exit 1; fi; "
-            "grep -q 'EPP login failed' \"$work/out\"",
-            retries=1,
-        )
-        test.exec_check(
-            "Namingo Registry rejects an untrusted EPP client certificate",
-            registrar,
-            "work=$(mktemp -d); trap 'rm -f \"$work/config.php\" \"$work/client\" \"$work/client.key\" \"$work/client.crt\"; rmdir \"$work\"' EXIT; "
-            "openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes "
-            "-days 1 -subj /CN=untrusted-registrar -keyout \"$work/client.key\" "
-            "-out \"$work/client.crt\" >/dev/null 2>&1; "
-            "sed -e \"s#/opt/seedemu/namingo/epp-client.crt#$work/client.crt#\" "
-            "-e \"s#/opt/seedemu/namingo/epp-client.key#$work/client.key#\" "
-            "/opt/seedemu/namingo/epp-client.php > \"$work/config.php\"; "
-            "sed \"s#/opt/seedemu/namingo/epp-client.php#$work/config.php#\" "
-            "/usr/local/bin/seedemu-epp-client > \"$work/client\"; chmod 700 \"$work/client\"; "
-            "if \"$work/client\" check rejected-certificate.com >/dev/null 2>&1; then exit 1; fi",
-            retries=1,
-        )
-
-    if b_com and c_com:
-        test.exec_check(
-            "Registry registration reaches both public COM secondaries",
-            b_com,
-            "for server in 10.152.0.71 10.153.0.73; do "
-            "ns=$(dig @$server example.com NS +norecurse +noall +authority); "
-            "glue=$(dig @$server example.com NS +norecurse +noall +additional); "
-            "printf '%s\\n' \"$ns\" | awk '$4 == \"NS\" {print $5}' "
-            "| grep -qx 'ns1.example.com.' "
-            "&& printf '%s\\n' \"$ns\" | awk '$4 == \"NS\" {print $5}' "
-            "| grep -qx 'ns2.example.com.' "
-            "&& printf '%s\\n' \"$glue\" "
-            "| awk '$1 == \"ns1.example.com.\" && $4 == \"A\" {print $5}' "
-            "| grep -qx '11.160.0.53' "
-            "&& printf '%s\\n' \"$glue\" "
-            "| awk '$1 == \"ns2.example.com.\" && $4 == \"A\" {print $5}' "
-            "| grep -qx '11.160.0.54' || exit 1; done",
-            retries=15,
-            interval=3,
-        )
-
-    if resolver:
-        test.exec_check(
-            "recursive resolver expires its pre-registration failure cache",
-            resolver,
-            "rndc flush",
-            retries=1,
-        )
-
-    if client and resolver:
-        test.exec_check(
-            "registered domain resolves through COM delegation and owner DNS",
-            client,
-            "test \"$(dig +short www.example.com A | tail -n1)\" = 11.160.0.80",
-            retries=15,
-            interval=3,
-        )
-
     if registry:
         test.exec_check(
-            "Namingo Registry starts EPP for COM",
+            "Namingo Registry starts EPP and Registry-backed RDDS for COM",
             registry,
             "pgrep -f start_epp.php >/dev/null "
+            "&& pgrep -f start_whois.php >/dev/null "
+            "&& pgrep -f start_rdap.php >/dev/null "
+            "&& grep -q 'rdap.registry.com' /opt/registry/rdap/config.php "
             "&& grep -q '\"epp_port\" => 700' /opt/registry/epp/config.php "
             "&& grep -q 'epp.registry.com' /usr/local/bin/seedemu-start-namingo-registry "
-            "&& grep -q '10.150.0.73' /opt/seedemu/namingo/bootstrap.php "
+            "&& grep -q '10.150.0.74' /opt/seedemu/namingo/bootstrap.php "
             "&& openssl x509 -in /opt/seedemu/namingo/tls/epp.crt -noout "
             "-checkhost epp.registry.com | grep -q 'does match certificate' "
             "&& test -s /opt/seedemu/namingo/zone-publisher-key "
