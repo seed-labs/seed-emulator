@@ -426,8 +426,9 @@ class DomainNameServer(Server):
 
         The receiver validates the candidate with named-checkzone, rejects SOA
         serial rollback, atomically replaces the active file, and reloads BIND.
-        It is intended for an external Registry Zone Writer and is deliberately
-        independent of RFC 2136 updates and secondary-transfer TSIG keys.
+        It is intended for an external Zone Writer publishing to either a
+        public primary or a hidden primary. It is deliberately independent of
+        RFC 2136 updates and secondary-transfer TSIG keys.
 
         @returns self, for chaining API calls.
         """
@@ -658,7 +659,7 @@ class DomainNameServer(Server):
         assert node == self.__node, 'configured node differs from install node. Please check if there are conflict bindings'
         node.addSoftware('bind9')
         if self.__zone_file_receiver is not None:
-            assert self.__is_hidden_primary, 'zone file receiver requires a hidden primary'
+            assert self.__is_master, 'zone file receiver requires a primary/master'
             node.addSoftware('openssh-server')
         if not self.__usesIncludeConfig():
             node.setFile(
@@ -716,19 +717,39 @@ include "/etc/bind/named.conf.local";
                 node.setFile(zonepath, '\n'.join(zone.getRecords()))
 
                 if self.__is_master:
-                    if self.__is_hidden_primary:
-                        assert transfer_key_name is not None, 'hidden primary requires a TSIG transfer key'
-                        assert self.__transfer_targets, 'hidden primary requires at least one transfer target'
-                        notify_targets = ' '.join(
-                            '{} key "{}";'.format(addr, transfer_key_name)
-                            for addr in self.__transfer_targets
+                    if self.__is_hidden_primary or self.__zone_file_receiver is not None:
+                        if self.__is_hidden_primary:
+                            assert transfer_key_name is not None, 'hidden primary requires a TSIG transfer key'
+                            assert self.__transfer_targets, 'hidden primary requires at least one transfer target'
+
+                        notify_clause = 'notify yes;'
+                        if self.__transfer_targets:
+                            notify_targets = ' '.join(
+                                '{}{};'.format(
+                                    addr,
+                                    ' key "{}"'.format(transfer_key_name)
+                                    if transfer_key_name is not None else '',
+                                )
+                                for addr in self.__transfer_targets
+                            )
+                            notify_clause += ' also-notify {{ {} }};'.format(notify_targets)
+
+                        allow_transfer = (
+                            'key "{}";'.format(transfer_key_name)
+                            if transfer_key_name is not None else 'any;'
+                        )
+                        query_clause = (
+                            ' allow-query { none; };' if self.__is_hidden_primary else ''
                         )
                         node.appendFile(
                             '/etc/bind/named.conf.zones',
-                            'zone "{}" {{ type master; notify yes; also-notify {{ {} }}; '
-                            'allow-transfer {{ key "{}"; }}; allow-query {{ none; }}; '
+                            'zone "{}" {{ type master; {} allow-transfer {{ {} }};{} '
                             'allow-update {{ none; }}; file "{}"; }};\n'.format(
-                                zonename, notify_targets, transfer_key_name, zonepath
+                                zonename,
+                                notify_clause,
+                                allow_transfer,
+                                query_clause,
+                                zonepath,
                             )
                         )
                     else:
