@@ -27,6 +27,10 @@ import yaml
 
 
 _LOCAL_IPS: set[str] | None = None
+VLAN_ID_ANNOTATION = "org.seedsecuritylabs.seedemu.meta.vlan-id"
+VLAN_BASE_ANNOTATION = "org.seedsecuritylabs.seedemu.meta.vlan-base-interface"
+VLAN_MASTER_ANNOTATION = "org.seedsecuritylabs.seedemu.meta.vlan-master-interface"
+VLAN_BRIDGE_ANNOTATION = "org.seedsecuritylabs.seedemu.meta.vlan-bridge-interface"
 
 
 def load_yaml(path: str) -> dict[str, Any]:
@@ -78,6 +82,42 @@ def get_nested(data: dict[str, Any], path: str, default: Any = None) -> Any:
         if not found:
             return default
     return cur
+
+
+def normalizeNetworkValue(value: Any) -> str:
+    """Normalize a network backend or CNI value from YAML/compiler metadata."""
+    return str(value or "").strip().lower().replace("_", "-")
+
+
+def networkBackendForCni(value: Any) -> str:
+    """Return the running backend implied by a compiler CNI value."""
+    normalized = normalizeNetworkValue(value)
+    if normalized in {"kube-ovn", "ovn"}:
+        return "kube-ovn"
+    return normalized or "macvlan"
+
+
+def loadCompileNetworking(output_dir: Path) -> dict[str, Any]:
+    """Read output/networking.yaml written by the compiler, if present."""
+    metadata_path = output_dir / "networking.yaml"
+    if not metadata_path.exists():
+        return {}
+    data = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
+    return data if isinstance(data, dict) else {}
+
+
+def resolveCompileNetworkBackend(
+    compile_networking: dict[str, Any],
+    fallback: str,
+) -> str:
+    """Resolve the backend, giving compile-time CNI metadata priority."""
+    cni_type = normalizeNetworkValue(compile_networking.get("cniType"))
+    network_backend = normalizeNetworkValue(compile_networking.get("networkBackend"))
+    if cni_type:
+        return networkBackendForCni(cni_type)
+    if network_backend:
+        return networkBackendForCni(network_backend)
+    return networkBackendForCni(fallback)
 
 
 def normalizeRole(role: Any) -> str:
@@ -259,8 +299,10 @@ def running_context(config_path: str) -> dict[str, str]:
     cluster_name = str(setup.get("clusterName") or setup.get("cluster_name") or "seedemu-k3s")
     registry_host = resolveRegistryHost(setup, master_node)
     registry_port = str(get_nested(setup, "registry.port", "5000"))
-    fabric_type = str(get_nested(setup, "fabric.type", "none")).strip().lower()
-    network_backend = "kube-ovn" if fabric_type in {"ovn", "kube-ovn"} else "macvlan"
+    fabric_type = normalizeNetworkValue(get_nested(setup, "fabric.type", "none"))
+    compile_networking = loadCompileNetworking(output_dir)
+    default_network_backend = "kube-ovn" if fabric_type in {"ovn", "kube-ovn"} else "macvlan"
+    network_backend = resolveCompileNetworkBackend(compile_networking, default_network_backend)
     manifest_path = resolveManifestPath(running, output_dir, network_backend)
     default_cni_master = (
         str(get_nested(setup, "fabric.bridgeName", "br-seedemu"))
@@ -270,10 +312,32 @@ def running_context(config_path: str) -> dict[str, str]:
     attached_cni_type = str(
         get_nested(
             setup,
-            "cni.localLinkCniType",
-            get_nested(setup, "fabric.attachedCniType", os.environ.get("SEED_LOCAL_LINK_CNI_TYPE", "kube-ovn")),
+            "cni.attachedCniType",
+            get_nested(
+                setup,
+                "cni.localLinkCniType",
+                get_nested(
+                    setup,
+                    "fabric.attachedCniType",
+                    os.environ.get("SEED_LOCAL_LINK_CNI_TYPE", "kube-ovn"),
+                ),
+            ),
         )
     )
+    compile_cni_type = normalizeNetworkValue(compile_networking.get("cniType"))
+    if compile_cni_type and network_backend != "kube-ovn":
+        attached_cni_type = compile_cni_type
+    raw_cni_mtu = get_nested(
+        setup,
+        "cni.mtu",
+        get_nested(setup, "fabric.mtu", compile_networking.get("cniMtu", 1400)),
+    )
+    try:
+        cni_mtu = int(raw_cni_mtu or 1400)
+    except (TypeError, ValueError) as exc:
+        raise SystemExit(f"CNI MTU must be an integer, got {raw_cni_mtu!r}") from exc
+    if cni_mtu < 576 or cni_mtu > 65535:
+        raise SystemExit(f"CNI MTU must be in range 576..65535, got {cni_mtu}")
     return {
         "setupConfig": str(setup_config_path),
         "outputDir": str(output_dir),
@@ -297,6 +361,7 @@ def running_context(config_path: str) -> dict[str, str]:
         "sshKey": resolveSshKey(setup, master_node),
         "masterConnection": str((master_node or {}).get("connection") or "ssh"),
         "cniMasterInterface": str(get_nested(setup, "cni.defaultMasterInterface", default_cni_master)),
+        "cniMtu": str(cni_mtu),
         "networkBackend": network_backend,
         "attachedCniType": attached_cni_type,
         "rolloutTimeoutSeconds": str(running.get("rolloutTimeoutSeconds") or "1800"),
@@ -454,6 +519,7 @@ def render_kustomization(args: argparse.Namespace) -> None:
         args.registry_prefix: Real registry host:port.
         args.network_backend: "macvlan" or "kube-ovn".
         args.cni_master_interface: Optional macvlan parent interface override.
+        args.cni_mtu: Macvlan interface MTU selected by the deployment config.
         args.output: Destination kustomization.yaml.
     """
     registry = args.registry_prefix.rstrip("/")
@@ -475,11 +541,16 @@ def render_kustomization(args: argparse.Namespace) -> None:
                 rendered_manifest,
                 attached_cni_type=args.attached_cni_type,
                 cni_master_interface=args.cni_master_interface,
+                cni_mtu=args.cni_mtu,
             )
         payload = {"resources": [rendered_manifest.name], "images": images}
     else:
         payload = {"resources": namespaceResources(manifest_path, output_path.parent) + ["k8s.yaml"], "images": images}
-        patches = networkAttachmentPatches(args.manifest, args.cni_master_interface)
+        patches = networkAttachmentPatches(
+            args.manifest,
+            args.cni_master_interface,
+            args.cni_mtu,
+        )
         if patches:
             payload["patches"] = patches
     output_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
@@ -490,6 +561,7 @@ def renderKubeOvnManifest(
     output_path: Path,
     attached_cni_type: str | None = None,
     cni_master_interface: str | None = None,
+    cni_mtu: int | None = None,
 ) -> None:
     """Render a SeedEMU manifest that uses Kube-OVN managed secondary networks.
 
@@ -500,6 +572,7 @@ def renderKubeOvnManifest(
             attached NICs; ``macvlan`` keeps macvlan dataplane and uses
             Kube-OVN only for IPAM.
         cni_master_interface: Optional macvlan master interface override.
+        cni_mtu: Optional macvlan interface MTU override.
 
     The compiler emits macvlan NADs plus Multus network-selection annotations
     with static `ips` values in CIDR form. The renderer creates matching
@@ -532,6 +605,7 @@ def renderKubeOvnManifest(
                 vpc_name,
                 attached_cni,
                 cni_master_interface,
+                cni_mtu,
             )
             rendered.extend(converted)
             continue
@@ -631,6 +705,7 @@ def convertNetworkAttachmentToKubeOvn(
     vpc_name: str,
     attached_cni_type: str,
     cni_master_interface: str | None,
+    cni_mtu: int | None,
 ) -> list[dict[str, Any]]:
     """Return [Subnet, NAD] for one compiler-generated macvlan NAD.
 
@@ -640,6 +715,7 @@ def convertNetworkAttachmentToKubeOvn(
         vpc_name: Namespace-scoped Kube-OVN VPC name.
         attached_cni_type: Secondary CNI type, for example kube-ovn or macvlan.
         cni_master_interface: Optional macvlan parent interface override.
+        cni_mtu: Optional macvlan interface MTU override.
     """
     metadata = doc.get("metadata") or {}
     nad_name = str(metadata.get("name") or "")
@@ -672,7 +748,15 @@ def convertNetworkAttachmentToKubeOvn(
         subnet["spec"]["gatewayType"] = "distributed"
 
     converted = dict(doc)
-    converted["spec"] = {"config": renderConvertedNadConfig(doc, provider, attached_cni_type, cni_master_interface)}
+    converted["spec"] = {
+        "config": renderConvertedNadConfig(
+            doc,
+            provider,
+            attached_cni_type,
+            cni_master_interface,
+            cni_mtu,
+        )
+    }
     return [subnet, converted]
 
 
@@ -681,6 +765,7 @@ def renderConvertedNadConfig(
     provider: str,
     attached_cni_type: str,
     cni_master_interface: str | None,
+    cni_mtu: int | None,
 ) -> str:
     """Return NetworkAttachmentDefinition spec.config for the selected CNI.
 
@@ -689,6 +774,7 @@ def renderConvertedNadConfig(
         provider: Kube-OVN provider string used to match the Subnet.
         attached_cni_type: Secondary CNI type, for example kube-ovn or macvlan.
         cni_master_interface: Optional macvlan parent interface override.
+        cni_mtu: Optional macvlan interface MTU override.
     """
     if isKubeOvnAttachedCni(attached_cni_type):
         config = {
@@ -707,11 +793,27 @@ def renderConvertedNadConfig(
         config = {}
     if not isinstance(config, dict):
         config = {}
+    metadata = doc.get("metadata") or {}
     config.setdefault("cniVersion", "0.3.1")
     config["type"] = attached_cni_type
     if attached_cni_type == "macvlan":
-        if cni_master_interface:
-            config["master"] = cni_master_interface
+        annotations = (
+            metadata.get("annotations")
+            if isinstance(metadata.get("annotations"), dict)
+            else {}
+        )
+        # The deployment YAML describes the selected cluster and therefore
+        # overrides the compile-time placeholder stored in the manifest.
+        base_interface = str(
+            cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or ""
+        ).strip()
+        if base_interface:
+            config["master"] = macvlanMasterForVlan(
+                base_interface,
+                readNadVlanId(metadata),
+            )
+        if cni_mtu is not None:
+            config["mtu"] = cni_mtu
         config.setdefault("mode", "bridge")
     config["ipam"] = {
         "type": "kube-ovn",
@@ -847,18 +949,23 @@ def firstUsableIp(cidr: str) -> str:
         return str(network.network_address)
 
 
-def networkAttachmentPatches(manifest_path: str, cni_master_interface: str) -> list[dict[str, Any]]:
-    """Return kustomize JSON6902 patches for NetworkAttachmentDefinition master.
+def networkAttachmentPatches(
+    manifest_path: str,
+    cni_master_interface: str,
+    cni_mtu: int | None = None,
+) -> list[dict[str, Any]]:
+    """Return deployment-specific kustomize patches for macvlan NADs.
 
     Args:
         manifest_path: Source k8s.yaml path.
         cni_master_interface: Physical parent interface for macvlan networks.
+        cni_mtu: Optional macvlan interface MTU override.
 
     Compile output is intentionally registry/fabric agnostic. The running
-    stage rewrites only the macvlan parent interface, leaving the original
-    k8s.yaml untouched and making physical/KVM deployments selectable by YAML.
+    stage rewrites the macvlan parent and MTU, leaving the original k8s.yaml
+    untouched and making physical/KVM deployments selectable by YAML.
     """
-    if not cni_master_interface:
+    if not cni_master_interface and cni_mtu is None:
         return []
     patches: list[dict[str, Any]] = []
     with open(manifest_path, "r", encoding="utf-8") as fh:
@@ -879,9 +986,30 @@ def networkAttachmentPatches(manifest_path: str, cni_master_interface: str) -> l
                 continue
             if not isinstance(cni_config, dict) or cni_config.get("type") != "macvlan":
                 continue
-            if cni_config.get("master") == cni_master_interface:
+            annotations = (
+                metadata.get("annotations")
+                if isinstance(metadata.get("annotations"), dict)
+                else {}
+            )
+            vlan_id = readNadVlanId(metadata)
+            # Prefer the deployment-stage value selected by configK3s.yaml.
+            base_interface = str(
+                cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or ""
+            ).strip()
+            target_master = (
+                macvlanMasterForVlan(base_interface, vlan_id)
+                if vlan_id
+                else base_interface
+            )
+            changed = False
+            if target_master and cni_config.get("master") != target_master:
+                cni_config["master"] = target_master
+                changed = True
+            if cni_mtu is not None and cni_config.get("mtu") != cni_mtu:
+                cni_config["mtu"] = cni_mtu
+                changed = True
+            if not changed:
                 continue
-            cni_config["master"] = cni_master_interface
             target = {
                 "group": "k8s.cni.cncf.io",
                 "version": "v1",
@@ -900,6 +1028,257 @@ def networkAttachmentPatches(manifest_path: str, cni_master_interface: str) -> l
             ]
             patches.append({"target": target, "patch": yaml.safe_dump(patch, sort_keys=False)})
     return patches
+
+
+def readNadVlanId(metadata: dict[str, Any]) -> int | None:
+    """Return the VLAN ID annotation from one NAD metadata block."""
+    annotations = metadata.get("annotations") if isinstance(metadata.get("annotations"), dict) else {}
+    raw = annotations.get(VLAN_ID_ANNOTATION)
+    if raw in (None, ""):
+        return None
+    try:
+        vlan_id = int(str(raw))
+    except ValueError as exc:
+        name = metadata.get("name") or "<unknown>"
+        raise SystemExit(f"NAD {name} has invalid VLAN ID annotation {raw!r}") from exc
+    if vlan_id < 1 or vlan_id > 4094:
+        name = metadata.get("name") or "<unknown>"
+        raise SystemExit(f"NAD {name} VLAN ID must be in 1..4094, got {vlan_id}")
+    return vlan_id
+
+
+def macvlanMasterForVlan(base_interface: str, vlan_id: int | None) -> str:
+    """Return the host interface name used by a macvlan NAD."""
+    base = str(base_interface or "").strip()
+    if vlan_id is None:
+        return base
+    if not base:
+        raise SystemExit("macvlan VLAN mode requires cni.defaultMasterInterface or --cni-master-interface")
+    return f"{base}.{vlan_id}"
+
+
+def macvlan_vlan_interfaces(args: argparse.Namespace) -> None:
+    """Print VLAN subinterfaces required by macvlan NADs as TSV rows."""
+    records: dict[tuple[str, int], dict[str, str]] = {}
+    with open(args.manifest, "r", encoding="utf-8") as fh:
+        for doc in yaml.safe_load_all(fh):
+            if not isinstance(doc, dict) or doc.get("kind") != "NetworkAttachmentDefinition":
+                continue
+            metadata = doc.get("metadata") or {}
+            vlan_id = readNadVlanId(metadata)
+            if vlan_id is None:
+                continue
+            spec = doc.get("spec") or {}
+            raw_config = spec.get("config")
+            try:
+                cni_config = json.loads(raw_config) if isinstance(raw_config, str) else {}
+            except json.JSONDecodeError:
+                cni_config = {}
+            annotations = metadata.get("annotations") if isinstance(metadata.get("annotations"), dict) else {}
+            base_interface = str(args.cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or "").strip()
+            if not base_interface:
+                master = str(cni_config.get("master") or annotations.get(VLAN_MASTER_ANNOTATION) or "")
+                suffix = f".{vlan_id}"
+                base_interface = master[: -len(suffix)] if master.endswith(suffix) else master
+            interface_name = macvlanMasterForVlan(base_interface, vlan_id)
+            key = (base_interface, vlan_id)
+            records[key] = {
+                "interface": interface_name,
+                "base": base_interface,
+                "vlan": str(vlan_id),
+                "namespace": str(metadata.get("namespace") or ""),
+                "name": str(metadata.get("name") or ""),
+            }
+    for _, record in sorted(records.items(), key=lambda item: (item[0][0], item[0][1])):
+        print("\t".join([record["interface"], record["base"], record["vlan"], record["namespace"], record["name"]]))
+
+
+def _macvlan_vlan_record_for_nad(doc: dict[str, Any], cni_master_interface: str) -> dict[str, str] | None:
+    """Return one VLAN parent record for a VLAN-backed NAD, or None."""
+    metadata = doc.get("metadata") or {}
+    vlan_id = readNadVlanId(metadata)
+    if vlan_id is None:
+        return None
+    spec = doc.get("spec") or {}
+    raw_config = spec.get("config")
+    try:
+        cni_config = json.loads(raw_config) if isinstance(raw_config, str) else {}
+    except json.JSONDecodeError:
+        cni_config = {}
+    annotations = metadata.get("annotations") if isinstance(metadata.get("annotations"), dict) else {}
+    base_interface = str(cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or "").strip()
+    if not base_interface:
+        master = str(cni_config.get("master") or annotations.get(VLAN_MASTER_ANNOTATION) or "")
+        suffix = f".{vlan_id}"
+        base_interface = master[: -len(suffix)] if master.endswith(suffix) else master
+    interface_name = macvlanMasterForVlan(base_interface, vlan_id)
+    bridge_interface = str(annotations.get(VLAN_BRIDGE_ANNOTATION) or cni_config.get("bridge") or "").strip()
+    return {
+        "interface": interface_name,
+        "base": base_interface,
+        "vlan": str(vlan_id),
+        "bridge": bridge_interface,
+        "namespace": str(metadata.get("namespace") or ""),
+        "name": str(metadata.get("name") or ""),
+    }
+
+
+def _load_macvlan_vlan_nads(manifest: str, cni_master_interface: str) -> dict[tuple[str, str], dict[str, str]]:
+    """Return VLAN-backed NAD records keyed by (namespace, name) and ("", name)."""
+    records: dict[tuple[str, str], dict[str, str]] = {}
+    with open(manifest, "r", encoding="utf-8") as fh:
+        for doc in yaml.safe_load_all(fh):
+            if not isinstance(doc, dict) or doc.get("kind") != "NetworkAttachmentDefinition":
+                continue
+            record = _macvlan_vlan_record_for_nad(doc, cni_master_interface)
+            if record is None:
+                continue
+            namespace_name = record["namespace"]
+            name = record["name"]
+            if not name:
+                continue
+            records[(namespace_name, name)] = record
+            records[("", name)] = record
+    return records
+
+
+def _node_selector_hostname(spec: dict[str, Any]) -> str:
+    """Return the fixed hostname selector or nodeName from a Pod spec."""
+    node_name = spec.get("nodeName")
+    if isinstance(node_name, str) and node_name.strip():
+        return node_name.strip()
+    selector = spec.get("nodeSelector")
+    if isinstance(selector, dict):
+        value = selector.get("kubernetes.io/hostname")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _workload_pod_template(doc: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], str]:
+    """Return (template_metadata, pod_spec, namespace) for Pod-like workload docs."""
+    kind = str(doc.get("kind") or "")
+    metadata = doc.get("metadata") if isinstance(doc.get("metadata"), dict) else {}
+    namespace_name = str(metadata.get("namespace") or "")
+    if kind == "Pod":
+        pod_spec = doc.get("spec") if isinstance(doc.get("spec"), dict) else {}
+        return metadata, pod_spec, namespace_name
+    if kind not in {"Deployment", "StatefulSet", "DaemonSet", "Job", "ReplicaSet"}:
+        return {}, {}, namespace_name
+    spec = doc.get("spec") if isinstance(doc.get("spec"), dict) else {}
+    template = spec.get("template") if isinstance(spec.get("template"), dict) else {}
+    template_metadata = template.get("metadata") if isinstance(template.get("metadata"), dict) else {}
+    pod_spec = template.get("spec") if isinstance(template.get("spec"), dict) else {}
+    return template_metadata, pod_spec, namespace_name
+
+
+def _network_attachment_names(raw: str) -> list[tuple[str, str]]:
+    """Parse a Multus networks annotation into (namespace, name) references."""
+    value = raw.strip()
+    if not value:
+        return []
+    refs: list[tuple[str, str]] = []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        parsed = None
+    if isinstance(parsed, list):
+        for item in parsed:
+            if isinstance(item, dict):
+                name = str(item.get("name") or "").strip()
+                namespace_name = str(item.get("namespace") or "").strip()
+                if name:
+                    refs.append((namespace_name, name))
+            elif isinstance(item, str) and item.strip():
+                refs.extend(_network_attachment_names(item))
+        return refs
+    if isinstance(parsed, dict):
+        name = str(parsed.get("name") or "").strip()
+        namespace_name = str(parsed.get("namespace") or "").strip()
+        return [(namespace_name, name)] if name else []
+
+    for token in value.split(","):
+        item = token.strip()
+        if not item:
+            continue
+        if "@" in item:
+            item = item.split("@", 1)[0].strip()
+        namespace_name = ""
+        name = item
+        if "/" in item:
+            namespace_name, name = [part.strip() for part in item.split("/", 1)]
+        if name:
+            refs.append((namespace_name, name))
+    return refs
+
+
+def macvlan_vlan_interfaces_by_node(args: argparse.Namespace) -> None:
+    """Print node-specific VLAN parent rows needed by scheduled workload Pods."""
+    nodes = [node for node in args.nodes if node]
+    all_nodes = set(nodes)
+    nad_records = _load_macvlan_vlan_nads(args.manifest, args.cni_master_interface)
+    if not nad_records:
+        return
+
+    by_node: dict[str, dict[tuple[str, int], dict[str, str]]] = {node: {} for node in nodes}
+    saw_workload_network = False
+    with open(args.manifest, "r", encoding="utf-8") as fh:
+        for doc in yaml.safe_load_all(fh):
+            if not isinstance(doc, dict):
+                continue
+            template_metadata, pod_spec, workload_namespace = _workload_pod_template(doc)
+            if not template_metadata and not pod_spec:
+                continue
+            annotations = template_metadata.get("annotations") if isinstance(template_metadata.get("annotations"), dict) else {}
+            networks_raw = annotations.get("k8s.v1.cni.cncf.io/networks")
+            if not isinstance(networks_raw, str) or not networks_raw.strip():
+                continue
+            refs = _network_attachment_names(networks_raw)
+            records: list[dict[str, str]] = []
+            for namespace_name, name in refs:
+                key_namespace = namespace_name or workload_namespace
+                record = nad_records.get((key_namespace, name)) or nad_records.get(("", name))
+                if record is not None:
+                    records.append(record)
+            if not records:
+                continue
+            saw_workload_network = True
+            fixed_node = _node_selector_hostname(pod_spec)
+            target_nodes = [fixed_node] if fixed_node in all_nodes else nodes
+            for node in target_nodes:
+                node_records = by_node.setdefault(node, {})
+                for record in records:
+                    key = (record["base"], int(record["vlan"]))
+                    node_records[key] = record
+
+    if not saw_workload_network:
+        # Safety fallback for non-standard manifests: create every VLAN parent
+        # on every node rather than risking a missing CNI master link.
+        unique_records = {
+            (record["base"], int(record["vlan"]), record["namespace"], record["name"]): record
+            for record in nad_records.values()
+        }
+        for node in nodes:
+            node_records = by_node.setdefault(node, {})
+            for record in unique_records.values():
+                key = (record["base"], int(record["vlan"]))
+                node_records[key] = record
+
+    for node in sorted(by_node):
+        for _, record in sorted(by_node[node].items(), key=lambda item: (item[0][0], item[0][1])):
+            print(
+                "\t".join(
+                    [
+                        node,
+                        record["interface"],
+                        record["base"],
+                        record["vlan"],
+                        record.get("bridge") or "-",
+                        record["namespace"],
+                        record["name"],
+                    ]
+                )
+            )
 
 
 def deployment_names(args: argparse.Namespace) -> None:
@@ -989,9 +1368,21 @@ def main() -> int:
     kustomization.add_argument("--registry-prefix", required=True)
     kustomization.add_argument("--network-backend", default="macvlan")
     kustomization.add_argument("--cni-master-interface", default="")
+    kustomization.add_argument("--cni-mtu", type=int, default=None)
     kustomization.add_argument("--attached-cni-type", default=None)
     kustomization.add_argument("--output", required=True)
     kustomization.set_defaults(func=render_kustomization)
+
+    vlans = subparsers.add_parser("macvlan-vlan-interfaces")
+    vlans.add_argument("--manifest", required=True)
+    vlans.add_argument("--cni-master-interface", default="")
+    vlans.set_defaults(func=macvlan_vlan_interfaces)
+
+    vlans_by_node = subparsers.add_parser("macvlan-vlan-interfaces-by-node")
+    vlans_by_node.add_argument("--manifest", required=True)
+    vlans_by_node.add_argument("--cni-master-interface", default="")
+    vlans_by_node.add_argument("--nodes", nargs="*", default=[])
+    vlans_by_node.set_defaults(func=macvlan_vlan_interfaces_by_node)
 
     deployments = subparsers.add_parser("deployment-names")
     deployments.add_argument("--manifest", required=True)

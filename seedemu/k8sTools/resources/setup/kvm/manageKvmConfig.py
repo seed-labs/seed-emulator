@@ -5,10 +5,14 @@ import argparse
 import os
 import re
 import shlex
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from normalizeResources import normalizeMemory
 
 
 SETUP_DIR = Path(__file__).resolve().parent
@@ -48,6 +52,7 @@ def normalize_config(data: dict[str, Any]) -> None:
     for section in ("master", "workers"):
         value = data.get(section)
         if isinstance(value, dict):
+            normalizeMemory(value)
             aliases = {"memoryMb": "memory_mb", "diskGb": "disk_gb", "namePrefix": "name_prefix"}
             for new_key, old_key in aliases.items():
                 if new_key in value and old_key not in value:
@@ -65,6 +70,7 @@ def normalize_config(data: dict[str, Any]) -> None:
             "bootTimeoutSeconds": "boot_timeout_seconds",
             "allowExisting": "allow_existing",
             "skipK3sConfig": "skip_k3s_config",
+            "prepareImageCache": "prepare_image_cache",
         }
         for new_key, old_key in aliases.items():
             if new_key in kvm and old_key not in kvm:
@@ -75,6 +81,41 @@ def normalize_config(data: dict[str, Any]) -> None:
         for new_key, old_key in aliases.items():
             if new_key in outputs and old_key not in outputs:
                 outputs[old_key] = outputs[new_key]
+
+
+def kvm_extra_networks(data: dict[str, Any]) -> list[dict[str, str]]:
+    """Return normalized extra libvirt networks attached to every KVM guest.
+
+    Args:
+        data: Parsed kvm.yaml or kvmState.yaml mapping.
+    """
+    raw = get_nested(data, "kvm.extra_networks", []) or []
+    if not isinstance(raw, list):
+        raise SystemExit("kvm.extraNetworks must be a list when provided")
+
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise SystemExit(f"kvm.extraNetworks[{index}] must be a mapping")
+        name = str(item.get("name") or item.get("network") or "").strip()
+        if not name:
+            raise SystemExit(f"kvm.extraNetworks[{index}] requires name or network")
+        if name in seen:
+            raise SystemExit(f"duplicate kvm.extraNetworks name: {name}")
+        seen.add(name)
+        out.append(
+            {
+                "name": name,
+                "bridge": str(item.get("bridge") or "").strip(),
+                "model": str(item.get("model") or "virtio").strip() or "virtio",
+                "trunk": str(item.get("trunk") or "").strip(),
+                "masterInterface": str(
+                    item.get("masterInterface") or item.get("master_interface") or ""
+                ).strip(),
+            }
+        )
+    return out
 
 
 def get_nested(data: dict[str, Any], path: str, default: Any = None) -> Any:
@@ -138,7 +179,12 @@ def default_seedemu_docker_dir() -> str:
 def normalize_node(node: dict[str, Any], defaults: dict[str, Any] | None = None) -> dict[str, Any]:
     defaults = defaults or {}
     out = dict(defaults)
+    normalizeMemory(out)
+    node = dict(node)
+    normalizeMemory(node)
     out.update(node)
+    if "memoryMb" in out:
+        out["memory_mb"] = out["memoryMb"]
     required = ["name", "role", "ip", "mac", "vcpus", "memory_mb", "disk_gb"]
     missing = [key for key in required if key not in out or out[key] in ("", None)]
     if missing:
@@ -432,6 +478,7 @@ def kvm_env(args: argparse.Namespace) -> None:
         "kvmBootTimeoutSeconds": get_nested(data, "kvm.boot_timeout_seconds", 300),
         "kvmAllowExisting": str(get_nested(data, "kvm.allow_existing", False)).lower(),
         "kvmSkipK3sConfig": str(get_nested(data, "kvm.skip_k3s_config", False)).lower(),
+        "kvmPrepareImageCache": str(get_nested(data, "kvm.prepare_image_cache", True)).lower(),
         "sshUser": get_nested(data, "ssh.user", "ubuntu"),
         "sshKey": expand_path(str(get_nested(data, "ssh.key", "~/.ssh/id_ed25519"))),
         "masterName": master["name"] if master else "",
@@ -452,6 +499,18 @@ def kvm_env(args: argparse.Namespace) -> None:
     }
     for key, value in values.items():
         print(f"{key}={shlex.quote(str(value))}")
+
+
+def extra_networks_tsv(args: argparse.Namespace) -> None:
+    """Print kvm.yaml extra networks as TSV for shell scripts."""
+    for item in kvm_extra_networks(load_config(args.config)):
+        print("\t".join(str(item[key]) for key in ("name", "bridge", "model", "trunk", "masterInterface")))
+
+
+def extra_network_args(args: argparse.Namespace) -> None:
+    """Print virt-install --network argument values for extra KVM networks."""
+    for item in kvm_extra_networks(load_config(args.config)):
+        print(f"network={item['name']},model={item['model']}")
 
 
 def nodes_tsv(args: argparse.Namespace) -> None:
@@ -683,6 +742,9 @@ def write_kvm_state(args: argparse.Namespace) -> None:
         },
         "nodes": resolved_nodes,
     }
+    extra_networks = kvm_extra_networks(data)
+    if extra_networks:
+        payload["kvm"]["extraNetworks"] = extra_networks
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
     print(output)
@@ -732,6 +794,12 @@ def state_vars(args: argparse.Namespace) -> None:
         print(f"{key}={shlex.quote(str(value))}")
 
 
+def state_extra_networks_tsv(args: argparse.Namespace) -> None:
+    """Print kvmState.yaml extra networks as TSV."""
+    for item in kvm_extra_networks(load_kvm_state(args.state)):
+        print("\t".join(str(item[key]) for key in ("name", "bridge", "model", "trunk", "masterInterface")))
+
+
 def validate_kvm_state(args: argparse.Namespace) -> None:
     """Validate that an existing kvmState.yaml still matches kvm.yaml.
 
@@ -760,6 +828,13 @@ def validate_kvm_state(args: argparse.Namespace) -> None:
         raise SystemExit(
             "kvmState.yaml node plan does not match current kvm.yaml. "
             f"expected={signature(expected)} resolved={signature(resolved)}"
+        )
+    expected_extra_networks = kvm_extra_networks(data)
+    resolved_extra_networks = kvm_extra_networks(load_kvm_state(args.state))
+    if expected_extra_networks != resolved_extra_networks:
+        raise SystemExit(
+            "kvmState.yaml extraNetworks do not match current kvm.yaml. "
+            f"expected={expected_extra_networks} resolved={resolved_extra_networks}"
         )
 
 
@@ -823,6 +898,10 @@ def main() -> int:
     kvm_env_parser = sub.add_parser("kvm-vars")
     kvm_env_parser.add_argument("--existing-tsv")
     kvm_env_parser.set_defaults(func=kvm_env)
+    extra_networks = sub.add_parser("extra-networks-tsv")
+    extra_networks.set_defaults(func=extra_networks_tsv)
+    extra_network_args_parser = sub.add_parser("extra-network-args")
+    extra_network_args_parser.set_defaults(func=extra_network_args)
     nodes_parser = sub.add_parser("nodes-tsv")
     nodes_parser.add_argument("--existing-tsv")
     nodes_parser.set_defaults(func=nodes_tsv)
@@ -843,6 +922,9 @@ def main() -> int:
     state_env = sub.add_parser("state-vars")
     state_env.add_argument("--state", required=True)
     state_env.set_defaults(func=state_vars)
+    state_extra_networks = sub.add_parser("state-extra-networks-tsv")
+    state_extra_networks.add_argument("--state", required=True)
+    state_extra_networks.set_defaults(func=state_extra_networks_tsv)
     validate = sub.add_parser("validate-kvm-state")
     validate.add_argument("--state", required=True)
     validate.set_defaults(func=validate_kvm_state)

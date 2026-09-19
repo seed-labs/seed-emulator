@@ -2,11 +2,14 @@
 """Compile a small SeedEMU Internet topology to native Kubernetes manifests.
 
 Outputs are written to ./output by default:
-- k8s.kube-ovn.yaml: Kubernetes namespace, Kube-OVN Vpc/Subnet,
-  NetworkAttachmentDefinitions, Deployments.
-- images.yaml: image build contexts consumed by the generated running/ stage.
+- k8s.yaml: Kubernetes namespace, macvlan NetworkAttachmentDefinitions,
+  and Deployments.
+- images.yaml: image references and build contexts consumed by the running
+  stage.
 - per-node Docker build contexts and optional base_images/ contexts.
-Default CNI is kube-ovn. Use --cni-type macvlan for macvlan manifests.
+The default is macvlan+VLAN with MTU 1400: every SeedEMU network gets its own
+VLAN parent subinterface. The deployment-stage YAML selects the parent
+interface. Kube-OVN remains available through --cni-type kube-ovn.
 """
 
 from __future__ import annotations
@@ -60,8 +63,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cni-type",
         choices=("kube-ovn", "ovn", "macvlan"),
-        default="kube-ovn",
-        help="Secondary CNI backend for SeedEMU links. Defaults to kube-ovn.",
+        default="macvlan",
+        help="Secondary CNI backend for SeedEMU links. Defaults to macvlan+VLAN.",
+    )
+    parser.add_argument(
+        "--macvlan-vlan-start",
+        type=int,
+        default=100,
+        help="First VLAN ID for --cni-type macvlan. Each SeedEMU network gets one VLAN.",
+    )
+    parser.add_argument(
+        "--cni-mtu",
+        type=int,
+        default=1400,
+        help="MTU for generated macvlan interfaces. Defaults to 1400.",
+    )
+    parser.add_argument(
+        "--no-macvlan-vlan",
+        action="store_true",
+        help="Disable per-network VLAN subinterfaces for macvlan output.",
     )
     return parser.parse_args()
 
@@ -134,7 +154,14 @@ def main() -> int:
         output_dir = (SCRIPT_DIR / output_dir).resolve()
     platform = Platform.AMD64 if args.platform == "amd64" else Platform.ARM64
 
-    compiler = KubernetesCompiler(platform=platform, cni_type=args.cni_type)
+    use_macvlan_vlan = args.cni_type == "macvlan" and not args.no_macvlan_vlan
+    compiler = KubernetesCompiler(
+        platform=platform,
+        cni_type=args.cni_type,
+        cni_mtu=args.cni_mtu,
+        macvlan_vlan_mode=use_macvlan_vlan,
+        macvlan_vlan_id_start=args.macvlan_vlan_start,
+    )
 
     emu = build_mini_internet(hosts_per_as=HOSTS_PER_AS)
     emu.compile(compiler, str(output_dir), override=True)
@@ -147,6 +174,9 @@ def main() -> int:
     print("Image registry prefix: seedemu")
     print("Namespace: seedemu")
     print(f"CNI type: {args.cni_type}")
+    print("CNI master interface: selected from the deployment YAML during up")
+    print(f"CNI MTU: {args.cni_mtu}")
+    print(f"Macvlan VLAN mode: {use_macvlan_vlan}")
     print("Runtime workflow: seedemu.k8sTools")
     print("Inventory required for compile: no")
     return 0
