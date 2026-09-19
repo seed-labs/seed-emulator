@@ -1,0 +1,43 @@
+kind: physical
+clusterName: seedemu-b61-physical
+
+nodes:
+  - name: amd
+    role: master
+    ip: 10.202.236.88
+    connection: local
+    ssh:
+      user: lxl
+      key: ~/.ssh/id_ed25519
+  - name: idc
+    role: worker
+    ip: 10.202.191.39
+    connection: ssh
+    ssh:
+      user: seed
+      key: ~/.ssh/id_ed25519
+
+fabric:
+  type: linux-vxlan
+  bridgeName: br-seedemu
+  vxlanName: vxseed0
+  vni: 4242
+  dstPort: 4789
+  mtu: 1400
+  nodes:
+    amd:
+      underlayInterface: eno8403
+    idc:
+      underlayInterface: enp101s0f1np1
+
+cni:
+  cniType: macvlan
+  localLinkCniType: macvlan
+  attachedCniType: macvlan
+  defaultMasterInterface: br-seedemu
+
+k3s:
+  version: v1.29.15+k3s1
+
+registry:
+  port: 5000

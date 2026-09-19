@@ -135,7 +135,14 @@ jobs:
             examples/blockchain/D22_oracle/test_runtime.py \
             examples/blockchain/D23_validator/validator.py \
             examples/blockchain/D23_validator/test_runtime.py \
-            examples/blockchain/D23_validator/test_vc_at_running.py
+            examples/blockchain/D23_validator/test_vc_at_running.py \
+            seedemu/compiler/kubernetes.py \
+            seedemu/k8sTools/resources/running/manageK8sManifest.py \
+            seedemu/k8sTools/resources/running/manageRunningStage.py \
+            seedemu/k8sTools/resources/setup/kvm/manageKvmConfig.py \
+            seedemu/k8sTools/resources/setup/multiHostKvm/manageMultiHostKvmConfig.py \
+            examples/internet/b61_k8s_compile/mini_internet_k8s.py \
+            examples/internet/b61_k8s_compile/test_compile.py
 
       - name: Validate selected example manifests
         run: |
@@ -158,6 +165,33 @@ jobs:
           python seedemu/testing/cli.py clean examples/blockchain/D21_deploy_contract/example.yaml
           python seedemu/testing/cli.py clean examples/blockchain/D22_oracle/example.yaml
           python seedemu/testing/cli.py clean examples/blockchain/D23_validator/example.yaml
+
+      - name: Compile and validate KubernetesCompiler artifacts
+        run: |
+          source development.env
+          python seedemu/testing/cli.py clean \
+            examples/internet/b61_k8s_compile/example.yaml \
+            --artifact-dir ci-artifacts/B61-kubernetes-compiler-static
+          python seedemu/testing/cli.py compile \
+            examples/internet/b61_k8s_compile/example.yaml \
+            --artifact-dir ci-artifacts/B61-kubernetes-compiler-static
+          python seedemu/testing/cli.py test \
+            examples/internet/b61_k8s_compile/example.yaml \
+            --artifact-dir ci-artifacts/B61-kubernetes-compiler-static
+
+      - name: Clean KubernetesCompiler output
+        if: always()
+        run: |
+          python seedemu/testing/cli.py clean \
+            examples/internet/b61_k8s_compile/example.yaml
+
+      - name: Upload KubernetesCompiler static artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: kubernetes-compiler-static-artifacts
+          path: ci-artifacts/B61-kubernetes-compiler-static
+          if-no-files-found: warn
 
   compile-selected-examples:
     name: Compile ${{ matrix.example.code }}

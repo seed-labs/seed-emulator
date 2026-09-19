@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import os
+import signal
 import shlex
 import subprocess
 import tempfile
@@ -14,6 +16,7 @@ from .config import (
     loadYaml,
     makeKvmConfig,
     makeMultiHostKvmConfig,
+    normalizeKind,
     resolvePath,
     setOutputPaths,
     writeYaml,
@@ -30,6 +33,51 @@ def runCommand(args: list[str], *, cwd: str | Path | None = None) -> subprocess.
     """
     print("+ " + shlex.join(args))
     return subprocess.run(args, cwd=str(cwd) if cwd is not None else None, check=True)
+
+
+def readOptionalPositiveIntEnv(name: str) -> int | None:
+    """Return a positive integer environment variable, or None when unset."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    value = int(raw)
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
+def runCommandWithTimeout(
+    args: list[str],
+    *,
+    cwd: str | Path | None = None,
+    timeout: int,
+) -> subprocess.CompletedProcess:
+    """Run a command in its own process group and kill that group on timeout."""
+    print("+ " + shlex.join(args))
+    process = subprocess.Popen(
+        args,
+        cwd=str(cwd) if cwd is not None else None,
+        start_new_session=True,
+    )
+    try:
+        returncode = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait()
+        raise subprocess.TimeoutExpired(args, timeout) from exc
+    if returncode != 0:
+        raise subprocess.CalledProcessError(returncode, args)
+    return subprocess.CompletedProcess(args, returncode)
 
 
 @contextmanager
@@ -111,12 +159,12 @@ def buildCluster(
     with temporaryWorkDir("seedemu-k8s-tools-build-", keep_temp) as root:
         setup_dir = copyTree("setup", root / "setup", overwrite=True)
         chmodScripts(setup_dir)
-        if kind == "kvmOvn":
-            _buildKvmOvn(setup_dir, input_path, config_path, kubeconfig_path, inventory_path)
-        elif kind == "multiHostKvmOvn":
-            _buildMultiHostKvmOvn(setup_dir, input_path, config_path, kubeconfig_path, inventory_path)
-        elif kind == "physicalOvn":
-            _buildPhysicalOvn(setup_dir, input_path, config_path, kubeconfig_path, inventory_path)
+        if kind == "kvm":
+            _buildKvm(setup_dir, input_path, config_path, kubeconfig_path, inventory_path)
+        elif kind == "multiHostKvm":
+            _buildMultiHostKvm(setup_dir, input_path, config_path, kubeconfig_path, inventory_path)
+        elif kind == "physical":
+            _buildPhysical(setup_dir, input_path, config_path, kubeconfig_path, inventory_path)
         else:
             raise ValueError(f"unsupported kind: {kind}")
 
@@ -215,7 +263,7 @@ def cleanWorkload(output_dir: str | Path, kubeconfig: str | Path, *, keep_temp: 
 
 
 def destroyCluster(config_k3s: str | Path, *, keep_temp: bool = False) -> None:
-    """Destroy K3s/OVN and optional KVM resources recorded in configK3s.yaml.
+    """Destroy K3s, its configured fabric, and recorded KVM resources.
 
     Args:
         config_k3s: configK3s.yaml produced by buildCluster().
@@ -224,33 +272,53 @@ def destroyCluster(config_k3s: str | Path, *, keep_temp: bool = False) -> None:
     config_path = resolvePath(config_k3s)
     config = loadYaml(config_path)
     destroy = config.get("k8sTools", {}).get("destroy", {})
-    destroy_type = str(destroy.get("type") or config.get("kind") or "")
-    if not destroy_type:
+    raw_destroy_type = str(destroy.get("type") or config.get("kind") or "")
+    if not raw_destroy_type:
         raise ValueError(f"{config_path} does not contain k8sTools.destroy metadata")
+    destroy_type = normalizeKind(raw_destroy_type, source=f"{config_path} destroy metadata")
     with temporaryWorkDir("seedemu-k8s-tools-destroy-", keep_temp) as root:
         setup_dir = copyTree("setup", root / "setup", overwrite=True)
         chmodScripts(setup_dir)
         temp_config = setup_dir / "configK3s.yaml"
         writeYaml(temp_config, config)
         try:
-            runCommand(["python3", str(setup_dir / "destroyPhysicalCluster.py"), str(temp_config)], cwd=setup_dir)
-        except subprocess.CalledProcessError:
-            if destroy_type == "physicalOvn":
+            destroy_physical_timeout = readOptionalPositiveIntEnv(
+                "SEED_K8S_DESTROY_PHYSICAL_TIMEOUT_SECONDS"
+            )
+            destroy_physical_cmd = ["python3", str(setup_dir / "destroyPhysicalCluster.py"), str(temp_config)]
+            if destroy_physical_timeout:
+                print(
+                    "[k8sTools] physical K3s cleanup timeout: "
+                    f"{destroy_physical_timeout}s"
+                )
+                runCommandWithTimeout(
+                    destroy_physical_cmd,
+                    cwd=setup_dir,
+                    timeout=destroy_physical_timeout,
+                )
+            else:
+                runCommand(destroy_physical_cmd, cwd=setup_dir)
+        except subprocess.TimeoutExpired:
+            if destroy_type == "physical":
                 raise
-            print("[k8sTools] warning: K3s/OVN cleanup failed; continuing with KVM cleanup")
-        if destroy_type == "kvmOvn":
+            print("[k8sTools] warning: K3s/fabric cleanup timed out; continuing with KVM cleanup")
+        except subprocess.CalledProcessError:
+            if destroy_type == "physical":
+                raise
+            print("[k8sTools] warning: K3s/fabric cleanup failed; continuing with KVM cleanup")
+        if destroy_type == "kvm":
             state = destroy.get("state")
             setup_config = destroy.get("config")
             if not isinstance(state, dict) or not isinstance(setup_config, dict):
-                raise ValueError("kvmOvn destroy requires embedded kvm state and config")
+                raise ValueError("kvm destroy requires embedded KVM state and config")
             writeYaml(setup_dir / "kvm.yaml", setup_config)
             writeYaml(setup_dir / "kvmState.yaml", state)
             runCommand(["python3", str(setup_dir / "kvm" / "destroyKvmVms.py"), str(setup_dir / "kvmState.yaml")], cwd=setup_dir)
             _removeManagedKvmDataDir(state)
-        elif destroy_type == "multiHostKvmOvn":
+        elif destroy_type == "multiHostKvm":
             state = destroy.get("state")
             if not isinstance(state, dict):
-                raise ValueError("multiHostKvmOvn destroy requires embedded multi-host state")
+                raise ValueError("multiHostKvm destroy requires embedded multi-host state")
             writeYaml(setup_dir / "multiHostKvmState.yaml", state)
             runCommand(
                 [
@@ -260,20 +328,20 @@ def destroyCluster(config_k3s: str | Path, *, keep_temp: bool = False) -> None:
                 ],
                 cwd=setup_dir,
             )
-        elif destroy_type == "physicalOvn":
+        elif destroy_type == "physical":
             return
         else:
             raise ValueError(f"unsupported destroy type: {destroy_type}")
 
 
-def _buildKvmOvn(
+def _buildKvm(
     setup_dir: Path,
     input_path: Path,
     config_path: Path,
     kubeconfig_path: Path,
     inventory_path: Path | None,
 ) -> None:
-    """Build a single-hypervisor KVM cluster with Kube-OVN."""
+    """Build a single-hypervisor KVM cluster with the configured fabric."""
     kvm_config = makeKvmConfig(
         config=input_path,
         setup_dir=setup_dir,
@@ -282,36 +350,35 @@ def _buildKvmOvn(
         inventory_path=inventory_path or setup_dir / "cluster.inventory.yaml",
         tmp_dir=setup_dir / "tmp",
     )
-    kvm_config.setdefault("fabric", {})["type"] = "ovn"
     _applyOvnK3sDefaults(kvm_config)
     writeYaml(setup_dir / "kvm.yaml", kvm_config)
     runCommand(["python3", str(setup_dir / "kvm" / "prepareHostAssets.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
+    runCommand(["python3", str(setup_dir / "kvm" / "prepareKvmNetworks.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
     runCommand(["python3", str(setup_dir / "kvm" / "createKvmVms.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
     runCommand(["python3", str(setup_dir / "kvm" / "tuneVmLimits.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     runCommand(["python3", str(setup_dir / "applyK3sCluster.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     final_config = loadYaml(setup_dir / "configK3s.yaml")
     addK8sToolsMetadata(
         final_config,
-        kind="kvmOvn",
+        kind="kvm",
         source_config=input_path,
         kubeconfig=kubeconfig_path,
-        destroy_type="kvmOvn",
+        destroy_type="kvm",
         destroy_state=loadYaml(setup_dir / "kvmState.yaml"),
         destroy_config=kvm_config,
     )
     writeYaml(config_path, final_config)
 
 
-def _buildMultiHostKvmOvn(
+def _buildMultiHostKvm(
     setup_dir: Path,
     input_path: Path,
     config_path: Path,
     kubeconfig_path: Path,
     inventory_path: Path | None,
 ) -> None:
-    """Build a multi-hypervisor KVM cluster with routed VM subnets and Kube-OVN."""
+    """Build a multi-hypervisor KVM cluster with the configured fabric."""
     source = loadYaml(input_path)
-    source.setdefault("fabric", {})["type"] = "ovn"
     _applyOvnK3sDefaults(source)
     outputs = source.setdefault("outputs", {})
     outputs["k3sConfig"] = str(setup_dir / "configK3s.yaml")
@@ -328,32 +395,39 @@ def _buildMultiHostKvmOvn(
     writeYaml(setup_dir / "kvm.yaml", kvm_config)
     runCommand(["python3", str(setup_dir / "multiHostKvm" / "prepareKvmHypervisors.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
     runCommand(["python3", str(setup_dir / "multiHostKvm" / "createMultiHostKvmVms.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
+    runCommand(
+        [
+            "python3",
+            str(setup_dir / "multiHostKvm" / "validateMultiHostKvmFabric.py"),
+            str(setup_dir / "kvm.yaml"),
+        ],
+        cwd=setup_dir,
+    )
     runCommand(["python3", str(setup_dir / "kvm" / "tuneVmLimits.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     runCommand(["python3", str(setup_dir / "applyK3sCluster.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     final_config = loadYaml(setup_dir / "configK3s.yaml")
     addK8sToolsMetadata(
         final_config,
-        kind="multiHostKvmOvn",
+        kind="multiHostKvm",
         source_config=input_path,
         kubeconfig=kubeconfig_path,
-        destroy_type="multiHostKvmOvn",
+        destroy_type="multiHostKvm",
         destroy_state=loadYaml(setup_dir / "multiHostKvmState.yaml"),
         destroy_config=kvm_config,
     )
     writeYaml(config_path, final_config)
 
 
-def _buildPhysicalOvn(
+def _buildPhysical(
     setup_dir: Path,
     input_path: Path,
     config_path: Path,
     kubeconfig_path: Path,
     inventory_path: Path | None,
 ) -> None:
-    """Build a K3s + Kube-OVN cluster on existing physical nodes."""
+    """Build K3s on existing physical nodes with the configured fabric."""
     config = loadYaml(input_path)
-    config["kind"] = "physicalOvn"
-    config.setdefault("fabric", {})["type"] = "ovn"
+    config["kind"] = "physical"
     _applyOvnK3sDefaults(config)
     setOutputPaths(
         config,
@@ -363,14 +437,34 @@ def _buildPhysicalOvn(
     )
     writeYaml(setup_dir / "configK3s.yaml", config)
     runCommand(["python3", str(setup_dir / "preparePhysicalNodes.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
+    fabric = config.get("fabric")
+    fabric_type = str(fabric.get("type", "none")).lower() if isinstance(fabric, dict) else "none"
+    if fabric_type == "linux-vxlan":
+        vxlan_dir = setup_dir / "vxlan"
+        runCommand(
+            [
+                "python3",
+                str(vxlan_dir / "configureLinuxVxlanFabric.py"),
+                str(setup_dir / "configK3s.yaml"),
+            ],
+            cwd=setup_dir,
+        )
+        runCommand(
+            [
+                "python3",
+                str(vxlan_dir / "validateLinuxVxlanFabric.py"),
+                str(setup_dir / "configK3s.yaml"),
+            ],
+            cwd=setup_dir,
+        )
     runCommand(["python3", str(setup_dir / "applyK3sCluster.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     final_config = loadYaml(setup_dir / "configK3s.yaml")
     addK8sToolsMetadata(
         final_config,
-        kind="physicalOvn",
+        kind="physical",
         source_config=input_path,
         kubeconfig=kubeconfig_path,
-        destroy_type="physicalOvn",
+        destroy_type="physical",
     )
     writeYaml(config_path, final_config)
 

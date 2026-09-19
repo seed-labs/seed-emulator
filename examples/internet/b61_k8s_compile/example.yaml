@@ -1,0 +1,40 @@
+id: internet-b61-kubernetes-compiler
+name: Native Kubernetes Compiler
+description: Compiles the B61 mini-Internet and statically validates native Kubernetes artifacts and deployment-mode rendering.
+runner: generic
+script: mini_internet_k8s.py
+platform: amd64
+features:
+  - native-kubernetes
+  - kubernetes-compiler
+  - multus
+  - macvlan-vlan
+  - k8s-tools
+
+compile:
+  enabled: true
+  command:
+    - python3
+    - ./mini_internet_k8s.py
+  output: output
+  clean:
+    - output
+  expected:
+    - output/k8s.yaml
+    - output/networking.yaml
+    - output/images.yaml
+  timeout: 600
+
+build:
+  enabled: false
+
+runtime:
+  compose: output/k8s.yaml
+  readiness: []
+
+probes: []
+
+test_programs:
+  - name: Validate KubernetesCompiler artifacts
+    script: test_compile.py
+    timeout: 300

@@ -6,11 +6,20 @@ import hashlib
 import os
 from pathlib import Path
 from typing import Any
+import warnings
 
 import yaml
 
+from .resources.setup.normalizeResources import normalizeMemory
 
-SUPPORTED_KINDS = {"kvmOvn", "physicalOvn", "multiHostKvmOvn"}
+
+CANONICAL_KINDS = {"kvm", "physical", "multiHostKvm"}
+LEGACY_KIND_ALIASES = {
+    "kvmOvn": "kvm",
+    "physicalOvn": "physical",
+    "multiHostKvmOvn": "multiHostKvm",
+}
+SUPPORTED_KINDS = CANONICAL_KINDS | set(LEGACY_KIND_ALIASES)
 
 
 def loadYaml(path: str | Path) -> dict[str, Any]:
@@ -43,20 +52,44 @@ def writeYaml(path: str | Path, data: dict[str, Any]) -> None:
 
 
 def detectKind(config: dict[str, Any], source: str | Path) -> str:
-    """Return the explicit k8sTools workflow kind from a user config.
+    """Return the canonical k8sTools workflow kind from a user config.
 
     Args:
         config: Parsed YAML mapping.
         source: Config path used only for a readable error message.
 
-    The new b61 flow intentionally requires `kind` in YAML so command behavior
-    never depends on file names or ambient environment.
+    Workflow selection describes infrastructure ownership, not the optional
+    secondary-network backend. Legacy *Ovn names remain input aliases so an
+    existing generated config can still be destroyed safely.
     """
-    kind = str(config.get("kind") or "").strip()
-    if kind not in SUPPORTED_KINDS:
-        supported = ", ".join(sorted(SUPPORTED_KINDS))
+    return normalizeKind(config.get("kind"), source=source)
+
+
+def normalizeKind(
+    value: Any,
+    *,
+    source: str | Path = "configuration",
+    warn_legacy: bool = True,
+) -> str:
+    """Normalize one workflow kind and reject unknown values.
+
+    Args:
+        value: Raw YAML kind or embedded destroy type.
+        source: Human-readable source used in diagnostics.
+        warn_legacy: Emit a visible compatibility warning for a legacy alias.
+    """
+    raw = str(value or "").strip()
+    canonical = LEGACY_KIND_ALIASES.get(raw, raw)
+    if canonical not in CANONICAL_KINDS:
+        supported = ", ".join(sorted(CANONICAL_KINDS))
         raise ValueError(f"{source} must set kind to one of: {supported}")
-    return kind
+    if raw in LEGACY_KIND_ALIASES and warn_legacy:
+        warnings.warn(
+            f"{source} uses deprecated kind '{raw}'; use '{canonical}' instead",
+            FutureWarning,
+            stacklevel=2,
+        )
+    return canonical
 
 
 def resolvePath(path: str | Path, base_dir: str | Path | None = None) -> Path:
@@ -102,7 +135,7 @@ def addK8sToolsMetadata(
 
     Args:
         config: Final configK3s.yaml mapping.
-        kind: Workflow kind such as kvmOvn or multiHostKvmOvn.
+        kind: Canonical workflow kind such as kvm or multiHostKvm.
         source_config: User-provided input YAML path.
         kubeconfig: Final kubeconfig path.
         destroy_type: Destroy workflow selector.
@@ -209,6 +242,9 @@ def makeKvmConfig(
     workers_cfg = _mapping(data, "workers")
     _normalizeLegacyResourceKeys(master_cfg)
     _normalizeLegacyResourceKeys(workers_cfg)
+    for node in data.get("nodes", []):
+        if isinstance(node, dict):
+            _normalizeLegacyResourceKeys(node)
     _fillMissing(master_cfg, {"vcpus": master_vcpus, "memoryMb": master_memory_mb, "diskGb": master_disk_gb})
     _fillMissing(workers_cfg, {"count": worker_count, "vcpus": worker_vcpus, "memoryMb": worker_memory_mb, "diskGb": worker_disk_gb})
 
@@ -457,6 +493,7 @@ def _portablePath(path: Path, base_dir: Path) -> str:
 
 
 def _normalizeLegacyResourceKeys(data: dict[str, Any]) -> None:
+    normalizeMemory(data)
     aliases = {"memory_mb": "memoryMb", "disk_gb": "diskGb", "name_prefix": "namePrefix"}
     for old, new in aliases.items():
         if old in data and new not in data:

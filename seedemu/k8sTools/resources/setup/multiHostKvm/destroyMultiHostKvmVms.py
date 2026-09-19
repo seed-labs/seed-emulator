@@ -18,6 +18,7 @@ SHELL_BODY = r'''#!/usr/bin/env bash
 #   - Runs each host-local kvm/destroyKvmVms.py on its owning hypervisor.
 #   - Removes static routes between hypervisor VM subnets.
 #   - Removes optional point-to-point VXLAN route tunnels.
+#   - Removes VLAN-fabric VXLAN interfaces and unnumbered libvirt networks.
 #   - Destroys and undefines the generated libvirt routed networks.
 #   - Removes generated local configK3s/kubeconfig/inventory/state outputs.
 set -euo pipefail
@@ -76,6 +77,40 @@ runHostCommand() {
     ssh $(sshOptions "${ssh_key}") "${ssh_user}@${ip}" "${libvirt_command}" </dev/null
 }
 
+cleanupHostFabric() {
+    # Remove VLAN-fabric VXLAN links on $1=name before libvirt tears down their
+    # bridges. Remaining arguments are $2=ip, $3=connection, $4=sshUser,
+    # $5=sshKey.
+    local name="$1"
+    local ip="$2"
+    local connection="$3"
+    local ssh_user="$4"
+    local ssh_key="$5"
+    local trunk_name network_name bridge_name master_interface vxlan_interface vni dst_port
+    while IFS=$'\t' read -r trunk_name network_name bridge_name master_interface vxlan_interface vni dst_port; do
+        [ -n "${trunk_name}" ] || continue
+        echo "  delete fabric ${trunk_name}: vxlan=${vxlan_interface} network=${network_name}"
+        runHostCommand "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
+            "sudo -n ip link del $(printf '%q' "${vxlan_interface}") >/dev/null 2>&1 || true"
+    done < <(python3 "${HELPER}" --config /dev/null state-fabric-trunks-tsv --state "${STATE_PATH}")
+}
+
+cleanupHostFabricNetworks() {
+    # Ensure fabric libvirt networks are absent after host-local VM cleanup.
+    # Arguments are the same as cleanupHostFabric.
+    local name="$1"
+    local ip="$2"
+    local connection="$3"
+    local ssh_user="$4"
+    local ssh_key="$5"
+    local trunk_name network_name bridge_name master_interface vxlan_interface vni dst_port
+    while IFS=$'\t' read -r trunk_name network_name bridge_name master_interface vxlan_interface vni dst_port; do
+        [ -n "${network_name}" ] || continue
+        runHostCommand "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
+            "virsh net-destroy $(printf '%q' "${network_name}") >/dev/null 2>&1 || true; virsh net-undefine $(printf '%q' "${network_name}") >/dev/null 2>&1 || true"
+    done < <(python3 "${HELPER}" --config /dev/null state-fabric-trunks-tsv --state "${STATE_PATH}")
+}
+
 destroyHostVms() {
     # Args are read from one state-hosts-tsv row.
     local name="$1"
@@ -89,6 +124,7 @@ destroyHostVms() {
     local remote_work_dir="${10}"
 
     echo "[multi-host-destroy] ${name} (${ip})"
+    cleanupHostFabric "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}"
     runHostCommand "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" "
         set -euo pipefail
         if [ -x $(printf '%q' "${remote_work_dir}/kvm/destroyKvmVms.py") ] && [ -s $(printf '%q' "${remote_work_dir}/kvmState.yaml") ]; then
@@ -104,6 +140,7 @@ destroyHostVms() {
         fi
         rm -rf $(printf '%q' "${remote_work_dir}")
     "
+    cleanupHostFabricNetworks "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}"
 
     while IFS=$'\t' read -r remote_cidr peer_ip peer_name route_dev; do
         [ -n "${remote_cidr}" ] || continue
