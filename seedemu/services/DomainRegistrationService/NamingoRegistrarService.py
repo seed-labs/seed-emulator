@@ -6,7 +6,8 @@ import shlex
 from typing import Optional
 
 from seedemu.core import Node, Server, Service
-from seedemu.services.RegistrarIdentity import RegistrarIdentity
+from .Templates import load_template, render_template
+from .RegistrarIdentity import RegistrarIdentity
 
 
 NAMINGO_REPOSITORY = "https://github.com/getnamingo/registrar.git"
@@ -17,22 +18,9 @@ NAMINGO_INSTALL_DIR = "/opt/registrar"
 NAMINGO_LABEL_META = "namingo.{key}"
 AGENT_RDDS_LABEL_META = "agent.exposed.rdds.{key}"
 
-LOOM_SCHEMA_COMPATIBILITY = r'''<?php
-$files = [
-    '/opt/registrar/whois/src/WHOIS/LOOM.php' => 2,
-    '/opt/registrar/rdap/src/RDAP/LOOM.php' => 3,
-];
-foreach ($files as $path => $expected) {
-    $contents = file_get_contents($path);
-    if ($contents === false || substr_count($contents, 'service_type') !== $expected) {
-        throw new RuntimeException("Pinned Namingo Loom adapter context mismatch: {$path}");
-    }
-    $contents = str_replace('service_type', 'type', $contents);
-    if (file_put_contents($path, $contents) === false) {
-        throw new RuntimeException("Cannot update Namingo Loom adapter: {$path}");
-    }
-}
-'''
+LOOM_SCHEMA_COMPATIBILITY = load_template(
+    "namingo_registrar", "loom_schema_compatibility.php"
+)
 
 
 def _php(value) -> str:
@@ -77,6 +65,7 @@ class NamingoRegistrarServer(Server):
         self.__minimum_data = False
         self.__enable_whois = True
         self.__enable_rdap = True
+        self.__rdap_proxy_port = 80
         self.__enable_automation = False
         self.__automation_config: Optional[str] = None
         self.__expose_rdds_to_agent = False
@@ -157,6 +146,12 @@ class NamingoRegistrarServer(Server):
         self.__enable_rdap = enabled
         return self
 
+    def setRdapProxyPort(self, port: int) -> NamingoRegistrarServer:
+        """Set RDAP's HTTP proxy port, allowing safe frontend colocation."""
+        assert 1 <= port <= 65535, "invalid RDAP reverse-proxy port"
+        self.__rdap_proxy_port = port
+        return self
+
     def exposeRddsToAgent(self, enabled: bool = True) -> NamingoRegistrarServer:
         """Publish enabled Registrar RDDS endpoints for metadata-driven Agent lookup."""
         self.__expose_rdds_to_agent = enabled
@@ -220,7 +215,7 @@ FLUSH PRIVILEGES;
                 "/usr/bin/php8.5 /opt/registrar/rdap/start_rdap.php "
                 ">>/var/log/namingo/rdap.stdout.log 2>&1 &"
             )
-            services.append("service nginx start")
+            services.append("service nginx reload 2>/dev/null || service nginx start")
         automation = (
             "while true; do /usr/bin/php8.5 /opt/registrar/automation/cron.php; sleep 60; done "
             ">>/var/log/namingo/automation.log 2>&1 &"
@@ -257,18 +252,14 @@ fi""".format(database=self.__db_name)
                 database=shlex.quote(self.__db_name),
                 wait_timeout=self.__external_database_wait_timeout,
             )
-        return """#!/bin/sh
-set -eu
-
-{database_setup}
-
-mkdir -p /var/log/namingo /run/php
-{services}
-{automation}
-""".format(
-            database_setup=database_setup,
-            services="\n".join(services),
-            automation=automation,
+        return render_template(
+            "namingo_registrar",
+            "start.sh",
+            {
+                "__SEED_DATABASE_SETUP__": database_setup,
+                "__SEED_SERVICES__": "\n".join(services),
+                "__SEED_AUTOMATION__": automation,
+            },
         )
 
     def install(self, node: Node):
@@ -362,19 +353,19 @@ mkdir -p /var/log/namingo /run/php
             node.setFile("/opt/seedemu/namingo/init.sql", self._database_init())
             node.setFile("/opt/seedemu/namingo/schema.sql", self.__schema_sql)
         if self.__enable_rdap:
-            node.setFile(
-                "/etc/nginx/sites-available/default",
-                """server {
-    listen 80 default_server;
-    server_name _;
-    location / {
-        proxy_pass http://127.0.0.1:7500;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-""",
+            nginx_site = render_template(
+                "namingo_registrar",
+                "rdap_nginx.conf",
+                {"__SEED_PORT__": str(self.__rdap_proxy_port)},
             )
+            if self.__rdap_proxy_port == 80:
+                node.setFile("/etc/nginx/sites-available/default", nginx_site)
+            else:
+                node.setFile("/etc/nginx/sites-available/namingo-rdap", nginx_site)
+                node.appendStartCommand(
+                    "ln -sf /etc/nginx/sites-available/namingo-rdap "
+                    "/etc/nginx/sites-enabled/namingo-rdap"
+                )
         if self.__automation_config is not None:
             node.setFile("/opt/registrar/automation/config.php", self.__automation_config)
         node.setFile("/usr/local/bin/seedemu-start-namingo", self._start_script())

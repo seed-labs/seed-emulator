@@ -12,7 +12,8 @@ from typing import List, NamedTuple, Optional
 from urllib.parse import urlparse
 
 from seedemu.core import Node, Server, Service
-from seedemu.services.RegistrarIdentity import RegistrarIdentity
+from .RegistrarIdentity import RegistrarIdentity
+from .Templates import load_template, render_template
 
 
 NAMINGO_REGISTRY_REPOSITORY = "https://github.com/getnamingo/registry.git"
@@ -32,6 +33,15 @@ class EppTlsCredentials(NamedTuple):
     client_certificate: str
     client_private_key: str
     client_sha256_fingerprint: str
+
+
+class EppTlsCredentialSet(NamedTuple):
+    """One Registry server identity and multiple clients signed by its CA."""
+
+    ca_certificate: str
+    server_certificate: str
+    server_private_key: str
+    clients: dict[str, tuple[str, str, str]]
 
 
 def _php(value) -> str:
@@ -75,19 +85,7 @@ class NamingoRegistryServer(Server):
         self.__minimum_data = False
         self.__ns_mode = "hostObj"
 
-        self.__registrar_name = "SeedEmu Registrar"
-        self.__registrar_iana_id = 9999
-        self.__registrar_clid = "seedemu"
-        self.__registrar_password = "seedemu-epp"
-        self.__registrar_prefix = "SEED"
-        self.__registrar_email = "registrar@seedemu.test"
-        self.__registrar_whois = "whois.registrar.seedemu"
-        self.__registrar_rdap = "rdap.registrar.seedemu"
-        self.__registrar_url = "http://registrar.seedemu"
-        self.__registrar_abuse_email = "registrar@seedemu.test"
-        self.__registrar_abuse_phone = "+1.5550100"
-        self.__registrar_whitelist: List[str] = ["10.0.0.0/8"]
-        self.__registrar_ssl_fingerprint: Optional[str] = None
+        self.__registrars: list[dict] = []
 
         self.__enable_whois = False
         self.__enable_rdap = False
@@ -166,7 +164,7 @@ class NamingoRegistryServer(Server):
         self.__ns_mode = mode
         return self
 
-    def setRegistrar(
+    def addRegistrar(
         self,
         identity: RegistrarIdentity,
         clid: str,
@@ -176,7 +174,9 @@ class NamingoRegistryServer(Server):
         ssl_fingerprint: Optional[str] = None,
     ) -> NamingoRegistryServer:
         assert re.fullmatch(r"[A-Za-z0-9_.-]{1,16}", clid), "invalid registrar clid"
-        assert password, "registrar EPP password cannot be empty"
+        assert 1 <= len(password) <= 16, (
+            "registrar EPP password must contain at most 16 characters"
+        )
         assert re.fullmatch(r"[A-Za-z0-9]{2,5}", prefix), "invalid registrar prefix"
         assert whitelist, "at least one registrar source address/CIDR is required"
         try:
@@ -194,20 +194,46 @@ class NamingoRegistryServer(Server):
             )
         else:
             normalized_fingerprint = None
-        self.__registrar_name = identity.name
-        self.__registrar_iana_id = identity.iana_id
-        self.__registrar_clid = clid
-        self.__registrar_password = password
-        self.__registrar_prefix = prefix.upper()
-        self.__registrar_email = identity.email
-        self.__registrar_whois = identity.whois_host
-        self.__registrar_rdap = identity.rdap_host
-        self.__registrar_url = identity.url.rstrip("/")
-        self.__registrar_abuse_email = identity.abuse_email
-        self.__registrar_abuse_phone = identity.abuse_phone
-        self.__registrar_whitelist = list(dict.fromkeys(whitelist))
-        self.__registrar_ssl_fingerprint = normalized_fingerprint
+        assert all(item["clid"] != clid for item in self.__registrars), (
+            "registrar clid is already configured"
+        )
+        assert all(item["iana_id"] != identity.iana_id for item in self.__registrars), (
+            "registrar IANA id is already configured"
+        )
+        assert all(item["prefix"] != prefix.upper() for item in self.__registrars), (
+            "registrar prefix is already configured"
+        )
+        self.__registrars.append({
+            "name": identity.name,
+            "iana_id": identity.iana_id,
+            "clid": clid,
+            "password": password,
+            "prefix": prefix.upper(),
+            "email": identity.email,
+            "whois": identity.whois_host,
+            "rdap": identity.rdap_host,
+            "url": identity.url.rstrip("/"),
+            "abuse_email": identity.abuse_email,
+            "abuse_phone": identity.abuse_phone,
+            "whitelist": list(dict.fromkeys(whitelist)),
+            "ssl_fingerprint": normalized_fingerprint,
+        })
         return self
+
+    def setRegistrar(
+        self,
+        identity: RegistrarIdentity,
+        clid: str,
+        password: str,
+        prefix: str,
+        whitelist: List[str],
+        ssl_fingerprint: Optional[str] = None,
+    ) -> NamingoRegistryServer:
+        """Backward-compatible single-Registrar configuration."""
+        assert not self.__registrars, "setRegistrar() requires no existing Registrars"
+        return self.addRegistrar(
+            identity, clid, password, prefix, whitelist, ssl_fingerprint
+        )
 
     def setTlsCertificate(
         self,
@@ -531,141 +557,14 @@ FLUSH PRIVILEGES;
         values = {
             "database": self.__db_name,
             "tlds": self.__tlds,
-            "registrar_name": self.__registrar_name,
-            "registrar_iana_id": self.__registrar_iana_id,
-            "registrar_clid": self.__registrar_clid,
-            "registrar_password": self.__registrar_password,
-            "registrar_prefix": self.__registrar_prefix,
-            "registrar_email": self.__registrar_email,
-            "registrar_whois": self.__registrar_whois,
-            "registrar_rdap": self.__registrar_rdap,
-            "registrar_url": self.__registrar_url,
-            "registrar_abuse_email": self.__registrar_abuse_email,
-            "registrar_abuse_phone": self.__registrar_abuse_phone,
-            "registrar_whitelist": self.__registrar_whitelist,
-            "registrar_ssl_fingerprint": self.__registrar_ssl_fingerprint,
+            "registrars": self.__registrars,
         }
         encoded = json.dumps(values, ensure_ascii=False).replace("</", "<\\/")
-        return """<?php
-declare(strict_types=1);
-
-$settings = json_decode(<<<'JSON'
-{settings}
-JSON, true, 512, JSON_THROW_ON_ERROR);
-
-$pdo = new PDO(
-    'mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=' . $settings['database'] . ';charset=utf8mb4',
-    'root',
-    '',
-    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-);
-
-$pdo->beginTransaction();
-try {{
-    // Disable the public demonstration EPP credentials shipped in the sample schema.
-    $disabled = password_hash(bin2hex(random_bytes(32)), PASSWORD_ARGON2ID);
-    $stmt = $pdo->prepare('UPDATE registrar SET pw = :pw WHERE clid <> :clid');
-    $stmt->execute(['pw' => $disabled, 'clid' => $settings['registrar_clid']]);
-
-    // The upstream schema also ships .test and .com.test demonstration TLDs.
-    // Remove only those untouched sample rows when this emulation did not ask
-    // for them, so the upstream Zone Writer does not emit unrelated zones.
-    $configuredTlds = array_map(
-        static fn(string $tld): string => '.' . ltrim(strtolower($tld), '.'),
-        $settings['tlds']
-    );
-    foreach (['.test', '.com.test'] as $sampleTld) {{
-        if (in_array($sampleTld, $configuredTlds, true)) {{
-            continue;
-        }}
-        $stmt = $pdo->prepare(
-            'SELECT id FROM domain_tld WHERE tld = :tld '
-            . 'AND NOT EXISTS (SELECT 1 FROM domain WHERE domain.tldid = domain_tld.id) '
-            . 'AND NOT EXISTS (SELECT 1 FROM application WHERE application.tldid = domain_tld.id)'
-        );
-        $stmt->execute(['tld' => $sampleTld]);
-        $sampleTldId = $stmt->fetchColumn();
-        if ($sampleTldId !== false) {{
-            $pdo->prepare('DELETE FROM domain_restore_price WHERE tldid = :id')
-                ->execute(['id' => $sampleTldId]);
-            $pdo->prepare('DELETE FROM domain_price WHERE tldid = :id')
-                ->execute(['id' => $sampleTldId]);
-            $pdo->prepare('DELETE FROM domain_tld WHERE id = :id')
-                ->execute(['id' => $sampleTldId]);
-        }}
-    }}
-
-    $tldPattern = '/^(?!-)(?!.*--)[A-Z0-9-]{{1,63}}(?<!-)(\\.(?!-)(?!.*--)[A-Z0-9-]{{1,63}}(?<!-))*$/i';
-    $insertTld = $pdo->prepare(
-        'INSERT INTO domain_tld (tld, idn_table, secure, launch_phase_id) '
-        . 'VALUES (:tld, :pattern, 0, NULL) ON DUPLICATE KEY UPDATE tld = VALUES(tld)'
-    );
-    $findTld = $pdo->prepare('SELECT id FROM domain_tld WHERE tld = :tld');
-    $insertPrice = $pdo->prepare(
-        'INSERT INTO domain_price '
-        . '(tldid, registrar_id, command, m0, m12, m24, m36, m48, m60, m72, m84, m96, m108, m120) '
-        . "VALUES (:tldid, NULL, :command, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50) "
-        . 'ON DUPLICATE KEY UPDATE m12 = VALUES(m12)'
-    );
-    foreach ($settings['tlds'] as $tld) {{
-        $fqdn = '.' . $tld;
-        $insertTld->execute(['tld' => $fqdn, 'pattern' => $tldPattern]);
-        $findTld->execute(['tld' => $fqdn]);
-        $tldId = (int) $findTld->fetchColumn();
-        foreach (['create', 'renew', 'transfer'] as $command) {{
-            $insertPrice->execute(['tldid' => $tldId, 'command' => $command]);
-        }}
-    }}
-
-    $registrarPassword = password_hash($settings['registrar_password'], PASSWORD_ARGON2ID);
-    $stmt = $pdo->prepare(
-        'INSERT INTO registrar '
-        . '(name, iana_id, clid, pw, prefix, email, whois_server, rdap_server, url, '
-        . 'abuse_email, abuse_phone, accountBalance, creditLimit, creditThreshold, '
-        . 'thresholdType, currency, ssl_fingerprint, crdate) '
-        . "VALUES (:name, :iana, :clid, :pw, :prefix, :email, :whois, "
-        . ":rdap, :url, :abuse_email, :abuse_phone, "
-        . "100000, 100000, 500, 'fixed', 'USD', :ssl_fingerprint, CURRENT_TIMESTAMP) "
-        . 'ON DUPLICATE KEY UPDATE name = VALUES(name), iana_id = VALUES(iana_id), '
-        . 'pw = VALUES(pw), prefix = VALUES(prefix), email = VALUES(email), '
-        . 'whois_server = VALUES(whois_server), rdap_server = VALUES(rdap_server), '
-        . 'url = VALUES(url), abuse_email = VALUES(abuse_email), '
-        . 'abuse_phone = VALUES(abuse_phone), '
-        . 'ssl_fingerprint = VALUES(ssl_fingerprint)'
-    );
-    $stmt->execute([
-        'name' => $settings['registrar_name'],
-        'iana' => $settings['registrar_iana_id'],
-        'clid' => $settings['registrar_clid'],
-        'pw' => $registrarPassword,
-        'prefix' => $settings['registrar_prefix'],
-        'email' => $settings['registrar_email'],
-        'whois' => $settings['registrar_whois'],
-        'rdap' => $settings['registrar_rdap'],
-        'url' => $settings['registrar_url'],
-        'abuse_email' => $settings['registrar_abuse_email'],
-        'abuse_phone' => $settings['registrar_abuse_phone'],
-        'ssl_fingerprint' => $settings['registrar_ssl_fingerprint'],
-    ]);
-    $stmt = $pdo->prepare('SELECT id FROM registrar WHERE clid = :clid');
-    $stmt->execute(['clid' => $settings['registrar_clid']]);
-    $registrarId = (int) $stmt->fetchColumn();
-    $pdo->prepare('DELETE FROM registrar_whitelist WHERE registrar_id = :id')
-        ->execute(['id' => $registrarId]);
-    $stmt = $pdo->prepare(
-        'INSERT INTO registrar_whitelist (registrar_id, addr) VALUES (:id, :addr)'
-    );
-    foreach ($settings['registrar_whitelist'] as $address) {{
-        $stmt->execute(['id' => $registrarId, 'addr' => $address]);
-    }}
-    $pdo->commit();
-}} catch (Throwable $error) {{
-    if ($pdo->inTransaction()) {{
-        $pdo->rollBack();
-    }}
-    throw $error;
-}}
-""".format(settings=encoded)
+        return render_template(
+            "namingo_registry",
+            "bootstrap.php",
+            {"__SEED_SETTINGS_JSON__": encoded},
+        )
 
     def _start_script(self) -> str:
         commands = [
@@ -699,34 +598,15 @@ try {{
                     self.__zone_writer_interval
                 )
             )
-        return """#!/bin/sh
-set -eu
-
-service mariadb start
-service redis-server start
-until mariadb-admin ping --silent; do sleep 1; done
-mariadb < /opt/seedemu/namingo/init.sql
-
-if ! mariadb -Nse "SELECT 1 FROM information_schema.tables WHERE table_schema='{database}' AND table_name='users'" | grep -q 1; then
-    mariadb < /opt/registry/database/registry.mariadb.sql
-fi
-
-/usr/bin/php8.5 /opt/seedemu/namingo/bootstrap.php
-mkdir -p /var/log/namingo /run /var/lib/bind /opt/seedemu/namingo/tls
-
-if [ ! -s /opt/seedemu/namingo/tls/epp.crt ] || [ ! -s /opt/seedemu/namingo/tls/epp.key ]; then
-    openssl req -x509 -newkey rsa:3072 -sha256 -nodes -days 14 \
-        -subj '/CN={epp_host}' -addext 'subjectAltName=DNS:{epp_host}' \
-        -keyout /opt/seedemu/namingo/tls/epp.key \
-        -out /opt/seedemu/namingo/tls/epp.crt
-fi
-chmod 600 /opt/seedemu/namingo/tls/epp.key
-
-{commands}
-""".format(
-            database=self.__db_name,
-            epp_host=self.__epp_host,
-            commands="\n".join(commands),
+        return render_template(
+            "namingo_registry",
+            "start.sh",
+            {
+                "__SEED_DATABASE__": self.__db_name,
+                "__SEED_EPP_HOST__": self.__epp_host,
+                "__SEED_EPP_SAN_HOST__": self.__epp_host,
+                "__SEED_COMMANDS__": "\n".join(commands),
+            },
         )
 
     def install(self, node: Node):
@@ -837,16 +717,7 @@ chmod 600 /opt/seedemu/namingo/tls/epp.key
             node.setFile("/opt/registry/rdap/config.php", self._rdap_config())
             node.setFile(
                 "/etc/nginx/sites-available/default",
-                """server {
-    listen 80 default_server;
-    server_name _;
-    location / {
-        proxy_pass http://127.0.0.1:7500;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-""",
+                load_template("namingo_registry", "rdap_nginx.conf"),
             )
         if self.__enable_das:
             node.setFile("/opt/registry/das/config.php", self._das_config())
@@ -946,6 +817,26 @@ class NamingoRegistryService(Service):
         validity_days: int = 3650,
     ) -> EppTlsCredentials:
         """Generate a CA-signed EPP server/client mutual-TLS credential set."""
+        credential_set = NamingoRegistryService.generateEppTlsCredentialSet(
+            server_hostname, [client_name], validity_days
+        )
+        certificate, private_key, fingerprint = credential_set.clients[client_name]
+        return EppTlsCredentials(
+            credential_set.ca_certificate,
+            credential_set.server_certificate,
+            credential_set.server_private_key,
+            certificate,
+            private_key,
+            fingerprint,
+        )
+
+    @staticmethod
+    def generateEppTlsCredentialSet(
+        server_hostname: str,
+        client_names: List[str],
+        validity_days: int = 3650,
+    ) -> EppTlsCredentialSet:
+        """Generate one Registry TLS identity and CA-signed client identities."""
         hostname_pattern = (
             r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
             r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+"
@@ -953,9 +844,12 @@ class NamingoRegistryService(Service):
         assert re.fullmatch(hostname_pattern, server_hostname), (
             "invalid EPP server hostname"
         )
-        assert re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", client_name), (
-            "invalid EPP client name"
-        )
+        assert client_names, "at least one EPP client is required"
+        assert len(set(client_names)) == len(client_names), "duplicate EPP client name"
+        assert all(
+            re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", client_name)
+            for client_name in client_names
+        ), "invalid EPP client name"
         assert validity_days >= 1, "TLS validity must be at least one day"
 
         with tempfile.TemporaryDirectory() as work:
@@ -966,9 +860,6 @@ class NamingoRegistryService(Service):
             server_csr = directory / "server.csr"
             server_cert = directory / "server.crt"
             server_ext = directory / "server.ext"
-            client_key = directory / "client.key"
-            client_csr = directory / "client.csr"
-            client_cert = directory / "client.crt"
             client_ext = directory / "client.ext"
 
             def run_openssl(*arguments: str) -> None:
@@ -1014,30 +905,37 @@ class NamingoRegistryService(Service):
                 "keyUsage=critical,digitalSignature,keyAgreement\n"
                 "extendedKeyUsage=clientAuth\n"
             )
-            run_openssl(
-                "ecparam", "-name", "prime256v1", "-genkey", "-noout",
-                "-out", str(client_key),
-            )
-            run_openssl(
-                "req", "-new", "-sha256", "-key", str(client_key),
-                "-out", str(client_csr), "-subj", "/CN={}".format(client_name),
-            )
-            run_openssl(
-                "x509", "-req", "-sha256", "-days", str(validity_days),
-                "-in", str(client_csr), "-CA", str(ca_cert),
-                "-CAkey", str(ca_key), "-CAcreateserial",
-                "-out", str(client_cert), "-extfile", str(client_ext),
-            )
-
-            client_certificate = client_cert.read_text()
-            client_der = ssl.PEM_cert_to_DER_cert(client_certificate)
-            return EppTlsCredentials(
+            clients = {}
+            for index, client_name in enumerate(client_names):
+                client_key = directory / "client-{}.key".format(index)
+                client_csr = directory / "client-{}.csr".format(index)
+                client_cert = directory / "client-{}.crt".format(index)
+                run_openssl(
+                    "ecparam", "-name", "prime256v1", "-genkey", "-noout",
+                    "-out", str(client_key),
+                )
+                run_openssl(
+                    "req", "-new", "-sha256", "-key", str(client_key),
+                    "-out", str(client_csr), "-subj", "/CN={}".format(client_name),
+                )
+                run_openssl(
+                    "x509", "-req", "-sha256", "-days", str(validity_days),
+                    "-in", str(client_csr), "-CA", str(ca_cert),
+                    "-CAkey", str(ca_key), "-CAcreateserial",
+                    "-out", str(client_cert), "-extfile", str(client_ext),
+                )
+                client_certificate = client_cert.read_text()
+                client_der = ssl.PEM_cert_to_DER_cert(client_certificate)
+                clients[client_name] = (
+                    client_certificate,
+                    client_key.read_text(),
+                    hashlib.sha256(client_der).hexdigest().upper(),
+                )
+            return EppTlsCredentialSet(
                 ca_certificate=ca_cert.read_text(),
                 server_certificate=server_cert.read_text(),
                 server_private_key=server_key.read_text(),
-                client_certificate=client_certificate,
-                client_private_key=client_key.read_text(),
-                client_sha256_fingerprint=hashlib.sha256(client_der).hexdigest().upper(),
+                clients=clients,
             )
 
     def getName(self) -> str:

@@ -13,8 +13,8 @@ def main() -> int:
     root = test.require_service(171, "host_0", "root primary is generated")
     client = test.require_service(150, "host_1", "representative DNS client is generated")
     resolver = test.require_service(153, "local-dns-2", "recursive DNS resolver is generated")
-    registrar = test.require_service(150, "namingo-registrar", "Namingo Registrar is generated")
     loom = test.require_service(150, "loom-registrar", "Loom Registrar frontend is generated")
+    registrar = loom
     registry = test.require_service(154, "namingo-registry", "Namingo Registry is generated")
     owner_primary = test.require_service(
         160, "owner-dns-primary", "source-owned DNS Primary is generated"
@@ -135,7 +135,7 @@ def main() -> int:
             "Namingo service names resolve through public COM secondaries",
             client,
             "getent hosts epp.registry.com | grep -q '10.154.0.73' "
-            "&& getent hosts whois.registrar.com | grep -q '10.150.0.73'",
+            "&& getent hosts whois.registrar.com | grep -q '10.150.0.74'",
         )
 
     if client and owner_primary and owner_secondary:
@@ -203,9 +203,9 @@ def main() -> int:
             "Namingo Registrar uses its upstream Loom backend adapter",
             registrar,
             "grep -q '\"backend\" => \"loom\"' /opt/registrar/whois/config.php "
-            "&& grep -q '\"db_host\" => \"10.150.0.74\"' /opt/registrar/whois/config.php "
+            "&& grep -q '\"db_host\" => \"127.0.0.1\"' /opt/registrar/whois/config.php "
             "&& grep -q '\"backend\" => \"loom\"' /opt/registrar/rdap/config.php "
-            "&& mariadb -h 10.150.0.74 -P 3306 -uloom_rdds -pseedemu-loom-rdds "
+            "&& mariadb -h 127.0.0.1 -P 3306 -uloom_rdds -pseedemu-loom-rdds "
             "-N loom -e 'SELECT COUNT(*) FROM providers' | grep -qx 1",
             retries=10,
             interval=3,
@@ -216,6 +216,8 @@ def main() -> int:
             "pgrep -f start_whois.php >/dev/null "
             "&& pgrep -f start_rdap.php >/dev/null "
             "&& grep -q 'whois.registrar.com' /opt/registrar/whois/config.php "
+            "&& grep -q 'listen 8080' /etc/nginx/sites-available/namingo-rdap "
+            "&& grep -q 'listen 443 ssl' /etc/nginx/sites-available/default "
             "&& test ! -e /usr/local/bin/seedemu-epp-client "
             "&& test ! -e /opt/seedemu/namingo/epp-client.php "
             "&& test ! -e /run/seedemu-epp-health.json",

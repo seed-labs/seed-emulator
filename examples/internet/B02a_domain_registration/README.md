@@ -1,18 +1,20 @@
 # B02a: Hidden-primary TLD DNS
 
-This scenario extends B02's DNS Internet with independent Namingo Registrar and
-Registry nodes plus a Namingo-compatible `.com` authoritative topology. The
+This scenario extends B02's DNS Internet with a combined Loom Registrar/Namingo
+RDDS node, an independent Registry, and a Namingo-compatible `.com`
+authoritative topology. The
 removed Agent Registrar, provisioning API, and managed customer-zone services
 are not part of this example.
 
-- Namingo Registrar (`10.150.0.73`) runs only the upstream WHOIS/RDAP
-  components. Its Loom backend uses a read-only connection to the Loom
-  database; this node does not install or run an EPP client.
-- Loom (`10.150.0.74`) is the customer-facing Registrar web application. Its
-  source is pinned to commit `212410852c821b14bfc9603043ab0a61632bd576`, and
+- Loom (`10.150.0.74`) is the customer-facing Registrar web application and
+  also hosts Namingo Registrar's WHOIS/RDAP components. The RDDS adapter reads
+  Loom's database through a loopback-only read-only account; it does not install
+  or run a separate EPP client. WHOIS listens on port 43, Namingo RDAP is
+  published on port 8080, and Loom HTTPS remains on port 443. The
+  `LoomRegistrarService` owns and pins its supported upstream commit, and
   its `.com` provider connects directly to the Namingo Registry over mutually
   authenticated EPP/TLS. The discovery label publishes
-  `http://10.150.0.74:80` and an opaque `b02a.loom.admin` credential reference.
+  `https://10.150.0.74:443` and an opaque credential reference.
 - Namingo Registry (`10.154.0.73`) runs the upstream EPP, WHOIS, and RDAP services for `.com`,
   provisions the `seedemu` registrar account, and restricts that account to the
   Loom node address.
@@ -23,6 +25,27 @@ are not part of this example.
 - `epp.registry.com`, `whois.registrar.com`, `rdap.registrar.com`,
   `whois.registry.com`, and `rdap.registry.com` are
   published through the `.com` authoritative infrastructure.
+
+The reusable `DomainRegistrationSystem` builder owns the cross-service
+relationships: it creates matching EPP server/client credentials, configures
+both Registry authorization and Loom's provider, connects Registrar RDDS to
+Loom's business database, configures Registry-to-hidden-primary publication,
+binds colocated service vnodes, and enrolls Agent sources. B02a retains only its
+scenario choices such as AS placement, addresses, `.com`, prices, and sample
+records.
+
+The builder models Registrars and Registries as named collections. Explicit
+`connectEpp(registrar_id=..., registry_id=...)` edges support multiple Loom
+Registrars per Namingo Registry and multiple Namingo Registries per Loom. Each
+Registry uses one CA for all of its authorized Registrar clients, while every
+Loom stores Registry-specific client credentials in a separate directory.
+Loom and Registry instances require separate physical nodes; a Registrar RDDS
+service may still be colocated with its corresponding Loom instance.
+
+The implementation follows the package layout used by `EthereumService` and is
+grouped under `seedemu/services/DomainRegistrationService/`. The package exports
+the system builder, shared identity/deployment models, and the Loom/Namingo service
+wrappers through the existing `seedemu.services` public import surface.
 
 - COM-A (`10.151.0.71`) is the hidden primary. It is absent from the root
   delegation, rejects public queries and RFC 2136 updates, and permits zone
@@ -42,10 +65,11 @@ are not part of this example.
   `owner-dns-primary` (`11.160.0.53`) and `owner-dns-secondary`
   (`11.160.0.54`) form a `DomainNameService` source-owned authoritative DNS pair. The Agent uses
   `dns.authoritative_find` with AS150 `host_1` to discover the pair, then uses
-  `dns.configure` through that source to provision the allowlisted
-  `example.com` zone and maintain its records. A deployment-local SSH identity
+  `dns.configure` through that source to provision zones below the authorized
+  `.com` suffix and maintain their records; the `com` zone itself is not allowed.
+  A deployment-local SSH identity
   is stored only in that source. Both DNS nodes enforce the public key, the
-  source address, a forced command, and the zone allowlist. Runtime updates use
+  source address, a forced command, and the zone-suffix policy. Runtime updates use
   an update TSIG while Primary-to-Secondary transfer uses a separate TSIG.
 
 Compile the example from the repository root:
@@ -82,6 +106,6 @@ helper. Registry-side EPP processing remains an unmodified Namingo component.
 The SSH zone receiver/publisher, fixed
 simulation credentials, and removal of Namingo's untouched `.test` and
 `.com.test` sample rows during bootstrap are also SeedEmu integration code.
-The compact EC TLS and Ed25519 SSH credentials are kept as one-line constants
-in `domain_registration.py`. Production deployments must inject separately
-managed secrets instead.
+Deployment-local EC TLS and Ed25519 SSH credentials are generated by the
+reusable services. Production deployments must inject separately managed
+secrets instead.

@@ -9,200 +9,39 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
-from seedemu.services.LoomSourceAuth import SOURCE_AUTH_BOOTSTRAP, SOURCE_AUTH_ENDPOINT
-from seedemu.services.RegistrarIdentity import RegistrarIdentity
+from .RegistrarIdentity import RegistrarIdentity
+from .Templates import load_loom_template, render_template
 
 from seedemu.core import Node, Server, Service
 
+
+SOURCE_AUTH_BOOTSTRAP = load_loom_template("source_auth_bootstrap.php")
+SOURCE_AUTH_ENDPOINT = load_loom_template("source_auth_endpoint.php")
+FORCE_GENERIC_EPP = load_loom_template("force_generic_epp.php")
+ENABLE_NAMESERVER_GLUE = load_loom_template("enable_nameserver_glue.php")
+USE_CONFIGURED_API_DATABASE_HOST = load_loom_template(
+    "use_configured_api_database_host.php"
+)
+IMPORT_PROVIDER_SQL = load_loom_template("import_provider_sql.php")
+LOOM_EPP_PROBE = load_loom_template("epp_probe.php")
 LOOM_REPOSITORY = "https://github.com/getnamingo/loom.git"
+LOOM_COMMIT = "212410852c821b14bfc9603043ab0a61632bd576"
 LOOM_INSTALL_DIR = "/opt/loom"
+LOOM_DATABASE_NAME = "loom"
+LOOM_DATABASE_USERNAME = "loom"
+LOOM_DATABASE_PASSWORD = "seedemu-loom"
+LOOM_WEBAUTHN_SECRET = "seedemu-loom-webauthn"
 
 
 class LoomWebTlsCredentials(NamedTuple):
     certificate: str
     private_key: str
 
-
 def _sql_string(value: str) -> str:
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "''"))
 
-
 def _dotenv_string(value: str) -> str:
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "\\'"))
-
-FORCE_GENERIC_EPP = r"""<?php
-$path = '/opt/loom/bootstrap/helper.php';
-$contents = file_get_contents($path);
-if ($contents === false) {
-    throw new RuntimeException("Cannot read $path");
-}
-$replacements = [
-    'return $tldMap[$last];' => "return 'generic';",
-    "return \$tldMap[\$tld] ?? 'generic';" => "return 'generic';",
-];
-foreach ($replacements as $from => $to) {
-    if (substr_count($contents, $from) !== 1) {
-        throw new RuntimeException("Pinned Loom EPP selector context mismatch");
-    }
-    $contents = str_replace($from, $to, $contents);
-}
-if (file_put_contents($path, $contents) === false) {
-    throw new RuntimeException("Cannot write $path");
-}
-"""
-
-ENABLE_NAMESERVER_GLUE = r"""<?php
-$edits = [
-    '/opt/loom/app/Controllers/OrdersController.php' => [
-        "            \$nameservers = \$data['nameserver'] ?? [];" =>
-            "            \$nameservers = \$data['nameserver'] ?? [];\n"
-            . "            \$nameserverAddresses = \$data['nameserver_ipv4'] ?? [];",
-        "                    'nameservers' => array_values(\$nameservers)," =>
-            "                    'nameservers' => array_values(\$nameservers),\n"
-            . "                    'nameserver_addresses' => array_values(\$nameserverAddresses),",
-    ],
-    '/opt/loom/app/Services/Provisioning/DomainProvisioner.php' => [
-        "                    foreach (\$nameservers as \$host) {\n"
-            . "                        // Registries commonly return \"already exists\" during a retry;\n"
-            . "                        // preserve the previous best-effort host creation behavior.\n"
-            . "                        \$epp->hostCreate(['hostname' => strtolower(\$host)]);\n"
-            . "                    }" =>
-            "                    \$addresses = is_array(\$serviceData['nameserver_addresses'] ?? null)\n"
-            . "                        ? array_values(\$serviceData['nameserver_addresses']) : [];\n"
-            . "                    \$pendingNameservers = [];\n"
-            . "                    foreach (\$nameservers as \$index => \$host) {\n"
-            . "                        \$address = trim((string)(\$addresses[\$index] ?? ''));\n"
-            . "                        \$pendingNameservers[] = [\n"
-            . "                            'hostname' => strtolower(\$host),\n"
-            . "                            'ipaddress' => \$address,\n"
-            . "                        ];\n"
-            . "                    }\n"
-            . "                    // Namingo requires the superordinate domain before in-bailiwick hosts.\n"
-            . "                    \$domainParams['nss'] = [];",
-        "            if (\$error !== null) {\n"
-            . "                throw new \\RuntimeException('DomainCreate Error: ' . \$error);\n"
-            . "            }" =>
-            "            if (\$error !== null) {\n"
-            . "                throw new \\RuntimeException('DomainCreate Error: ' . \$error);\n"
-            . "            }\n"
-            . "\n"
-            . "            if (!empty(\$pendingNameservers)) {\n"
-            . "                \$update = ['domainname' => \$domainName];\n"
-            . "                foreach (\$pendingNameservers as \$index => \$host) {\n"
-            . "                    \$hostCreate = \$epp->hostCreate(\$host);\n"
-            . "                    \$hostError = \$this->responseError(\$hostCreate);\n"
-            . "                    if (\$hostError !== null) {\n"
-            . "                        throw new \\RuntimeException('HostCreate Error: ' . \$hostError);\n"
-            . "                    }\n"
-            . "                    \$update['ns' . (\$index + 1)] = \$host['hostname'];\n"
-            . "                }\n"
-            . "                \$domainUpdate = \$epp->domainUpdateNS(\$update);\n"
-            . "                \$updateError = \$this->responseError(\$domainUpdate);\n"
-            . "                if (\$updateError !== null) {\n"
-            . "                    throw new \\RuntimeException('DomainUpdateNS Error: ' . \$updateError);\n"
-            . "                }\n"
-            . "            }",
-    ],
-];
-foreach ($edits as $path => $replacements) {
-    $contents = file_get_contents($path);
-    if ($contents === false) {
-        throw new RuntimeException("Cannot read $path");
-    }
-    foreach ($replacements as $from => $to) {
-        if (substr_count($contents, $from) !== 1) {
-            throw new RuntimeException("Pinned Loom glue patch context mismatch in $path");
-        }
-        $contents = str_replace($from, $to, $contents);
-    }
-    if (file_put_contents($path, $contents) === false) {
-        throw new RuntimeException("Cannot write $path");
-    }
-}
-"""
-
-USE_CONFIGURED_API_DATABASE_HOST = r"""<?php
-$path = '/opt/loom/routes/web.php';
-$contents = file_get_contents($path);
-if ($contents === false) {
-    throw new RuntimeException("Cannot read $path");
-}
-$from = "        \$db_address = 'localhost';";
-$to = "        \$db_address = \$db['mysql']['host'];";
-if (substr_count($contents, $from) < 1) {
-    throw new RuntimeException("Pinned Loom API database context mismatch");
-}
-$contents = preg_replace('/^' . preg_quote($from, '/') . '$/m', $to, $contents, 1);
-if (file_put_contents($path, $contents) === false) {
-    throw new RuntimeException("Cannot write $path");
-}
-"""
-
-IMPORT_PROVIDER_SQL = r"""<?php
-require '/opt/loom/vendor/autoload.php';
-Dotenv\Dotenv::createImmutable('/opt/loom')->load();
-$dsn = 'mysql:host=' . $_ENV['DB_HOST'] . ';port=' . $_ENV['DB_PORT']
-    . ';dbname=' . $_ENV['DB_DATABASE'] . ';charset=utf8mb4';
-$pdo = new PDO($dsn, $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD'], [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-]);
-$sql = file_get_contents('/opt/seedemu/loom/provider.sql');
-if ($sql === false || trim($sql) === '') {
-    throw new RuntimeException('Loom provider SQL is empty');
-}
-$pdo->exec($sql);
-"""
-
-LOOM_EPP_PROBE = r'''<?php
-declare(strict_types=1);
-
-require '/opt/loom/vendor/autoload.php';
-Dotenv\Dotenv::createImmutable('/opt/loom')->load();
-require '/opt/loom/bootstrap/helper.php';
-
-$config = json_decode(
-    file_get_contents('/opt/seedemu/loom/epp-probe.json'),
-    true,
-    16,
-    JSON_THROW_ON_ERROR
-);
-$pdo = new PDO(
-    'mysql:host=' . $_ENV['DB_HOST'] . ';port=' . $_ENV['DB_PORT']
-        . ';dbname=' . $_ENV['DB_DATABASE'] . ';charset=utf8mb4',
-    $_ENV['DB_USERNAME'],
-    $_ENV['DB_PASSWORD'],
-    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-);
-$find = $pdo->prepare("SELECT api_endpoint, credentials FROM providers
-    WHERE tld = ? AND status = 'active'");
-$find->execute([$config['tld']]);
-$provider = $find->fetch(PDO::FETCH_ASSOC);
-if (!$provider) {
-    throw new RuntimeException('Active Loom EPP provider not found');
-}
-$credentials = json_decode($provider['credentials'], true, 64, JSON_THROW_ON_ERROR);
-[$host, $port] = explode(':', $provider['api_endpoint'], 2);
-$epp = connectEpp(
-    'generic', $host, (int)$port,
-    $credentials['cafile'], $credentials['cert_file'], $credentials['key_file'],
-    $credentials['passphrase'], $credentials['auth']['username'],
-    $credentials['auth']['password']
-);
-$reply = $epp->domainCheck(['domains' => [$config['domain']]]);
-$epp->logout();
-if (isset($reply['error'])) {
-    throw new RuntimeException((string)$reply['error']);
-}
-echo json_encode([
-    'status' => 'ok',
-    'transport' => 'epp-over-tls',
-    'client' => 'loom',
-    'peer' => $provider['api_endpoint'],
-    'operation' => 'domain-check',
-    'resource' => $config['domain'],
-], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . PHP_EOL;
-'''
-
 
 class LoomRegistrarServer(Server):
     """Deploy Loom with optional TLS and a source-token authentication adapter.
@@ -215,7 +54,7 @@ class LoomRegistrarServer(Server):
 
     def __init__(self):
         super().__init__()
-        self.__commit: str | None = None
+        self.__commit = LOOM_COMMIT
         self.__environment: str | None = None
         self.__environment_config: dict[str, str | int] | None = None
         self.__port = 80
@@ -229,16 +68,20 @@ class LoomRegistrarServer(Server):
         self.__provider_sql: str | None = None
         self.__epp_providers: list[dict] = []
         self.__admin_user_creation = False
-        self.__epp_client_credentials: tuple[str, str, str] | None = None
-        self.__epp_probe: dict[str, str | int] | None = None
+        self.__epp_client_credentials: dict[str, tuple[str, str, str]] = {}
+        self.__epp_probes: list[dict[str, str | int]] = []
 
     def setCommit(self, commit: str) -> LoomRegistrarServer:
-        """Pin the exact upstream Loom commit used by the emulation."""
+        """Override the service-pinned Loom commit for a controlled experiment."""
         assert re.fullmatch(r"[0-9a-f]{40}", commit), (
             "Loom commit must be 40 lowercase hex digits"
         )
         self.__commit = commit
         return self
+
+    def getVersion(self) -> str:
+        """Return the exact upstream Loom commit supported by this service."""
+        return self.__commit
 
     def setEnvironment(self, environment: str) -> LoomRegistrarServer:
         """Provide the complete Loom .env for the selected pinned version."""
@@ -252,7 +95,7 @@ class LoomRegistrarServer(Server):
     def configureEnvironment(
         self,
         identity: RegistrarIdentity,
-        webauthn_secret: str,
+        webauthn_secret: str = LOOM_WEBAUTHN_SECRET,
         app_name: str = "SeedEmu Loom Registrar",
     ) -> LoomRegistrarServer:
         """Configure a standard Loom environment using service-owned defaults."""
@@ -340,7 +183,10 @@ class LoomRegistrarServer(Server):
         return self
 
     def configureDatabase(
-        self, database: str, app_username: str, app_password: str
+        self,
+        database: str = LOOM_DATABASE_NAME,
+        app_username: str = LOOM_DATABASE_USERNAME,
+        app_password: str = LOOM_DATABASE_PASSWORD,
     ) -> LoomRegistrarServer:
         """Create Loom's database and grant its local application user access."""
         identifier = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -412,6 +258,7 @@ class LoomRegistrarServer(Server):
         ),
         contact_type: str = "int",
         auto_create_hosts: bool = True,
+        credential_name: str = "default",
     ) -> LoomRegistrarServer:
         """Add a parameterized Loom domain provider backed by an EPP Registry."""
         assert self.__provider_sql is None, "setProviderSql() is already configured"
@@ -433,7 +280,12 @@ class LoomRegistrarServer(Server):
         assert re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", clid), (
             "invalid EPP provider client id"
         )
-        assert password, "EPP provider password cannot be empty"
+        assert 1 <= len(password) <= 16, (
+            "EPP provider password must contain at most 16 characters"
+        )
+        assert re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", credential_name), (
+            "invalid EPP credential name"
+        )
         assert prices, "EPP provider prices cannot be empty"
         normalized_prices: dict[str, dict[str, float]] = {}
         allowed_operations = {"register", "renew", "transfer", "restore"}
@@ -474,6 +326,7 @@ class LoomRegistrarServer(Server):
             "contact_roles": list(contact_roles),
             "contact_type": contact_type,
             "auto_create_hosts": auto_create_hosts,
+            "credential_name": credential_name,
         })
         return self
 
@@ -489,6 +342,7 @@ class LoomRegistrarServer(Server):
         ca_certificate_pem: str,
         client_certificate_pem: str,
         client_private_key_pem: str,
+        credential_name: str = "default",
     ) -> LoomRegistrarServer:
         """Install Loom EPP mutual-TLS credentials with safe key permissions."""
         assert "BEGIN CERTIFICATE" in ca_certificate_pem, "invalid EPP CA certificate"
@@ -496,10 +350,13 @@ class LoomRegistrarServer(Server):
             "invalid EPP client certificate"
         )
         assert "PRIVATE KEY" in client_private_key_pem, "invalid EPP client key"
-        assert self.__epp_client_credentials is None, (
-            "Loom EPP client credentials are already configured"
+        assert re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", credential_name), (
+            "invalid EPP credential name"
         )
-        self.__epp_client_credentials = (
+        assert credential_name not in self.__epp_client_credentials, (
+            "Loom EPP client credential name is already configured"
+        )
+        self.__epp_client_credentials[credential_name] = (
             ca_certificate_pem,
             client_certificate_pem,
             client_private_key_pem,
@@ -524,12 +381,14 @@ class LoomRegistrarServer(Server):
         )
         assert dns_name.fullmatch(normalized_domain), "invalid EPP probe domain"
         assert probe_interval >= 5, "EPP probe interval must be at least 5 seconds"
-        assert self.__epp_probe is None, "Loom EPP probe is already enabled"
-        self.__epp_probe = {
+        assert all(probe["tld"] != normalized_tld for probe in self.__epp_probes), (
+            "Loom EPP probe TLD is already enabled"
+        )
+        self.__epp_probes.append({
             "tld": normalized_tld,
             "domain": normalized_domain,
             "interval": probe_interval,
-        }
+        })
         return self
 
     def _epp_provider_sql(self) -> str:
@@ -537,9 +396,15 @@ class LoomRegistrarServer(Server):
         for provider in self.__epp_providers:
             credentials = {
                 "ssl": True,
-                "cert_file": "/opt/loom-epp/client.crt",
-                "key_file": "/opt/loom-epp/client.key",
-                "cafile": "/opt/loom-epp/ca.crt",
+                "cert_file": "/opt/loom-epp/{}/client.crt".format(
+                    provider["credential_name"]
+                ),
+                "key_file": "/opt/loom-epp/{}/client.key".format(
+                    provider["credential_name"]
+                ),
+                "cafile": "/opt/loom-epp/{}/ca.crt".format(
+                    provider["credential_name"]
+                ),
                 "passphrase": "",
                 "auth": {
                     "username": provider["clid"],
@@ -659,66 +524,60 @@ MOSAPI_PASSWORD=''
                    "    ssl_certificate_key /opt/seedemu/loom/web.key;\n"
                    "    ssl_protocols TLSv1.2 TLSv1.3;")
         listen = f"{self.__port} ssl" if self.__web_tls else str(self.__port)
-        return rf"""server {{
-    listen {listen};
-    {tls}
-    server_name _;
-    root {LOOM_INSTALL_DIR}/public;
-    index index.php index.html;
-
-    location / {{
-        try_files $uri $uri/ /index.php$is_args$args;
-    }}
-
-    location ~ \.php$ {{
-        include snippets/fastcgi-php.conf;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
-    }}
-}}
-"""
+        return render_template(
+            "loom",
+            "nginx.conf",
+            {
+                "__SEED_LISTEN__": listen,
+                "__SEED_TLS__": tls,
+                "__SEED_DOCUMENT_ROOT__": LOOM_INSTALL_DIR + "/public",
+            },
+        )
 
     def _start_script(self) -> str:
         bootstrap = "\n".join(self.__bootstrap_commands)
         source_bootstrap = ("php /opt/seedemu/loom/init-source-accounts.php"
                             if self.__source_accounts else "")
         epp_probe = ""
-        if self.__epp_probe is not None:
-            epp_probe = (
-                "while true; do if php /opt/seedemu/loom/epp-probe.php "
-                ">/run/seedemu-loom-epp-health.json.tmp "
-                "2>/opt/loom/logs/seedemu-epp-probe.log; "
-                "then mv /run/seedemu-loom-epp-health.json.tmp "
-                "/run/seedemu-loom-epp-health.json; "
-                "else rm -f /run/seedemu-loom-epp-health.json.tmp "
-                "/run/seedemu-loom-epp-health.json; fi; sleep {}; done &"
-            ).format(self.__epp_probe["interval"])
-        return f"""#!/bin/sh
-set -eu
-
-service mariadb start
-service php8.5-fpm start
-if [ ! -e /var/lib/loom/.seedemu-initialized ]; then
-{bootstrap}
-    mkdir -p /var/lib/loom
-    touch /var/lib/loom/.seedemu-initialized
-fi
-{source_bootstrap}
-service nginx start
-{epp_probe}
-"""
+        if self.__epp_probes:
+            commands = []
+            for index, probe in enumerate(self.__epp_probes):
+                suffix = "" if index == 0 else "-{}".format(
+                    str(probe["tld"]).lstrip(".").replace(".", "-")
+                )
+                config = "/opt/seedemu/loom/epp-probe{}.json".format(suffix)
+                health = "/run/seedemu-loom-epp-health{}.json".format(suffix)
+                log = "/opt/loom/logs/seedemu-epp-probe{}.log".format(suffix)
+                commands.append(
+                    "while true; do if php /opt/seedemu/loom/epp-probe.php {} "
+                    ">{}.tmp 2>{}; then mv {}.tmp {}; "
+                    "else rm -f {}.tmp {}; fi; sleep {}; done &".format(
+                        config, health, log, health, health, health, health,
+                        probe["interval"],
+                    )
+                )
+            epp_probe = "\n".join(commands)
+        return render_template(
+            "loom",
+            "start.sh",
+            {
+                "__SEED_BOOTSTRAP__": bootstrap,
+                "__SEED_SOURCE_BOOTSTRAP__": source_bootstrap,
+                "__SEED_EPP_PROBE__": epp_probe,
+            },
+        )
 
     def install(self, node: Node):
-        assert self.__commit is not None, "setCommit() is required"
         assert self.__environment is not None or self.__environment_config is not None, (
             "setEnvironment() or configureEnvironment() is required"
         )
         assert self.__environment_config is None or self.__database_access is not None, (
             "configureEnvironment() requires configureDatabase()"
         )
-        assert not self.__epp_providers or self.__epp_client_credentials is not None, (
-            "EPP providers require setEppClientCredentials()"
-        )
+        assert all(
+            provider["credential_name"] in self.__epp_client_credentials
+            for provider in self.__epp_providers
+        ), "each EPP provider requires matching client credentials"
         assert self.__bootstrap_commands, (
             "at least one Loom bootstrap command is required"
         )
@@ -802,32 +661,33 @@ service nginx start
                 "/etc/mysql/mariadb.conf.d/99-seedemu-loom.cnf",
                 "[mysqld]\nbind-address = 0.0.0.0\n",
             )
-        if self.__epp_client_credentials is not None:
-            ca_certificate, client_certificate, client_private_key = (
-                self.__epp_client_credentials
-            )
-            node.setFile("/opt/loom-epp/ca.crt", ca_certificate)
-            node.setFile("/opt/loom-epp/client.crt", client_certificate)
-            node.setFile("/opt/loom-epp/client.key", client_private_key)
+        for name, credentials in self.__epp_client_credentials.items():
+            ca_certificate, client_certificate, client_private_key = credentials
+            directory = "/opt/loom-epp/{}".format(name)
+            node.setFile(directory + "/ca.crt", ca_certificate)
+            node.setFile(directory + "/client.crt", client_certificate)
+            node.setFile(directory + "/client.key", client_private_key)
             node.appendStartCommand(
-                "chown root:www-data /opt/loom-epp/client.key && "
-                "chmod 0640 /opt/loom-epp/client.key"
+                "chown root:www-data {0}/client.key && chmod 0640 {0}/client.key".format(
+                    directory
+                )
             )
-        if self.__epp_probe is not None:
+        if self.__epp_probes:
             assert self.__provider_sql is not None or self.__epp_providers, (
                 "Loom EPP probe requires setProviderSql() or addEppProvider()"
             )
-            assert self.__epp_client_credentials is not None, (
+            assert self.__epp_client_credentials, (
                 "Loom EPP probe requires setEppClientCredentials()"
             )
             node.setFile("/opt/seedemu/loom/epp-probe.php", LOOM_EPP_PROBE)
-            node.setFile(
-                "/opt/seedemu/loom/epp-probe.json",
-                json.dumps({
-                    "tld": self.__epp_probe["tld"],
-                    "domain": self.__epp_probe["domain"],
-                }),
-            )
+            for index, probe in enumerate(self.__epp_probes):
+                suffix = "" if index == 0 else "-{}".format(
+                    str(probe["tld"]).lstrip(".").replace(".", "-")
+                )
+                node.setFile(
+                    "/opt/seedemu/loom/epp-probe{}.json".format(suffix),
+                    json.dumps({"tld": probe["tld"], "domain": probe["domain"]}),
+                )
         environment = self.__environment or self._configured_environment(
             str(interfaces[0].getAddress())
         )

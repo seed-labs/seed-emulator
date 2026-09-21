@@ -1,18 +1,31 @@
 from __future__ import annotations
-from seedemu.core import Node, Printable, Emulator, Service, Server
+from seedemu.core import Binding, Filter, Node, Printable, Emulator, Service, Server
 from seedemu.core.enums import NetworkType
-from typing import List, Dict, Tuple, Set, Optional
+from dataclasses import dataclass
+from typing import Iterable, List, Dict, Tuple, Set, Optional
 from ipaddress import ip_address
 from re import fullmatch, sub
 from random import randint
+import base64
 import json
 import requests
+import secrets
 import subprocess
 import tempfile
 from pathlib import Path
 
 DomainNameServiceFileTemplates: Dict[str, str] = {}
 ROOT_ZONE_URL = 'https://www.internic.net/domain/root.zone'
+
+
+@dataclass(frozen=True)
+class RuntimeDnsNode:
+    """A runtime-managed authoritative DNS vnode and its physical host."""
+
+    vnode: str
+    asn: int
+    node_name: str
+    address: str
 
 SOURCE_OWNED_DNS_CONTROL_SCRIPT = r'''#!/bin/sh
 set -eu
@@ -21,7 +34,11 @@ zone=$(printf %s "$request" | jq -r '.zone')
 operation=$(printf %s "$request" | jq -r '.operation')
 case "$zone" in *[!A-Za-z0-9._-]*|'') exit 64 ;; esac
 zone=${zone%.}
-jq -e --arg zone "$zone" '.zones | index($zone) != null' /etc/seedemu-owned-dns/policy.json >/dev/null
+jq -e --arg zone "$zone" '
+  any(.zone_suffixes[];
+    . as $suffix |
+    $zone != $suffix and ($zone | endswith("." + $suffix)))
+' /etc/seedemu-owned-dns/policy.json >/dev/null
 role=$(jq -r .role /etc/seedemu-owned-dns/policy.json)
 primary=$(jq -r .primary /etc/seedemu-owned-dns/policy.json)
 secondary=$(jq -r .secondary /etc/seedemu-owned-dns/policy.json)
@@ -464,7 +481,7 @@ class DomainNameServer(Server):
         ssh_host_public_key: str,
         update_secret: str,
         transfer_secret: str,
-        zones: List[str],
+        zone_suffixes: List[str],
     ) -> DomainNameServer:
         """Enable source-authenticated runtime provisioning on this BIND node."""
         assert role in {'primary', 'secondary'}, 'invalid runtime DNS role'
@@ -477,14 +494,18 @@ class DomainNameServer(Server):
         assert ssh_host_public_key.startswith('ssh-ed25519 '), 'host key must be Ed25519'
         assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', update_secret), 'invalid update secret'
         assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', transfer_secret), 'invalid transfer secret'
-        assert zones, 'at least one authorized runtime zone is required'
+        assert zone_suffixes, 'at least one authorized runtime zone suffix is required'
         assert self.__runtime_zone_management is None, 'runtime zone management already configured'
         assert self.__zone_file_receiver is None, 'runtime management conflicts with zone receiver'
-        normalized_zones = []
-        for zone in zones:
-            normalized = zone.rstrip('.').lower()
-            assert fullmatch(r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9-]+', normalized), 'invalid runtime zone'
-            normalized_zones.append(normalized)
+        normalized_suffixes = []
+        for suffix in zone_suffixes:
+            normalized = suffix.removeprefix('.').rstrip('.').lower()
+            assert fullmatch(
+                r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*'
+                r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?',
+                normalized,
+            ), 'invalid runtime zone suffix'
+            normalized_suffixes.append(normalized)
         self.__runtime_zone_management = {
             'role': role,
             'service_id': service_id,
@@ -496,7 +517,7 @@ class DomainNameServer(Server):
             'host_public_key': ssh_host_public_key.strip() + '\n',
             'update_secret': update_secret,
             'transfer_secret': transfer_secret,
-            'zones': normalized_zones,
+            'zone_suffixes': normalized_suffixes,
         }
         return self
 
@@ -911,7 +932,7 @@ Match User root Address {publisher_ip}
                     'role': runtime['role'],
                     'primary': runtime['primary'],
                     'secondary': runtime['secondary'],
-                    'zones': runtime['zones'],
+                    'zone_suffixes': runtime['zone_suffixes'],
                 }),
             )
             node.setFile(
@@ -1015,6 +1036,112 @@ class DomainNameService(Service):
                 key_path.read_text(),
                 key_path.with_suffix('.pub').read_text().strip(),
             )
+
+    def configureRuntimeZoneService(
+        self,
+        emulator: Emulator,
+        source_node: Node,
+        *,
+        service_id: str,
+        source_address: str,
+        primary: RuntimeDnsNode,
+        secondary: RuntimeDnsNode,
+        zone_suffixes: Iterable[str],
+        credential_dir: Optional[str] = None,
+    ) -> DomainNameService:
+        """Install and expose one source-controlled authoritative DNS pair.
+
+        Physical networks and hosts remain scenario topology. This method owns
+        the reusable control credentials, source discovery metadata, primary
+        and secondary service configuration, and vnode bindings.
+        """
+        assert fullmatch(r'[A-Za-z0-9_.-]{1,64}', service_id), 'invalid DNS service id'
+        ip_address(source_address)
+        ip_address(primary.address)
+        ip_address(secondary.address)
+        assert primary.vnode != secondary.vnode, 'runtime DNS vnodes must be distinct'
+        assert primary.address != secondary.address, 'runtime DNS addresses must be distinct'
+        assert (primary.asn, primary.node_name) != (secondary.asn, secondary.node_name), (
+            'runtime DNS nodes must be distinct'
+        )
+        normalized_suffixes = tuple(dict.fromkeys(
+            suffix.removeprefix('.').rstrip('.').lower()
+            for suffix in zone_suffixes
+        ))
+        assert normalized_suffixes, 'at least one authorized runtime zone suffix is required'
+        assert all(
+            fullmatch(
+                r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*'
+                r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?',
+                suffix,
+            )
+            for suffix in normalized_suffixes
+        ), 'invalid runtime zone suffix'
+
+        control_private, control_public = self.generateSshKeyPair(
+            '{}-source-control'.format(service_id)
+        )
+        primary_private, primary_public = self.generateSshKeyPair(
+            '{}-primary'.format(service_id)
+        )
+        secondary_private, secondary_public = self.generateSshKeyPair(
+            '{}-secondary'.format(service_id)
+        )
+        credential_dir = credential_dir or '/opt/seedemu/dns/{}'.format(service_id)
+        assert credential_dir.startswith('/'), 'credential directory must be absolute'
+        assert fullmatch(r'/[A-Za-z0-9_./-]+', credential_dir), 'invalid credential directory'
+        assert '..' not in credential_dir.split('/'), 'invalid credential directory'
+
+        service_label = 'agent.exposed.dns.authoritative_services'
+        existing_services = source_node.getLabel().get(service_label, '')
+        service_ids = existing_services.split(',') if existing_services else []
+        assert service_id not in service_ids, 'runtime DNS service is already exposed'
+        source_node.setLabel(service_label, ','.join(service_ids + [service_id]))
+        source_node.setFile('{}/control.key'.format(credential_dir), control_private)
+        source_node.setFile(
+            '{}/known_hosts'.format(credential_dir),
+            '{} {}\n{} {}\n'.format(
+                primary.address, primary_public,
+                secondary.address, secondary_public,
+            ),
+        )
+        source_node.appendStartCommand(
+            'chmod 0700 {0}; chmod 0600 {0}/control.key; '
+            'chmod 0644 {0}/known_hosts'.format(credential_dir)
+        )
+        source_node.addSoftware('openssh-client dnsutils whois')
+
+        common = {
+            'service_id': service_id,
+            'primary': primary.address,
+            'secondary': secondary.address,
+            'source_address': source_address,
+            'source_public_key': control_public,
+            'update_secret': base64.b64encode(secrets.token_bytes(32)).decode(),
+            'transfer_secret': base64.b64encode(secrets.token_bytes(32)).decode(),
+            'zone_suffixes': list(normalized_suffixes),
+        }
+        self.install(primary.vnode).enableRuntimeZoneManagement(
+            role='primary',
+            ssh_host_private_key=primary_private,
+            ssh_host_public_key=primary_public,
+            **common,
+        )
+        self.install(secondary.vnode).enableRuntimeZoneManagement(
+            role='secondary',
+            ssh_host_private_key=secondary_private,
+            ssh_host_public_key=secondary_public,
+            **common,
+        )
+        emulator.addBinding(Binding(
+            primary.vnode,
+            filter=Filter(asn=primary.asn, nodeName=primary.node_name),
+        ))
+        emulator.addBinding(Binding(
+            secondary.vnode,
+            filter=Filter(asn=secondary.asn, nodeName=secondary.node_name),
+        ))
+        return self
     
     def __autoNameServer(self, zone: Zone):
         """!
