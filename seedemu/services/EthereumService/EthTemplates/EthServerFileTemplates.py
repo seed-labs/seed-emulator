@@ -8,7 +8,7 @@ def get_file_content(filename):
     @return the content of the file
     """
     real_filename = os.path.dirname(os.path.realpath(__file__)) + "/" + filename
-    with open(real_filename, "r") as file:
+    with open(real_filename, "r", encoding="utf-8") as file:
         return file.read()
 
 
