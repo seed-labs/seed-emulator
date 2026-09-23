@@ -19,6 +19,9 @@ SOURCE_AUTH_BOOTSTRAP = load_loom_template("source_auth_bootstrap.php")
 SOURCE_AUTH_ENDPOINT = load_loom_template("source_auth_endpoint.php")
 FORCE_GENERIC_EPP = load_loom_template("force_generic_epp.php")
 ENABLE_NAMESERVER_GLUE = load_loom_template("enable_nameserver_glue.php")
+ENFORCE_REGISTRATION_BOUNDARY = load_loom_template(
+    "enforce_registration_boundary.php"
+)
 USE_CONFIGURED_API_DATABASE_HOST = load_loom_template(
     "use_configured_api_database_host.php"
 )
@@ -34,13 +37,17 @@ LOOM_WEBAUTHN_SECRET = "seedemu-loom-webauthn"
 
 
 class LoomWebTlsCredentials(NamedTuple):
+    """PEM-encoded certificate and private key for Loom HTTPS."""
+
     certificate: str
     private_key: str
 
 def _sql_string(value: str) -> str:
+    """Return ``value`` as an escaped MariaDB string literal."""
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "''"))
 
 def _dotenv_string(value: str) -> str:
+    """Return ``value`` quoted for Loom's generated dotenv file."""
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "\\'"))
 
 class LoomRegistrarServer(Server):
@@ -123,6 +130,7 @@ class LoomRegistrarServer(Server):
         return self
 
     def setPort(self, port: int) -> LoomRegistrarServer:
+        """Set the HTTP frontend port and return this server for chaining."""
         assert 1 <= port <= 65535, "invalid Loom frontend port"
         self.__port = port
         return self
@@ -568,6 +576,14 @@ MOSAPI_PASSWORD=''
         )
 
     def install(self, node: Node):
+        """Render Loom packages, files, commands, and labels onto ``node``.
+
+        Args:
+            node: Bound physical SeedEmu node receiving the Loom installation.
+
+        Returns:
+            Nothing. ``node`` is modified in place during service rendering.
+        """
         assert self.__environment is not None or self.__environment_config is not None, (
             "setEnvironment() or configureEnvironment() is required"
         )
@@ -622,6 +638,13 @@ MOSAPI_PASSWORD=''
         node.addBuildCommandAtEnd("php /opt/seedemu/loom/force-generic-epp.php")
         node.setFile("/opt/seedemu/loom/enable-nameserver-glue.php", ENABLE_NAMESERVER_GLUE)
         node.addBuildCommandAtEnd("php /opt/seedemu/loom/enable-nameserver-glue.php")
+        node.setFile(
+            "/opt/seedemu/loom/enforce-registration-boundary.php",
+            ENFORCE_REGISTRATION_BOUNDARY,
+        )
+        node.addBuildCommandAtEnd(
+            "php /opt/seedemu/loom/enforce-registration-boundary.php"
+        )
         node.setFile("/opt/seedemu/loom/use-configured-api-db-host.php", USE_CONFIGURED_API_DATABASE_HOST)
         node.addBuildCommandAtEnd("php /opt/seedemu/loom/use-configured-api-db-host.php")
         node.addBuildCommand(
@@ -699,6 +722,7 @@ MOSAPI_PASSWORD=''
         node.appendStartCommand("/usr/local/bin/seedemu-start-loom")
 
     def print(self, indent: int) -> str:
+        """Return an indented diagnostic name for this server."""
         return " " * indent + "LoomRegistrarServer\n"
 
 
@@ -710,13 +734,22 @@ class LoomRegistrarService(Service):
         self.addDependency("Base", False, False)
 
     def getName(self) -> str:
+        """Return the stable SeedEmu layer name for this service."""
         return "LoomRegistrarService"
 
     @staticmethod
     def generateWebTlsCredentials(
         server_name: str, validity_days: int = 3650
     ) -> LoomWebTlsCredentials:
-        """Generate a self-signed Loom HTTPS certificate for one deployment."""
+        """Generate a self-signed Loom HTTPS certificate for one deployment.
+
+        Args:
+            server_name: DNS name or IP address placed in the certificate SAN.
+            validity_days: Positive certificate lifetime in days.
+
+        Returns:
+            PEM-encoded certificate and private key.
+        """
         assert validity_days > 0, "TLS certificate validity must be positive"
         try:
             ipaddress.ip_address(server_name)
@@ -746,9 +779,11 @@ class LoomRegistrarService(Service):
             )
 
     def _createServer(self) -> LoomRegistrarServer:
+        """Return a fresh per-vnode Loom server configuration object."""
         return LoomRegistrarServer()
 
     def print(self, indent: int) -> str:
+        """Return an indented diagnostic name for this service layer."""
         return " " * indent + "LoomRegistrarService\n"
 
 

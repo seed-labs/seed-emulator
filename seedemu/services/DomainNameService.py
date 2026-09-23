@@ -10,9 +10,12 @@ import base64
 import json
 import requests
 import secrets
-import subprocess
-import tempfile
-from pathlib import Path
+
+from .RestrictedSshEndpoint import (
+    RestrictedSshEndpoint,
+    generateSshKeyPair,
+    installRestrictedSshEndpoint,
+)
 
 DomainNameServiceFileTemplates: Dict[str, str] = {}
 ROOT_ZONE_URL = 'https://www.internic.net/domain/root.zone'
@@ -26,6 +29,23 @@ class RuntimeDnsNode:
     asn: int
     node_name: str
     address: str
+
+
+@dataclass(frozen=True)
+class RuntimeDnsNameserver:
+    """An in-zone nameserver name and the address published as its glue."""
+
+    name: str
+    address: str
+
+
+@dataclass(frozen=True)
+class ZonePublicationCredentials:
+    """Credentials and targets needed by an external full-zone publisher."""
+
+    publisher_private_key: str
+    primary_host_public_key: str
+    secondary_addresses: tuple[str, ...]
 
 SOURCE_OWNED_DNS_CONTROL_SCRIPT = r'''#!/bin/sh
 set -eu
@@ -42,23 +62,25 @@ jq -e --arg zone "$zone" '
 role=$(jq -r .role /etc/seedemu-owned-dns/policy.json)
 primary=$(jq -r .primary /etc/seedemu-owned-dns/policy.json)
 secondary=$(jq -r .secondary /etc/seedemu-owned-dns/policy.json)
+soa_nameserver=$(jq -r '.nameservers[0].name' /etc/seedemu-owned-dns/policy.json)
 conf=/etc/bind/seedemu-owned-${zone}.conf
 zone_file=/var/lib/bind/seedemu-owned-${zone}.zone
 if [ "$operation" = provision ]; then
     if [ ! -e "$conf" ]; then
         if [ "$role" = primary ]; then
             serial=$(date +%s)
-            cat > "$zone_file" <<EOF
-\$TTL 300
-@ IN SOA ns1.$zone. hostmaster.$zone. $serial 300 60 86400 60
-@ IN NS ns1.$zone.
-@ IN NS ns2.$zone.
-ns1 IN A $primary
-ns2 IN A $secondary
-EOF
+            {
+                printf '$TTL 300\n'
+                printf '@ IN SOA %s.%s. hostmaster.%s. %s 300 60 86400 60\n' \
+                    "$soa_nameserver" "$zone" "$zone" "$serial"
+                jq -r --arg zone "$zone" '
+                  .nameservers[] |
+                  "@ IN NS \(.name).\($zone).\n\(.name) IN \(.record_type) \(.address)"
+                ' /etc/seedemu-owned-dns/policy.json
+            } > "$zone_file"
             chown bind:bind "$zone_file"
             cat > "$conf" <<EOF
-zone "$zone" { type master; file "$zone_file"; notify yes; also-notify { $secondary key "seedemu-transfer"; }; allow-transfer { key "seedemu-transfer"; }; allow-update { key "seedemu-update"; }; };
+zone "$zone" { type master; file "$zone_file"; notify yes; also-notify { $secondary key "seedemu-transfer"; }; allow-transfer { key "seedemu-transfer"; }; update-policy local; };
 EOF
         else
             cat > "$conf" <<EOF
@@ -79,10 +101,10 @@ updates=$(printf %s "$request" | jq -r '
   if .operation == "delete" then "update delete \(.name) \(.record_type)"
   else "update delete \(.name) \(.record_type)\nupdate add \(.name) \(.ttl) \(.record_type) \(.value)" end')
 {
-    printf 'server 127.0.0.1\nzone %s\n' "$zone"
+    printf 'zone %s\n' "$zone"
     printf '%s\n' "$updates"
     printf 'send\n'
-} | nsupdate -k /etc/bind/keys/seedemu-update.key
+} | nsupdate -l
 printf '{"status":"applied","role":"primary","zone":"%s"}\n' "$zone"
 '''
 
@@ -479,11 +501,16 @@ class DomainNameServer(Server):
         source_public_key: str,
         ssh_host_private_key: str,
         ssh_host_public_key: str,
-        update_secret: str,
         transfer_secret: str,
         zone_suffixes: List[str],
+        nameservers: List[RuntimeDnsNameserver],
     ) -> DomainNameServer:
-        """Enable source-authenticated runtime provisioning on this BIND node."""
+        """Enable source-authenticated runtime provisioning on this BIND node.
+
+        ``primary`` and ``secondary`` define the transfer topology, whereas
+        ``nameservers`` defines the in-zone NS names and glue published in each
+        newly provisioned zone. The first nameserver is used as the SOA MNAME.
+        """
         assert role in {'primary', 'secondary'}, 'invalid runtime DNS role'
         assert fullmatch(r'[A-Za-z0-9_.-]{1,64}', service_id), 'invalid DNS service id'
         ip_address(primary)
@@ -492,9 +519,9 @@ class DomainNameServer(Server):
         assert source_public_key.startswith('ssh-ed25519 '), 'source key must be Ed25519'
         assert 'BEGIN OPENSSH PRIVATE KEY' in ssh_host_private_key, 'invalid SSH host key'
         assert ssh_host_public_key.startswith('ssh-ed25519 '), 'host key must be Ed25519'
-        assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', update_secret), 'invalid update secret'
         assert fullmatch(r'[A-Za-z0-9+/]+={0,2}', transfer_secret), 'invalid transfer secret'
         assert zone_suffixes, 'at least one authorized runtime zone suffix is required'
+        assert nameservers, 'at least one runtime nameserver is required'
         assert self.__runtime_zone_management is None, 'runtime zone management already configured'
         assert self.__zone_file_receiver is None, 'runtime management conflicts with zone receiver'
         normalized_suffixes = []
@@ -506,6 +533,23 @@ class DomainNameServer(Server):
                 normalized,
             ), 'invalid runtime zone suffix'
             normalized_suffixes.append(normalized)
+        normalized_nameservers = []
+        seen_names = set()
+        for nameserver in nameservers:
+            name = nameserver.name.rstrip('.').lower()
+            assert fullmatch(
+                r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*'
+                r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?',
+                name,
+            ), 'invalid runtime nameserver name'
+            assert name not in seen_names, 'runtime nameserver names must be unique'
+            seen_names.add(name)
+            address = ip_address(nameserver.address)
+            normalized_nameservers.append({
+                'name': name,
+                'address': str(address),
+                'record_type': 'A' if address.version == 4 else 'AAAA',
+            })
         self.__runtime_zone_management = {
             'role': role,
             'service_id': service_id,
@@ -515,9 +559,9 @@ class DomainNameServer(Server):
             'source_public_key': source_public_key.strip(),
             'host_private_key': ssh_host_private_key.strip() + '\n',
             'host_public_key': ssh_host_public_key.strip() + '\n',
-            'update_secret': update_secret,
             'transfer_secret': transfer_secret,
             'zone_suffixes': normalized_suffixes,
+            'nameservers': normalized_nameservers,
         }
         return self
 
@@ -681,7 +725,6 @@ class DomainNameServer(Server):
         node.addSoftware('bind9')
         if self.__zone_file_receiver is not None:
             assert self.__is_master, 'zone file receiver requires a primary/master'
-            node.addSoftware('openssh-server')
         if not self.__usesIncludeConfig():
             node.setFile(
                 '/etc/bind/named.conf',
@@ -873,41 +916,17 @@ logger -t seedemu-zone-publisher "installed $zone serial $new_serial"
                     max_bytes=max_bytes,
                 ),
             )
-            node.setFile('/etc/ssh/ssh_host_ed25519_key', host_private_key)
-            node.setFile('/etc/ssh/ssh_host_ed25519_key.pub', host_public_key)
-            node.setFile(
-                '/root/.ssh/authorized_keys',
-                'from="{}",restrict,command="{}" {}\n'.format(
-                    publisher_ip, receiver_command, publisher_public_key
+            installRestrictedSshEndpoint(
+                node,
+                RestrictedSshEndpoint(
+                    source_address=publisher_ip,
+                    source_public_key=publisher_public_key,
+                    host_private_key=host_private_key,
+                    host_public_key=host_public_key,
+                    forced_command=receiver_command,
+                    config_name='seedemu-zone-publisher',
                 ),
             )
-            node.setFile(
-                '/etc/ssh/sshd_config.d/seedemu-zone-publisher.conf',
-                '''PasswordAuthentication no
-KbdInteractiveAuthentication no
-PermitRootLogin prohibit-password
-PubkeyAuthentication yes
-Match User root Address {publisher_ip}
-    ForceCommand {receiver_command}
-'''.format(
-                    publisher_ip=publisher_ip,
-                    receiver_command=receiver_command,
-                ),
-            )
-            node.appendStartCommand('chmod 0755 {}'.format(receiver_command))
-            node.appendStartCommand('chmod 0600 /etc/ssh/ssh_host_ed25519_key')
-            node.appendStartCommand('chmod 0644 /etc/ssh/ssh_host_ed25519_key.pub')
-            node.appendStartCommand('mkdir -p /root/.ssh /run/sshd')
-            node.appendStartCommand('chmod 0700 /root/.ssh')
-            node.appendStartCommand('chmod 0600 /root/.ssh/authorized_keys')
-            # This node's SSH endpoint is dedicated to zone publication.  Use
-            # the receiver as the login shell as well as a forced command so
-            # base images that discard SSH exec requests cannot feed the zone
-            # text to an interactive shell.
-            node.appendStartCommand(
-                'usermod --shell {} root'.format(receiver_command)
-            )
-            node.appendStartCommand('service ssh start')
 
         if self.__runtime_zone_management is not None:
             runtime = self.__runtime_zone_management
@@ -921,7 +940,7 @@ Match User root Address {publisher_ip}
                 'agent.exposed.dns.credential_ref',
                 '{}.source-control'.format(service_id),
             )
-            node.addSoftware('bind9-utils dnsutils jq openssh-server')
+            node.addSoftware('bind9-utils dnsutils jq')
             node.setFile(
                 '/usr/local/sbin/seedemu-owned-dns-control',
                 SOURCE_OWNED_DNS_CONTROL_SCRIPT,
@@ -933,13 +952,8 @@ Match User root Address {publisher_ip}
                     'primary': runtime['primary'],
                     'secondary': runtime['secondary'],
                     'zone_suffixes': runtime['zone_suffixes'],
+                    'nameservers': runtime['nameservers'],
                 }),
-            )
-            node.setFile(
-                '/etc/bind/keys/seedemu-update.key',
-                'key "seedemu-update" {{ algorithm hmac-sha256; secret "{}"; }};\n'.format(
-                    runtime['update_secret']
-                ),
             )
             node.setFile(
                 '/etc/bind/keys/seedemu-transfer.key',
@@ -949,50 +963,24 @@ Match User root Address {publisher_ip}
             )
             node.appendFile(
                 '/etc/bind/named.conf.local',
-                'include "/etc/bind/keys/seedemu-update.key";\n'
                 'include "/etc/bind/keys/seedemu-transfer.key";\n',
             )
-            node.setFile(
-                '/etc/ssh/ssh_host_ed25519_key', runtime['host_private_key']
-            )
-            node.setFile(
-                '/etc/ssh/ssh_host_ed25519_key.pub', runtime['host_public_key']
-            )
-            node.setFile(
-                '/root/.ssh/authorized_keys',
-                'from="{}",restrict,command="/usr/local/sbin/seedemu-owned-dns-control" {}\n'.format(
-                    runtime['source_address'], runtime['source_public_key']
+            installRestrictedSshEndpoint(
+                node,
+                RestrictedSshEndpoint(
+                    source_address=runtime['source_address'],
+                    source_public_key=runtime['source_public_key'],
+                    host_private_key=runtime['host_private_key'],
+                    host_public_key=runtime['host_public_key'],
+                    forced_command='/usr/local/sbin/seedemu-owned-dns-control',
+                    config_name='seedemu-owned-dns',
                 ),
             )
-            node.setFile(
-                '/etc/ssh/sshd_config.d/seedemu-owned-dns.conf',
-                '''PasswordAuthentication no
-KbdInteractiveAuthentication no
-PermitRootLogin prohibit-password
-PubkeyAuthentication yes
-Match User root Address {source_address}
-    ForceCommand /usr/local/sbin/seedemu-owned-dns-control
-'''.format(source_address=runtime['source_address']),
-            )
-            node.appendStartCommand(
-                'chmod 0755 /usr/local/sbin/seedemu-owned-dns-control'
-            )
-            node.appendStartCommand('mkdir -p /root/.ssh /run/sshd /var/lib/bind')
-            node.appendStartCommand('chmod 0700 /root/.ssh')
-            node.appendStartCommand(
-                'chmod 0600 /etc/ssh/ssh_host_ed25519_key /root/.ssh/authorized_keys'
-            )
+            node.appendStartCommand('mkdir -p /var/lib/bind')
             node.appendStartCommand(
                 'chown -R root:bind /etc/bind/keys && chmod 0750 /etc/bind/keys '
                 '&& chmod 0640 /etc/bind/keys/*.key'
             )
-            # Some SeedEmu base images wrap the root shell and discard SSH exec
-            # requests.  Keep the authorized-key and sshd forced commands, and
-            # use the restricted controller as the login shell as well.
-            node.appendStartCommand(
-                'usermod --shell /usr/local/sbin/seedemu-owned-dns-control root'
-            )
-            node.appendStartCommand('service ssh start')
 
         node.appendStartCommand('chown -R bind:bind /etc/bind/zones')
         node.appendStartCommand('service named start')
@@ -1020,22 +1008,91 @@ class DomainNameService(Service):
 
     @staticmethod
     def generateSshKeyPair(comment: str) -> Tuple[str, str]:
-        """Generate a deployment-local Ed25519 private/public key pair."""
-        assert comment.strip(), 'SSH key comment cannot be empty'
-        with tempfile.TemporaryDirectory() as work:
-            key_path = Path(work) / 'id_ed25519'
-            subprocess.run(
-                [
-                    'ssh-keygen', '-q', '-t', 'ed25519', '-N', '',
-                    '-C', comment, '-f', str(key_path),
-                ],
-                check=True,
-                capture_output=True,
+        """Generate SSH credentials through the restricted-endpoint helper."""
+        return generateSshKeyPair(comment)
+
+    def configureZonePublicationTopology(
+        self,
+        *,
+        zone: str,
+        publisher_address: str,
+        primary_vnode: str,
+        primary_address: str,
+        secondary_vnodes: Iterable[tuple[str, str]],
+        transfer_key_name: Optional[str] = None,
+    ) -> ZonePublicationCredentials:
+        """Configure a primary/secondary topology for full-zone publication.
+
+        The caller declares vnode roles and addresses. This service generates
+        the SSH and TSIG material, configures the primary receiver and zone
+        transfers, and returns only what the external publisher must install.
+
+        Args:
+            zone: Authoritative zone hosted by all listed DNS servers.
+            publisher_address: Source IP allowed to deliver complete zone files.
+            primary_vnode: Installed vnode that receives published zone files.
+            primary_address: Address used by secondaries for AXFR/IXFR.
+            secondary_vnodes: Public ``(vnode, address)`` secondary pairs.
+            transfer_key_name: Optional TSIG key name derived from ``zone``.
+
+        Returns:
+            Publisher private key, primary SSH host key, and secondary addresses.
+        """
+        normalized_zone = zone if zone.endswith('.') else zone + '.'
+        ip_address(publisher_address)
+        ip_address(primary_address)
+        secondary_items = list(secondary_vnodes)
+        assert secondary_items, 'at least one secondary DNS server is required'
+        assert len({vnode for vnode, _ in secondary_items}) == len(secondary_items), (
+            'secondary DNS vnodes must be unique'
+        )
+        assert len({address for _, address in secondary_items}) == len(secondary_items), (
+            'secondary DNS addresses must be unique'
+        )
+        for _, address in secondary_items:
+            ip_address(address)
+
+        targets = self.getPendingTargets()
+        assert primary_vnode in targets, 'primary DNS vnode is not installed'
+        assert all(vnode in targets for vnode, _ in secondary_items), (
+            'secondary DNS vnode is not installed'
+        )
+        assert primary_vnode not in {vnode for vnode, _ in secondary_items}, (
+            'primary DNS vnode cannot also be a secondary'
+        )
+
+        key_prefix = normalized_zone.rstrip('.').replace('.', '-')
+        transfer_key_name = transfer_key_name or '{}-transfer'.format(key_prefix)
+        publisher_private, publisher_public = self.generateSshKeyPair(
+            '{}-zone-publisher'.format(key_prefix)
+        )
+        primary_host_private, primary_host_public = self.generateSshKeyPair(
+            '{}-primary'.format(key_prefix)
+        )
+        transfer_secret = base64.b64encode(secrets.token_bytes(32)).decode()
+
+        primary = targets[primary_vnode]
+        primary.setHiddenPrimary().setTransferKey(
+            transfer_key_name, transfer_secret
+        ).enableZoneFileReceiver(
+            normalized_zone,
+            publisher_address,
+            publisher_public,
+            primary_host_private,
+            primary_host_public,
+        )
+        for _, address in secondary_items:
+            primary.addTransferTarget(address)
+        for vnode, _ in secondary_items:
+            targets[vnode].setSecondary(primary_address).setTransferKey(
+                transfer_key_name, transfer_secret
             )
-            return (
-                key_path.read_text(),
-                key_path.with_suffix('.pub').read_text().strip(),
-            )
+
+        return ZonePublicationCredentials(
+            publisher_private_key=publisher_private,
+            primary_host_public_key=primary_host_public,
+            secondary_addresses=tuple(address for _, address in secondary_items),
+        )
 
     def configureRuntimeZoneService(
         self,
@@ -1047,13 +1104,17 @@ class DomainNameService(Service):
         primary: RuntimeDnsNode,
         secondary: RuntimeDnsNode,
         zone_suffixes: Iterable[str],
+        nameservers: Iterable[RuntimeDnsNameserver],
         credential_dir: Optional[str] = None,
     ) -> DomainNameService:
         """Install and expose one source-controlled authoritative DNS pair.
 
         Physical networks and hosts remain scenario topology. This method owns
         the reusable control credentials, source discovery metadata, primary
-        and secondary service configuration, and vnode bindings.
+        and secondary service configuration, and vnode bindings. ``nameservers``
+        may contain any number of relative, in-zone names; address families are
+        converted to A or AAAA glue records automatically. Its first item is
+        used as the SOA MNAME.
         """
         assert fullmatch(r'[A-Za-z0-9_.-]{1,64}', service_id), 'invalid DNS service id'
         ip_address(source_address)
@@ -1077,6 +1138,8 @@ class DomainNameService(Service):
             )
             for suffix in normalized_suffixes
         ), 'invalid runtime zone suffix'
+        nameserver_items = tuple(nameservers)
+        assert nameserver_items, 'at least one runtime nameserver is required'
 
         control_private, control_public = self.generateSshKeyPair(
             '{}-source-control'.format(service_id)
@@ -1117,9 +1180,9 @@ class DomainNameService(Service):
             'secondary': secondary.address,
             'source_address': source_address,
             'source_public_key': control_public,
-            'update_secret': base64.b64encode(secrets.token_bytes(32)).decode(),
             'transfer_secret': base64.b64encode(secrets.token_bytes(32)).decode(),
             'zone_suffixes': list(normalized_suffixes),
+            'nameservers': list(nameserver_items),
         }
         self.install(primary.vnode).enableRuntimeZoneManagement(
             role='primary',

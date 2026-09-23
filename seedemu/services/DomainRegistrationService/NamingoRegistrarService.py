@@ -24,6 +24,7 @@ LOOM_SCHEMA_COMPATIBILITY = load_template(
 
 
 def _php(value) -> str:
+    """Serialize a scalar as a PHP configuration literal."""
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
@@ -32,6 +33,7 @@ def _php(value) -> str:
 
 
 def _sql_string(value: str) -> str:
+    """Return ``value`` as an escaped MariaDB string literal."""
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "''"))
 
 
@@ -75,6 +77,7 @@ class NamingoRegistrarServer(Server):
         return NAMINGO_VERSION
 
     def setBackend(self, backend: str) -> NamingoRegistrarServer:
+        """Select the supported billing-schema adapter and return ``self``."""
         backend = backend.lower()
         assert backend in {"foss", "whmcs", "loom", "custom"}, "unsupported Namingo backend"
         self.__backend = backend
@@ -83,6 +86,13 @@ class NamingoRegistrarServer(Server):
     def setDatabase(
         self, name: str, username: str, password: str
     ) -> NamingoRegistrarServer:
+        """Configure the locally managed database and return ``self``.
+
+        Args:
+            name: MariaDB database name.
+            username: Application database user.
+            password: Non-empty password for that user.
+        """
         identifier = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
         assert identifier.fullmatch(name), "invalid MariaDB database name"
         assert identifier.fullmatch(username), "invalid MariaDB username"
@@ -119,6 +129,7 @@ class NamingoRegistrarServer(Server):
         return self
 
     def setIdentity(self, identity: RegistrarIdentity) -> NamingoRegistrarServer:
+        """Copy shared public identity fields into RDDS configuration."""
         self.__registrar_name = identity.name
         self.__registrar_iana = str(identity.iana_id)
         self.__registrar_url = identity.url.rstrip("/")
@@ -129,10 +140,12 @@ class NamingoRegistrarServer(Server):
         return self
 
     def setPrivacy(self, enabled: bool) -> NamingoRegistrarServer:
+        """Enable or disable RDDS privacy filtering and return ``self``."""
         self.__privacy = enabled
         return self
 
     def setMinimumData(self, enabled: bool) -> NamingoRegistrarServer:
+        """Select minimum-data RDDS responses and return ``self``."""
         self.__minimum_data = enabled
         return self
 
@@ -263,6 +276,14 @@ fi""".format(database=self.__db_name)
         )
 
     def install(self, node: Node):
+        """Render Namingo Registrar RDDS onto a bound physical node.
+
+        Args:
+            node: SeedEmu node receiving packages, configuration, and commands.
+
+        Returns:
+            Nothing. ``node`` is modified in place during rendering.
+        """
         assert (
             self.__enable_whois
             or self.__enable_rdap
@@ -373,19 +394,25 @@ fi""".format(database=self.__db_name)
         node.appendStartCommand("/usr/local/bin/seedemu-start-namingo")
 
     def print(self, indent: int) -> str:
+        """Return an indented diagnostic name for this server."""
         return " " * indent + "NamingoRegistrarServer\n"
 
 
 class NamingoRegistrarService(Service):
+    """SeedEmu service layer that creates Namingo Registrar RDDS servers."""
+
     def __init__(self):
         super().__init__()
         self.addDependency("Base", False, False)
 
     def getName(self) -> str:
+        """Return the stable SeedEmu layer name for this service."""
         return "NamingoRegistrarService"
 
     def _createServer(self) -> NamingoRegistrarServer:
+        """Return a fresh per-vnode Namingo Registrar server configuration."""
         return NamingoRegistrarServer()
 
     def print(self, indent: int) -> str:
+        """Return an indented diagnostic name for this service layer."""
         return " " * indent + "NamingoRegistrarService\n"

@@ -2,7 +2,14 @@ from .WebService import WebService, WebServer
 from .BotnetService import BotnetClientService, BotnetClientServer, BotnetService, BotnetServer
 from .DomainRegistrarService import DomainRegistrarService, DomainRegistrarServer
 from .DomainRegistrationService import *
-from .DomainNameService import DomainNameServer, DomainNameService, RuntimeDnsNode, Zone
+from .DomainNameService import (
+    DomainNameServer,
+    DomainNameService,
+    RuntimeDnsNameserver,
+    RuntimeDnsNode,
+    Zone,
+    ZonePublicationCredentials,
+)
 from .TorService import TorService, TorServer, TorNodeType
 from .DomainNameCachingService import DomainNameCachingServer, DomainNameCachingService
 from .CymruIpOrigin import CymruIpOriginService, CymruIpOriginServer

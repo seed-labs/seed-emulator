@@ -5,7 +5,23 @@ from urllib.parse import SplitResult, urlsplit
 
 @dataclass(frozen=True)
 class RegistrarIdentity:
-    """Shared public identity used by Loom, Registrar RDDS, and Registry."""
+    """Shared public identity used by Loom, Registrar RDDS.
+
+    Attributes:
+        name: Human-readable Registrar name.
+        company_name: Legal or display name shown by Loom.
+        domain: Registrar application domain, without a URL scheme.
+        iana_id: Numeric Registrar identifier advertised by RDDS.
+        url: Public Registrar HTTP(S) URL.
+        whois_host: Public Registrar WHOIS hostname.
+        rdap_url: Public Registrar RDAP base URL.
+        email: General contact email address.
+        phone: General contact telephone number.
+        address: Postal address displayed by the Registrar.
+        country_code: Two-letter uppercase country code.
+        abuse_email: Abuse contact email address.
+        abuse_phone: Abuse contact telephone number.
+    """
 
     name: str
     company_name: str
@@ -22,6 +38,7 @@ class RegistrarIdentity:
     abuse_phone: str
 
     def __post_init__(self) -> None:
+        """Validate identity fields immediately after dataclass construction."""
         values = {
             field: value
             for field, value in self.__dict__.items()
@@ -54,6 +71,7 @@ class RegistrarIdentity:
 
     @staticmethod
     def _parse_url(value: str, label: str) -> SplitResult:
+        """Validate an HTTP(S) URL and return its parsed representation."""
         parsed = urlsplit(value)
         assert parsed.scheme in {"http", "https"}, (
             "Registrar {} must use HTTP or HTTPS".format(label)
@@ -70,7 +88,7 @@ class RegistrarIdentity:
 
     @property
     def rdap_host(self) -> str:
-        """Return the host portion expected by Loom's RDAP_SERVER setting."""
+        """Return the hostname expected by Loom's ``RDAP_SERVER`` setting."""
         parsed = self._parse_url(self.rdap_url, "RDAP URL")
         assert parsed.hostname is not None
         return parsed.hostname

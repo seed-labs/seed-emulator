@@ -2,7 +2,6 @@ from __future__ import annotations
 
 """Reusable composition of Loom, Namingo Registry/RDDS, and TLD publication."""
 
-import base64
 import hashlib
 import ipaddress
 import secrets
@@ -12,7 +11,10 @@ from urllib.parse import urlsplit
 
 from seedemu.core import Binding, Emulator, Filter, Node
 from seedemu.layers import Base
-from seedemu.services.DomainNameService import DomainNameService
+from seedemu.services.DomainNameService import (
+    DomainNameService,
+    ZonePublicationCredentials,
+)
 from .LoomRegistrarService import (
     LOOM_DATABASE_NAME,
     LOOM_DATABASE_PASSWORD,
@@ -39,7 +41,14 @@ DEFAULT_RDDS_DATABASE_PASSWORD = "seedemu-loom-rdds"
 
 @dataclass(frozen=True)
 class RegistrationNode:
-    """A service vnode and its physical host."""
+    """Map one service vnode to the physical host that will run it.
+
+    Attributes:
+        vnode: Virtual-node name passed to ``Service.install``.
+        asn: Autonomous-system number containing the physical host.
+        node_name: Physical host name within ``asn``.
+        address: Service address used by peers and generated configuration.
+    """
 
     vnode: str
     asn: int
@@ -49,6 +58,7 @@ class RegistrationNode:
 
 @dataclass(frozen=True)
 class RegistryDeployment:
+    """References and public endpoints for one configured Registry."""
     node: RegistrationNode
     service: NamingoRegistryService
     server: NamingoRegistryServer
@@ -61,6 +71,7 @@ class RegistryDeployment:
 
 @dataclass(frozen=True)
 class LoomRegistrarDeployment:
+    """References, identity, and HTTPS state for one Loom Registrar."""
     identity: RegistrarIdentity
     node: RegistrationNode
     service: LoomRegistrarService
@@ -72,6 +83,7 @@ class LoomRegistrarDeployment:
 
 @dataclass(frozen=True)
 class RegistrarRddsDeployment:
+    """References for Registrar WHOIS/RDAP attached to a Loom instance."""
     registrar_id: str
     node: RegistrationNode
     service: NamingoRegistrarService
@@ -80,6 +92,7 @@ class RegistrarRddsDeployment:
 
 @dataclass(frozen=True)
 class DomainRegistrationDeployment:
+    """Snapshot of all deployments produced when the system is installed."""
     registries: dict[str, RegistryDeployment]
     registrars: dict[str, LoomRegistrarDeployment]
     registrar_rdds: dict[str, RegistrarRddsDeployment]
@@ -87,6 +100,7 @@ class DomainRegistrationDeployment:
 
 @dataclass(frozen=True)
 class EppConnection:
+    """Configuration of one Registrar-to-Registry EPP relationship."""
     registrar_id: str
     registry_id: str
     clid: str
@@ -112,6 +126,14 @@ class DomainRegistrationSystem:
         dns: DomainNameService,
         registrar_identity: RegistrarIdentity | None = None,
     ):
+        """Create an uninstalled domain-registration composition.
+
+        Args:
+            emulator: Emulator that will receive service layers and bindings.
+            base: Base layer used to validate physical hosts.
+            dns: Authoritative DNS layer used for TLD publication.
+            registrar_identity: Optional default identity for Loom Registrars.
+        """
         self._emulator = emulator
         self._base = base
         self._dns = dns
@@ -126,11 +148,13 @@ class DomainRegistrationSystem:
 
     @staticmethod
     def _validate_id(value: str, kind: str) -> None:
+        """Validate a short identifier used as an internal dictionary key."""
         assert 1 <= len(value) <= 32 and value.replace("-", "").replace("_", "").isalnum(), (
             "invalid {} id".format(kind)
         )
 
     def _bind(self, node: RegistrationNode) -> None:
+        """Validate and queue a vnode-to-physical-host binding."""
         assert node.vnode not in self._bindings, "registration vnode is already configured"
         ipaddress.ip_address(node.address)
         self._base.getAutonomousSystem(node.asn).getHost(node.node_name)
@@ -147,7 +171,20 @@ class DomainRegistrationSystem:
         rdap_url: str,
         epp_port: int = 700,
     ) -> RegistryDeployment:
-        """Create one EPP Registry and its Registry-authority RDDS."""
+        """Create one EPP Registry and its Registry-authority RDDS.
+
+        Args:
+            registry_id: Unique composition-local Registry identifier.
+            node: Virtual and physical placement of the Registry.
+            epp_hostname: DNS hostname exposed by the EPP server.
+            tlds: TLDs for which this Registry accepts registrations.
+            whois_host: Public Registry WHOIS hostname.
+            rdap_url: Public Registry RDAP base URL.
+            epp_port: TCP port used by EPP over TLS.
+
+        Returns:
+            The configured Registry deployment and its service/server handles.
+        """
         self._validate_id(registry_id, "Registry")
         assert registry_id not in self._registries, "Registry id is already configured"
         assert all(
@@ -182,7 +219,21 @@ class DomainRegistrationSystem:
         database_password: str = LOOM_DATABASE_PASSWORD,
         webauthn_secret: str = LOOM_WEBAUTHN_SECRET,
     ) -> LoomRegistrarDeployment:
-        """Create the customer-facing Registrar and business database."""
+        """Create the customer-facing Loom Registrar and business database.
+
+        Args:
+            registrar_id: Unique composition-local Registrar identifier.
+            node: Virtual and physical placement of Loom.
+            identity: Public Registrar identity, or the constructor default.
+            commit: Optional Loom commit override for controlled experiments.
+            database: Loom database name.
+            database_username: Local Loom database user.
+            database_password: Password for the local database user.
+            webauthn_secret: Secret used by Loom's WebAuthn configuration.
+
+        Returns:
+            The configured Loom deployment, including generated HTTPS material.
+        """
         self._validate_id(registrar_id, "Registrar")
         assert registrar_id not in self._registrars, "Registrar id is already configured"
         assert all(
@@ -228,7 +279,21 @@ class DomainRegistrationSystem:
         prices: dict[str, dict[int, float]],
         probe_domain: str | None = None,
     ) -> None:
-        """Declare one edge in the Registrar-to-Registry EPP graph."""
+        """Declare one edge in the Registrar-to-Registry EPP graph.
+
+        Args:
+            registrar_id: Existing Loom Registrar identifier.
+            registry_id: Existing Registry identifier serving ``tld``.
+            clid: Optional EPP client identifier; generated when omitted.
+            password: Optional EPP password; generated when omitted.
+            prefix: Optional Registry object prefix; generated when omitted.
+            tld: TLD sold through this connection.
+            prices: Loom prices keyed by operation, registration period, and value.
+            probe_domain: Domain used for the read-only EPP health check.
+
+        Returns:
+            Nothing. The connection is materialized by :meth:`install`.
+        """
         assert registry_id in self._registries, "unknown Registry id"
         assert registrar_id in self._registrars, "unknown Registrar id"
         registry = self._registries[registry_id]
@@ -278,7 +343,19 @@ class DomainRegistrationSystem:
         database_password: str = DEFAULT_RDDS_DATABASE_PASSWORD,
         rdap_proxy_port: int = 80,
     ) -> RegistrarRddsDeployment:
-        """Attach Registrar WHOIS/RDAP to Loom's business database."""
+        """Attach Registrar WHOIS/RDAP to Loom's business database.
+
+        Args:
+            rdds_id: Unique composition-local RDDS identifier.
+            registrar_id: Loom Registrar whose data will be served.
+            node: Virtual and physical placement of Namingo Registrar RDDS.
+            database_username: Read-only Loom database user to create.
+            database_password: Password for that read-only user.
+            rdap_proxy_port: HTTP port exposing the RDAP reverse proxy.
+
+        Returns:
+            The configured Registrar RDDS deployment and service handles.
+        """
         self._validate_id(rdds_id, "Registrar RDDS")
         assert registrar_id in self._registrars, "unknown Registrar id"
         assert rdds_id not in self._registrar_rdds, "Registrar RDDS id is already configured"
@@ -330,7 +407,23 @@ class DomainRegistrationSystem:
         static_records: Iterable[tuple[str, str, list[str]]] = (),
         interval_seconds: int = 30,
     ) -> None:
-        """Connect Registry Zone Writer output to authoritative TLD DNS."""
+        """Connect Registry Zone Writer output to authoritative TLD DNS.
+
+        Args:
+            registry_id: Registry whose database feeds the zone writer.
+            zone: TLD zone to publish.
+            nameservers: Zone-writer NS slots mapped to public hostnames.
+            soa_contact: SOA responsible-party domain name.
+            hidden_primary_ip: Destination address for full-zone publication.
+            publisher_private_key: SSH key used by the Registry publisher.
+            hidden_primary_host_key: Expected SSH host public key.
+            public_secondary_ips: Servers whose SOA serials must converge.
+            static_records: Records retained in every generated zone snapshot.
+            interval_seconds: Zone-writer polling interval.
+
+        Returns:
+            Nothing. It updates the Registry server configuration in place.
+        """
         assert registry_id in self._registries, "unknown Registry id"
         registry = self._registries[registry_id]
         normalized_zone = zone.lower().strip(".")
@@ -353,7 +446,7 @@ class DomainRegistrationSystem:
 
     @staticmethod
     def _relativeName(hostname: str, zone: str) -> str | None:
-        """Return an in-zone hostname relative to its authoritative zone."""
+        """Return an in-zone hostname relative to ``zone``, else ``None``."""
         normalized_host = hostname.lower().rstrip(".")
         normalized_zone = zone.lower().rstrip(".")
         suffix = ".{}".format(normalized_zone)
@@ -366,7 +459,7 @@ class DomainRegistrationSystem:
     def _serviceRecords(
         self, registry_id: str, zone: str
     ) -> list[tuple[str, str, list[str]]]:
-        """Derive public service records from composed Registry/RDDS nodes."""
+        """Derive public A records for Registry and Registrar RDDS endpoints."""
         registry = self._registries[registry_id]
         registry_rdap_host = urlsplit(registry.rdap_url).hostname
         assert registry_rdap_host is not None
@@ -400,7 +493,15 @@ class DomainRegistrationSystem:
         zone: str,
         records: Iterable[tuple[str, str, Iterable[str]]],
     ) -> None:
-        """Make service endpoints resolvable before the first Zone Writer run."""
+        """Add initial service records before the first Zone Writer run.
+
+        Args:
+            zone: Existing authoritative DNS zone to update.
+            records: ``(name, type, parameters)`` records relative to ``zone``.
+
+        Returns:
+            Nothing. The DNS layer's pending zone is modified in place.
+        """
         dns_zone = self._dns.getZone(zone)
         if not dns_zone.findRecords("SOA"):
             dns_zone.addRecord("@ SOA ns1.{} hostmaster.{} 1 900 900 1800 60".format(
@@ -416,68 +517,46 @@ class DomainRegistrationSystem:
         *,
         registry_id: str,
         zone: str,
-        hidden_primary_vnode: str,
         hidden_primary_ip: str,
-        public_secondaries: Iterable[tuple[str, str]],
+        publication: ZonePublicationCredentials,
         nameservers: dict[str, str],
         soa_contact: str,
         static_records: Iterable[tuple[str, str, list[str]]] = (),
         interval_seconds: int = 30,
-        transfer_key_name: str | None = None,
     ) -> None:
-        """Configure the complete Registry-to-public-TLD publication path."""
+        """Publish Registry-generated data to an existing TLD DNS topology.
+
+        Args:
+            registry_id: Registry that owns and publishes ``zone``.
+            zone: TLD zone, with or without a trailing dot.
+            hidden_primary_ip: Existing DNS primary receiving complete zones.
+            publication: Opaque DNS-service result containing the publisher
+                credentials and public-secondary convergence targets.
+            nameservers: Zone-writer NS slots mapped to public DNS names.
+            soa_contact: SOA responsible-party domain name.
+            static_records: Scenario records retained during regeneration.
+            interval_seconds: Zone-writer polling interval.
+
+        Returns:
+            Nothing. Registry publication and initial records are configured;
+            DNS server roles and transfers must already exist.
+        """
         assert registry_id in self._registries, "unknown Registry id"
-        registry = self._registries[registry_id]
         normalized_zone = zone.lower().strip(".") + "."
-        transfer_key_name = transfer_key_name or "{}-transfer".format(
-            normalized_zone.rstrip(".")
-        )
-        secondary_items = list(public_secondaries)
-        assert secondary_items, "at least one public TLD secondary is required"
-        assert len(nameservers) == len(secondary_items), (
+        secondary_ips = list(publication.secondary_addresses)
+        assert secondary_ips, "at least one public TLD secondary is required"
+        assert len(nameservers) == len(secondary_ips), (
             "each public TLD secondary requires one nameserver"
         )
-        assert len({address for _, address in secondary_items}) == len(secondary_items), (
+        assert len(set(secondary_ips)) == len(secondary_ips), (
             "public TLD secondary addresses must be unique"
         )
-
-        publisher_private, publisher_public = self._dns.generateSshKeyPair(
-            "{}-zone-publisher".format(normalized_zone.rstrip("."))
-        )
-        primary_host_private, primary_host_public = self._dns.generateSshKeyPair(
-            "{}-hidden-primary".format(normalized_zone.rstrip("."))
-        )
-        transfer_secret = base64.b64encode(secrets.token_bytes(32)).decode()
-
-        targets = self._dns.getPendingTargets()
-        assert hidden_primary_vnode in targets, "hidden-primary vnode is not installed"
-        hidden_primary = targets[hidden_primary_vnode]
-        hidden_primary.setHiddenPrimary().setTransferKey(
-            transfer_key_name, transfer_secret
-        ).enableZoneFileReceiver(
-            normalized_zone,
-            registry.node.address,
-            publisher_public,
-            primary_host_private,
-            primary_host_public,
-        )
-        for _, address in secondary_items:
-            hidden_primary.addTransferTarget(address)
-
-        for vnode, _ in secondary_items:
-            targets = self._dns.getPendingTargets()
-            secondary = targets.get(vnode)
-            if secondary is None:
-                secondary = self._dns.install(vnode).addZone(normalized_zone)
-            secondary.setSecondary(hidden_primary_ip).setTransferKey(
-                transfer_key_name, transfer_secret
-            )
 
         service_records = self._serviceRecords(registry_id, normalized_zone)
         self._publishInitialServiceRecords(normalized_zone, service_records)
         nameserver_records = [
             (relative_name, "A", [address])
-            for hostname, (_, address) in zip(nameservers.values(), secondary_items)
+            for hostname, address in zip(nameservers.values(), secondary_ips)
             if (relative_name := self._relativeName(hostname, normalized_zone)) is not None
         ]
         generated_records = nameserver_records + service_records + list(static_records)
@@ -488,9 +567,9 @@ class DomainRegistrationSystem:
             nameservers=nameservers,
             soa_contact=soa_contact,
             hidden_primary_ip=hidden_primary_ip,
-            publisher_private_key=publisher_private,
-            hidden_primary_host_key=primary_host_public,
-            public_secondary_ips=[address for _, address in secondary_items],
+            publisher_private_key=publication.publisher_private_key,
+            hidden_primary_host_key=publication.primary_host_public_key,
+            public_secondary_ips=secondary_ips,
             static_records=generated_records,
             interval_seconds=interval_seconds,
         )
@@ -506,7 +585,20 @@ class DomainRegistrationSystem:
         username: str,
         credit_limit: float = 0.0,
     ) -> None:
-        """Provision both halves of one source-to-Registrar identity."""
+        """Provision both halves of one source-to-Registrar identity.
+
+        Args:
+            source_node: Emulated client receiving its credential material.
+            registrar_id: Loom Registrar that authenticates the source.
+            source_id: Stable, non-secret source principal identifier.
+            source_address: Expected source IP address at the Registrar.
+            email: Email assigned to the bootstrapped Loom account.
+            username: Login name assigned to the Loom account.
+            credit_limit: Initial account credit available for purchases.
+
+        Returns:
+            Nothing. Both source node and Loom configuration are modified.
+        """
         assert registrar_id in self._registrars, "unknown Registrar id"
         registrar = self._registrars[registrar_id]
         registrar.server.provisionSourceAccount(
@@ -579,7 +671,16 @@ class DomainRegistrationSystem:
                 )
 
     def install(self) -> DomainRegistrationDeployment:
-        """Add bindings and layers after validating a complete system."""
+        """Validate and add all queued bindings and service layers.
+
+        Returns:
+            A snapshot containing every installed Registry, Registrar, and
+            Registrar RDDS deployment.
+
+        Raises:
+            AssertionError: If required components are missing or installation
+                has already occurred.
+        """
         assert not self._installed, "DomainRegistrationSystem is already installed"
         assert self._registries, "at least one Registry is required"
         assert self._registrars, "at least one Loom Registrar is required"

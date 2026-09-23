@@ -25,7 +25,7 @@ AGENT_RDDS_LABEL_META = "agent.exposed.rdds.{key}"
 
 
 class EppTlsCredentials(NamedTuple):
-    """One CA and a matching EPP server/client mutual-TLS identity set."""
+    """PEM material and fingerprint for one EPP mutual-TLS client pair."""
 
     ca_certificate: str
     server_certificate: str
@@ -36,7 +36,11 @@ class EppTlsCredentials(NamedTuple):
 
 
 class EppTlsCredentialSet(NamedTuple):
-    """One Registry server identity and multiple clients signed by its CA."""
+    """One Registry server identity and multiple clients signed by its CA.
+
+    ``clients`` maps caller-provided client names to certificate, private-key,
+    and SHA-256 certificate-fingerprint tuples.
+    """
 
     ca_certificate: str
     server_certificate: str
@@ -45,6 +49,7 @@ class EppTlsCredentialSet(NamedTuple):
 
 
 def _php(value) -> str:
+    """Recursively serialize Python configuration data as a PHP literal."""
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
@@ -60,6 +65,7 @@ def _php(value) -> str:
 
 
 def _sql_string(value: str) -> str:
+    """Return ``value`` as an escaped MariaDB string literal."""
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "''"))
 
 
@@ -109,6 +115,13 @@ class NamingoRegistryServer(Server):
     def setDatabase(
         self, name: str, username: str, password: str
     ) -> NamingoRegistryServer:
+        """Configure Registry MariaDB credentials and return ``self``.
+
+        Args:
+            name: Upstream-required database name, currently ``registry``.
+            username: Local Registry database user.
+            password: Non-empty password for that user.
+        """
         identifier = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
         assert identifier.fullmatch(name), "invalid MariaDB database name"
         assert name == "registry", (
@@ -125,6 +138,7 @@ class NamingoRegistryServer(Server):
     def setEppEndpoint(
         self, hostname: str, port: int = 700
     ) -> NamingoRegistryServer:
+        """Set the EPP-over-TLS hostname and port and return ``self``."""
         assert re.fullmatch(
             r"(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*"
             r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?",
@@ -136,6 +150,7 @@ class NamingoRegistryServer(Server):
         return self
 
     def setTlds(self, tlds: List[str]) -> NamingoRegistryServer:
+        """Replace the normalized TLD allowlist and return ``self``."""
         assert tlds, "at least one TLD is required"
         normalized = []
         for tld in tlds:
@@ -151,15 +166,18 @@ class NamingoRegistryServer(Server):
         return self
 
     def setRoid(self, roid: str) -> NamingoRegistryServer:
+        """Set the Registry object-identifier prefix and return ``self``."""
         assert re.fullmatch(r"[A-Za-z0-9-]{2,16}", roid), "invalid ROID prefix"
         self.__roid = roid.upper()
         return self
 
     def setMinimumData(self, enabled: bool) -> NamingoRegistryServer:
+        """Select minimum-data RDDS responses and return ``self``."""
         self.__minimum_data = enabled
         return self
 
     def setNameserverMode(self, mode: str) -> NamingoRegistryServer:
+        """Select EPP ``hostObj`` or ``hostAttr`` nameserver representation."""
         assert mode in {"hostObj", "hostAttr"}, "unsupported nameserver mode"
         self.__ns_mode = mode
         return self
@@ -173,6 +191,19 @@ class NamingoRegistryServer(Server):
         whitelist: List[str],
         ssl_fingerprint: Optional[str] = None,
     ) -> NamingoRegistryServer:
+        """Authorize one Registrar account for EPP access.
+
+        Args:
+            identity: Shared public Registrar identity.
+            clid: EPP client identifier, unique within this Registry.
+            password: EPP password containing at most 16 characters.
+            prefix: Unique Registry object prefix for this Registrar.
+            whitelist: Permitted source IP addresses or CIDRs.
+            ssl_fingerprint: Optional SHA-256 client-certificate fingerprint.
+
+        Returns:
+            This server, allowing fluent configuration chaining.
+        """
         assert re.fullmatch(r"[A-Za-z0-9_.-]{1,16}", clid), "invalid registrar clid"
         assert 1 <= len(password) <= 16, (
             "registrar EPP password must contain at most 16 characters"
@@ -252,10 +283,12 @@ class NamingoRegistryServer(Server):
         return self
 
     def enableWhois(self, enabled: bool = True) -> NamingoRegistryServer:
+        """Enable or disable Registry WHOIS and return ``self``."""
         self.__enable_whois = enabled
         return self
 
     def enableRdap(self, enabled: bool = True) -> NamingoRegistryServer:
+        """Enable or disable Registry RDAP and return ``self``."""
         self.__enable_rdap = enabled
         return self
 
@@ -287,6 +320,7 @@ class NamingoRegistryServer(Server):
         return self
 
     def enableDas(self, enabled: bool = True) -> NamingoRegistryServer:
+        """Enable or disable the Domain Availability Service and return ``self``."""
         self.__enable_das = enabled
         return self
 
@@ -610,6 +644,14 @@ FLUSH PRIVILEGES;
         )
 
     def install(self, node: Node):
+        """Render Namingo Registry components onto a bound physical node.
+
+        Args:
+            node: SeedEmu node receiving packages, configuration, and commands.
+
+        Returns:
+            Nothing. ``node`` is modified in place during rendering.
+        """
         assert not self.__zone_writer_custom_records or self.__zone_writer_config is not None, (
             "Zone Writer records require configureZoneWriter()"
         )
@@ -800,6 +842,7 @@ ssh -T -i /opt/seedemu/namingo/zone-publisher-key \\
         node.appendStartCommand("/usr/local/bin/seedemu-start-namingo-registry")
 
     def print(self, indent: int) -> str:
+        """Return an indented diagnostic name for this server."""
         return " " * indent + "NamingoRegistryServer\n"
 
 
@@ -816,7 +859,16 @@ class NamingoRegistryService(Service):
         client_name: str,
         validity_days: int = 3650,
     ) -> EppTlsCredentials:
-        """Generate a CA-signed EPP server/client mutual-TLS credential set."""
+        """Generate a CA-signed EPP server/client mutual-TLS credential set.
+
+        Args:
+            server_hostname: DNS name placed in the server certificate SAN.
+            client_name: Name placed in the single client certificate subject.
+            validity_days: Positive certificate lifetime in days.
+
+        Returns:
+            PEM credentials and the client's SHA-256 certificate fingerprint.
+        """
         credential_set = NamingoRegistryService.generateEppTlsCredentialSet(
             server_hostname, [client_name], validity_days
         )
@@ -836,7 +888,16 @@ class NamingoRegistryService(Service):
         client_names: List[str],
         validity_days: int = 3650,
     ) -> EppTlsCredentialSet:
-        """Generate one Registry TLS identity and CA-signed client identities."""
+        """Generate one Registry TLS identity and CA-signed client identities.
+
+        Args:
+            server_hostname: DNS name placed in the server certificate SAN.
+            client_names: Unique names for client certificates signed by the CA.
+            validity_days: Positive certificate lifetime in days.
+
+        Returns:
+            Shared CA/server material plus credentials keyed by client name.
+        """
         hostname_pattern = (
             r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
             r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+"
@@ -863,6 +924,7 @@ class NamingoRegistryService(Service):
             client_ext = directory / "client.ext"
 
             def run_openssl(*arguments: str) -> None:
+                """Run OpenSSL with checked status and captured diagnostics."""
                 subprocess.run(
                     ["openssl", *arguments], check=True, capture_output=True
                 )
@@ -939,10 +1001,13 @@ class NamingoRegistryService(Service):
             )
 
     def getName(self) -> str:
+        """Return the stable SeedEmu layer name for this service."""
         return "NamingoRegistryService"
 
     def _createServer(self) -> NamingoRegistryServer:
+        """Return a fresh per-vnode Namingo Registry server configuration."""
         return NamingoRegistryServer()
 
     def print(self, indent: int) -> str:
+        """Return an indented diagnostic name for this service layer."""
         return " " * indent + "NamingoRegistryService\n"

@@ -24,7 +24,9 @@ from seedemu.services import (
     DomainNameService,
     RegistrarIdentity,
     RegistrationNode,
+    RuntimeDnsNameserver,
     RuntimeDnsNode,
+    ZonePublicationCredentials,
 )
 
 
@@ -63,6 +65,7 @@ def configure_namingo_services(
     emu: Emulator,
     base: Base,
     dns: DomainNameService,
+    tld_dns: ZonePublicationCredentials,
 ) -> None:
     """Compose Loom, colocated Registrar RDDS, Registry, and publication."""
     identity = RegistrarIdentity(
@@ -83,47 +86,17 @@ def configure_namingo_services(
     create_registration_nodes(base)
 
     drs = DomainRegistrationSystem(emu, base, dns, identity)
-    drs.addRegistry(
-        "com-registry",
-        RegistrationNode("namingo-registry", 154, "namingo-registry", REGISTRY_IP),
-        epp_hostname=REGISTRY_EPP_HOSTNAME,
-        tlds=["com"],
-        whois_host="whois.registry.com",
-        rdap_url="http://rdap.registry.com",
-    )
+
+    # Registrar: customer-facing ordering, payment, and Registrar RDDS.
     drs.addLoomRegistrar(
         "seedemu-registrar",
         RegistrationNode("loom-registrar", 150, "loom-registrar", LOOM_IP),
-    )
-    drs.connectEpp(
-        registrar_id="seedemu-registrar",
-        registry_id="com-registry",
-        tld="com",
-        prices={
-            "register": {1: 10},
-            "renew": {1: 10},
-            "transfer": {1: 10},
-            "restore": {1: 30},
-        },
     )
     drs.addRegistrarRdds(
         "seedemu-registrar-rdds",
         "seedemu-registrar",
         RegistrationNode("namingo-registrar", 150, "loom-registrar", LOOM_IP),
         rdap_proxy_port=8080,
-    )
-    drs.connectTldDns(
-        registry_id="com-registry",
-        zone="com.",
-        hidden_primary_vnode="a-com-server",
-        hidden_primary_ip=COM_HIDDEN_PRIMARY_IP,
-        public_secondaries=[
-            ("b-com-server", COM_PUBLIC_SECONDARY_IPS[0]),
-            ("c-com-server", COM_PUBLIC_SECONDARY_IPS[1]),
-        ],
-        nameservers={"ns1": "ns1.com", "ns2": "ns2.com"},
-        soa_contact="hostmaster.com",
-        static_records=COM_PRESEEDED_DELEGATIONS,
     )
 
     # Only this example client receives an identity. Its ID is not a secret.
@@ -137,11 +110,78 @@ def configure_namingo_services(
         username="b02a_host1",
         credit_limit=1000.0,
     )
+
+    # Registry: final domain uniqueness and Registrar-to-Registry EPP path.
+    drs.addRegistry(
+        "com-registry",
+        RegistrationNode("namingo-registry", 154, "namingo-registry", REGISTRY_IP),
+        epp_hostname=REGISTRY_EPP_HOSTNAME,
+        tlds=["com"],
+        whois_host="whois.registry.com",
+        rdap_url="http://rdap.registry.com",
+    )
+    drs.connectEpp(
+        registrar_id="seedemu-registrar",
+        registry_id="com-registry",
+        tld="com",
+        prices={
+            "register": {1: 10},
+            "renew": {1: 10},
+            "transfer": {1: 10},
+            "restore": {1: 30},
+        },
+    )
+
+    # TLD DNS: publish Registry data through the prepared COM topology.
+    drs.connectTldDns(
+        registry_id="com-registry",
+        zone="com.",
+        hidden_primary_ip=COM_HIDDEN_PRIMARY_IP,
+        publication=tld_dns,
+        nameservers={"ns1": "ns1.com", "ns2": "ns2.com"},
+        soa_contact="hostmaster.com",
+        static_records=COM_PRESEEDED_DELEGATIONS,
+    )
     drs.install()
 
 
-def configure_source_owned_dns(emu: Emulator, base: Base, dns: DomainNameService) -> None:
-    """Add two authoritative DNS nodes controlled only by B02a's source."""
+def configure_dns(
+    emu: Emulator,
+    base: Base,
+    dns: DomainNameService,
+) -> ZonePublicationCredentials:
+    """Configure B02a's COM topology and source-owned authoritative DNS."""
+    # B02 already supplies A-com and B-com. Add and bind the physical C-com
+    # server used by B02a's second public COM secondary.
+    base.getAutonomousSystem(153).createHost("c-com").joinNetwork(
+        "net0", address=COM_PUBLIC_SECONDARY_IPS[1]
+    ).setDisplayName("COM-C Public Secondary")
+    dns.install("c-com-server").addZone("com.")
+    emu.getVirtualNode("a-com-server").setDisplayName("COM-A Hidden Primary")
+    emu.getVirtualNode("b-com-server").setDisplayName("COM-B Public Secondary")
+    emu.getVirtualNode("c-com-server").setDisplayName("COM-C Public Secondary")
+    emu.addBinding(
+        Binding(
+            "c-com-server",
+            filter=Filter(asn=153, nodeName="c-com"),
+        )
+    )
+
+    # B02a declares the topology. DomainNameService owns SSH/TSIG generation
+    # and applies the corresponding receiver and transfer configuration.
+    tld_publication = dns.configureZonePublicationTopology(
+        zone="com.",
+        publisher_address=REGISTRY_IP,
+        primary_vnode="a-com-server",
+        primary_address=COM_HIDDEN_PRIMARY_IP,
+        secondary_vnodes=[
+            ("b-com-server", COM_PUBLIC_SECONDARY_IPS[0]),
+            ("c-com-server", COM_PUBLIC_SECONDARY_IPS[1]),
+        ],
+    )
+
+    # Source-owned DNS is independent of the COM publication topology, but it
+    # belongs to the same scenario-level DNS assembly.
     owner_as = base.getAutonomousSystem(160)
     owner_as.createNetwork(OWNER_DNS_NETWORK, OWNER_DNS_PREFIX)
     owner_as.getRouter("router0").joinNetwork(
@@ -167,7 +207,13 @@ def configure_source_owned_dns(emu: Emulator, base: Base, dns: DomainNameService
             "source-owned-dns-secondary", 160, "owner-dns-secondary", OWNER_DNS_SECONDARY_IP
         ),
         zone_suffixes=["com"],
+        nameservers=[
+            RuntimeDnsNameserver("ns1", OWNER_DNS_PRIMARY_IP),
+            RuntimeDnsNameserver("ns2", OWNER_DNS_SECONDARY_IP),
+        ],
     )
+
+    return tld_publication
 
 
 def build_emulator() -> Emulator:
@@ -178,33 +224,13 @@ def build_emulator() -> Emulator:
     base: Base = emu.getLayer("Base")
     dns: DomainNameService = emu.getLayer("DomainNameService")
 
-    ############################################################################
-    # B02 already supplies A-com and B-com. Add the physical C-com host.
-    base.getAutonomousSystem(153).createHost("c-com").joinNetwork(
-        "net0", address=COM_PUBLIC_SECONDARY_IPS[1]
-    ).setDisplayName("COM-C Public Secondary")
-
-    # B02 exposes A-com and B-com. B02a turns A-com into a hidden distribution
-    # primary, retains B-com as a public secondary, and adds C-com as a second
-    # public secondary. Only B/C publish NS and glue records to the root zone.
-    dns.install("c-com-server").addZone("com.")
-    emu.getVirtualNode("a-com-server").setDisplayName("COM-A Hidden Primary")
-    emu.getVirtualNode("b-com-server").setDisplayName("COM-B Public Secondary")
-    emu.getVirtualNode("c-com-server").setDisplayName("COM-C Public Secondary")
-
-    emu.addBinding(
-        Binding(
-            "c-com-server",
-            filter=Filter(asn=153, nodeName="c-com"),
-        )
-    )
-
+    tld_dns = configure_dns(emu, base, dns)
     configure_namingo_services(
         emu,
         base,
         dns,
+        tld_dns,
     )
-    configure_source_owned_dns(emu, base, dns)
 
     return emu
 
