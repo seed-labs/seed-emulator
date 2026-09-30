@@ -29,7 +29,7 @@ The attached services are:
 | `seedemu_emulator_service` | Backend shared by the maps |
 | `seedemu_traffic_observer_service` | Traffic observation backend used by the geographic map |
 
-The compiler selects available host ports in **8080–9999** for services that use port mappings. Read the generated Compose file or `docker compose ps` output to find each map's host port, then open `http://localhost:<port>` on the Docker host (or substitute the host's address). Ports are selected during generation, so they must also be available on the deployment host.
+The compiler selects host ports in **8080–9999**, excluding host ports already published by emulation services in the generated Compose configuration. It allocates ports during compilation without probing sockets on the host. Read the generated Compose file or `docker compose ps` output to find each map's host port, then open `http://localhost:<port>` on the Docker host (or substitute the host's address). These ports must also be available on the deployment host.
 
 The traffic observer uses host networking, the host PID namespace, privileged mode, and Linux kernel/BPF mounts. Run the full environment on a Linux Docker host that supports these facilities. The legacy built-in Internet map is disabled with `internetMapEnabled=False`; the map containers above are attached separately with `attachDockerhubContainer()`.
 

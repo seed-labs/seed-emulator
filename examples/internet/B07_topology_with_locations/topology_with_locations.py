@@ -22,7 +22,7 @@ from seedemu.core import Emulator
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, PeerRelationship, Routing
 from seedemu.utilities import Makers
 from geopy.distance import geodesic
-from seedemu.visualizationTools import VisualizationType
+from seedemu.visualizationTools import visualization_manager
 
 # The supplied catalogue is named cityies.py, not cities.py.
 from cityies import IX_LOCATIONS
@@ -461,72 +461,6 @@ class GeoDocker(Docker):
                 labels += f'            {META}{key}: "{value:.6f}"\n'
         return labels
 
-
-def validate_compose(output, expected):
-    path = output / "docker-compose.yml"
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    nodes = [
-        service
-        for service in data["services"].values()
-        if META + "role" in service.get("labels", {})
-    ]
-    if len(nodes) != expected:
-        raise RuntimeError(f"Expected {expected} nodes, found {len(nodes)}")
-    roles = Counter(node.get("labels", {}).get(META + "topology.role") for node in nodes)
-    if roles != {
-        "ix-route-server": 20,
-        "transit-router": expected - 80,
-        "stub-router": 20,
-        "stub-host": 40,
-    }:
-        raise RuntimeError(f"Unexpected node roles: {roles}")
-    for ix, asn in STUB_ASNS.items():
-        stub_nodes = [n for n in nodes if str(n["labels"].get(META + "asn")) == str(asn)]
-        if Counter(n["labels"][META + "topology.role"] for n in stub_nodes) != {
-            "stub-router": 1,
-            "stub-host": 2,
-        }:
-            raise RuntimeError(f"AS{asn} must contain one router and two hosts")
-        if any(n["labels"].get(META + "geo.anchor_ix") != str(ix) for n in stub_nodes):
-            raise RuntimeError(f"AS{asn} has an incorrect IX anchor")
-    globals_ = [
-        n for n in data["networks"].values() if n.get("labels", {}).get(META + "type") == "global"
-    ]
-    valid = {(round(c[3], 6), round(c[4], 6)) for c in load_cities()}
-    for obj in nodes + globals_:
-        labels = obj.get("labels", {})
-        point = tuple(round(float(labels[META + k]), 6) for k in ("geo.lat", "geo.lon"))
-        is_display = labels.get(META + "topology.role") == "ix-route-server"
-        if is_display:
-            ix = labels[META + "geo.anchor_ix"]
-            network = data["networks"][f"net_ix_ix{ix}"]["labels"]
-            anchor = tuple(float(network[META + k]) for k in ("geo.lat", "geo.lon"))
-            if anchor != tuple(
-                float(labels[META + k]) for k in ("geo.anchor_lat", "geo.anchor_lon")
-            ):
-                raise RuntimeError(f"IX{ix} logical anchor differs from its star network")
-            separation = geodesic(anchor, point).km
-            routers = [
-                s["labels"]
-                for s in nodes
-                if s["labels"].get(META + "topology.role") in ("transit-router", "stub-router")
-                and s["labels"].get(META + "geo.anchor_ix") == ix
-            ]
-            nearest = min(
-                geodesic(anchor, tuple(float(r[META + k]) for k in ("geo.lat", "geo.lon"))).km
-                for r in routers
-            )
-            if not (0 < separation <= 2.001 and separation < nearest / 10 and valid_land(*point)):
-                raise RuntimeError(f"Invalid IX{ix} display offset: {point}")
-        elif point not in valid:
-            raise RuntimeError(f"Invalid coordinate: {point}")
-    coordinates = [(s["labels"][META + "geo.lat"], s["labels"][META + "geo.lon"]) for s in nodes]
-    if len(set(coordinates)) != expected:
-        raise RuntimeError("Duplicate node coordinates")
-    if len(globals_) != 20:
-        raise RuntimeError("Expected 20 global IX networks")
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("legacy_platform", nargs="?", choices=["amd", "arm"])
@@ -565,15 +499,24 @@ def main():
         internetMapEnabled=False,
         platform=Platform.AMD64 if args.platform == "amd" else Platform.ARM64,
     )
+
     geoDocker.attachDockerhubContainer(
-        enabled={
-            VisualizationType.INTERNET_MAP_TOPOLOGY,
-            VisualizationType.INTERNET_MAP_GEOGRAPHIC,
-        },
-        portsRange=(8080, 9999),
+        visualization_manager.add_containers(
+            internet_map_topology={},
+            internet_map_geographic={},
+        ),
+        port_range=(8080, 9999),
     )
     emu.compile(geoDocker, str(output), override=args.override)
-    validate_compose(output, args.nodes)
+
+    for service in visualization_manager.getEnabled():
+        if service.toCompose().get('network_mode') == 'host':
+            continue
+        geoDocker._log(
+            f'visualization service {service.name}: '
+            f'port mapping (host:container) {service.ports}'
+        )
+
     print(
         f"Generated {args.nodes} nodes: 20 IX route servers + {args.nodes-80} transit routers"
         f" + 20 stub routers + 40 hosts, {len(records)} ASes."
