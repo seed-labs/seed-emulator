@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Iterable
 from seedemu.core.Emulator import Emulator
 from seedemu.core import Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
@@ -13,6 +14,7 @@ from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
 from yaml import dump, safe_dump
+from seedemu.visualizationTools import VisualizationType, visualization_manager, find_free_ports
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-internetmap:2.0'
 
@@ -1551,6 +1553,7 @@ class Docker(Compiler):
         # Add custom entries (typically added through Docker::attachCustomContainer APIs)
         self.__services += self.__custom_services
         self.__services += self._renderAdditionalComposeServices(emulator)
+        self._writeDockerhubCompose()
 
         local_images = ''
         for (image, _) in self.__images.values():
@@ -1571,6 +1574,23 @@ class Docker(Compiler):
         ), file=open('docker-compose.yml', 'w'))
 
         self.generateEnvFile(Scope(ScopeTier.Global),'')
+
+    def _writeDockerhubCompose(self) -> None:
+        """Append enabled visualization services and networks to the Compose sections."""
+        compose_services_txt, compose_networks_txt = visualization_manager.toComposeTxt()
+        if not compose_services_txt:
+            return
+
+        self._log('adding visualization services to docker-compose.yml...')
+        self.__services += compose_services_txt
+        self.__networks += compose_networks_txt
+
+        for name, service in visualization_manager.toComposeServices().items():
+            for port_mapping in service.get('ports', []):
+                self._log(
+                    f'visualization service {name}: '
+                    f'port mapping (host:container) {port_mapping}'
+                )
 
     def _getAdditionalComposeServices(
         self, emulator: Emulator
@@ -1668,6 +1688,53 @@ class Docker(Compiler):
             asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
             node_name=node_name
         )
+        return self
+
+    def attachDockerhubContainer(self, enabled: Iterable[VisualizationType] | None = None, portsRange: tuple[int, int] = (8080, 9999)):
+        if enabled is None:
+            enabled = {
+                VisualizationType.INTERNET_MAP_TOPOLOGY
+            }
+
+        enabled = set(enabled)
+        map_types = {
+            VisualizationType.INTERNET_MAP_TOPOLOGY,
+            VisualizationType.INTERNET_MAP_GEOGRAPHIC,
+            VisualizationType.INTERNET_MAP_SATELLITE,
+        }
+        if VisualizationType.INTERNET_MAP_TOPOLOGY in enabled:
+            visualization_manager.add_internet_map_toplogy()
+        if VisualizationType.INTERNET_MAP_GEOGRAPHIC in enabled:
+            visualization_manager.add_internet_map_geographic()
+        if VisualizationType.INTERNET_MAP_SATELLITE in enabled:
+            visualization_manager.add_internet_map_satellite()
+            visualization_manager.add_satellite_emulator_service()
+
+        if enabled & {VisualizationType.INTERNET_MAP_GEOGRAPHIC, VisualizationType.TRAFFIC_OBSERVER}:
+            visualization_manager.add_traffic_observer_service()
+        if enabled & map_types:
+            visualization_manager.add_emulator_service()
+
+        services = [
+            service for service in visualization_manager.getEnabled()
+            if service.toCompose().get('network_mode') != 'host'
+        ]
+        required_ports = len(services)
+        if not required_ports:
+            return self
+
+        ports = find_free_ports(portsRange, required_ports)
+        if len(ports) < required_ports:
+            message = (
+                f'Not enough available ports within {portsRange[0]}-{portsRange[1]}: '
+                f'need {required_ports}, found {len(ports)}.'
+            )
+            self._log(message)
+            raise RuntimeError(message)
+
+        for service, port in zip(services, ports):
+            service.ports = [f"{port}:{service.container_port}"]
+
         return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
