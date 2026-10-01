@@ -12,7 +12,8 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
-from yaml import dump, safe_dump
+from yaml import BaseLoader, dump, load, safe_dump
+from seedemu.visualizationTools import VisualizationManager
 
 SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-internetmap:2.0'
 
@@ -1571,6 +1572,44 @@ class Docker(Compiler):
         ), file=open('docker-compose.yml', 'w'))
 
         self.generateEnvFile(Scope(ScopeTier.Global),'')
+            
+
+    def find_free_ports(self, port_range: tuple[int, int], count: int) -> list[int]:
+        """Return unmapped host ports in an inclusive range, without socket probes.
+
+        Called after emulation services are compiled so node mappings are known.
+        Container-only ports do not reserve a host port. Published ports are
+        excluded regardless of bind address or protocol.
+        """
+        start, end = port_range
+        if not 1 <= start <= end <= 65535:
+            raise ValueError('Port range must be within 1-65535 and ordered.')
+        if count < 0:
+            raise ValueError('Port count must be non-negative.')
+        if count == 0:
+            return []
+        reserved = set()
+        for section in (self.__services, self.__custom_services):
+            # BaseLoader preserves unquoted short mappings such as 5000:80
+            # as strings instead of interpreting them as YAML 1.1 numbers.
+            services = load(section, Loader=BaseLoader) or {}
+            for service in services.values():
+                for mapping in service.get('ports', []) or []:
+                    if isinstance(mapping, Mapping):
+                        published = mapping.get('published')
+                        if published is None:
+                            continue
+                    else:
+                        parts = str(mapping).split('/')[0].rsplit(':', 2)
+                        if len(parts) < 2:
+                            continue
+                        published = parts[-2]
+                    if not published:
+                        continue
+                    bounds = str(published).split('-', 1)
+                    first, last = int(bounds[0]), int(bounds[-1])
+                    reserved.update(range(max(start, first), min(end, last) + 1))
+        return [port for port in range(start, end + 1) if port not in reserved][:count]
 
     def _getAdditionalComposeServices(
         self, emulator: Emulator
@@ -1668,6 +1707,30 @@ class Docker(Compiler):
             asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
             node_name=node_name
         )
+        return self
+
+    def attachDockerhubContainer(self, manager:VisualizationManager | None = None, port_range: tuple[int, int] = (8080, 9999)):
+        """Register visualization services; allocate host ports during compilation."""
+        if manager is None:
+            manager = VisualizationManager()
+            manager.add_and_enable()
+        services = [
+            service for service in manager.getEnabled()
+            if service.toCompose().get('network_mode') != 'host'
+        ]
+        ports = self.find_free_ports(port_range, len(services))
+        if len(ports) < len(services):
+            raise RuntimeError(
+                f'Not enough unmapped ports within {port_range[0]}-{port_range[1]}: '
+                f'need {len(services)}, found {len(ports)}.'
+            )
+        for service, port in zip(services, ports):
+            service.ports = [f"{port}:{service.container_port}"]
+            
+        compose_services_txt, compose_networks_txt = manager.toComposeTxt()
+        self.__custom_services += compose_services_txt
+        self.__networks += compose_networks_txt
+
         return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
