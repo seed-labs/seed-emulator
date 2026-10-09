@@ -29,6 +29,7 @@ SSH_PUB_KEY=""
 EXISTING_VMS_TSV=""
 PLANNED_NODES_TSV=""
 REUSING_KVM_STATE_PLAN="false"
+EXTRA_NETWORK_ARGS=()
 
 usage() {
     cat <<EOF
@@ -104,6 +105,33 @@ ensureNetwork() {
     fi
     virsh net-start "${kvmNetwork}" >/dev/null 2>&1 || true
     virsh net-autostart "${kvmNetwork}" >/dev/null 2>&1 || true
+}
+
+ensureExtraNetworks() {
+    # Start extra L2-only libvirt networks that back additional VM trunk NICs.
+    # Reads kvm.extraNetworks from kvm.yaml through manageKvmConfig.py.
+    local network bridge model trunk master_interface
+    while IFS=$'\t' read -r network bridge model trunk master_interface; do
+        [ -n "${network}" ] || continue
+        if ! virsh net-info "${network}" >/dev/null 2>&1; then
+            echo "Extra libvirt network not found: ${network}" >&2
+            echo "Run the host preflight that defines kvm.extraNetworks before createKvmVms.py." >&2
+            exit 1
+        fi
+        echo "Ensuring extra libvirt network: ${network} bridge=${bridge:-<auto>} trunk=${trunk:-<unset>} master=${master_interface:-<unset>}"
+        virsh net-start "${network}" >/dev/null 2>&1 || true
+        virsh net-autostart "${network}" >/dev/null 2>&1 || true
+    done < <(python3 "${HELPER}" "${CONFIG_PATH}" extra-networks-tsv)
+}
+
+loadExtraNetworkArgs() {
+    # Convert kvm.extraNetworks into virt-install --network arguments.
+    EXTRA_NETWORK_ARGS=()
+    local arg
+    while IFS= read -r arg; do
+        [ -n "${arg}" ] || continue
+        EXTRA_NETWORK_ARGS+=(--network "${arg}")
+    done < <(python3 "${HELPER}" "${CONFIG_PATH}" extra-network-args)
 }
 
 collectExistingVms() {
@@ -282,6 +310,7 @@ createOrStartVm() {
         --import \
         --os-variant generic \
         --network "network=${kvmNetwork},model=virtio,mac=${vm_mac}" \
+        "${EXTRA_NETWORK_ARGS[@]}" \
         --disk "path=${vm_disk},format=qcow2,bus=virtio" \
         --graphics none \
         --noautoconsole \
@@ -435,6 +464,8 @@ main() {
 
     prepareDirs
     ensureNetwork
+    ensureExtraNetworks
+    loadExtraNetworkArgs
     collectExistingVms
     downloadBaseImage
     loadSshPubkey

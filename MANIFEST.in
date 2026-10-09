@@ -3,4 +3,4 @@
 # Only portable source templates are matched here, so runtime caches such as
 # __pycache__, *.pyc, and image-cache/*.tar are left out of source packages.
 include seedemu/k8sTools/README.md
-recursive-include seedemu/k8sTools/resources *.py *.sh *.yml *.yaml README.md
+recursive-include seedemu/k8sTools/resources *.py *.yml *.yaml README.md

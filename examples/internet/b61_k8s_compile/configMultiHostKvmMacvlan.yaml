@@ -1,5 +1,5 @@
-kind: multiHostKvmOvn
-clusterName: seedemu-k3s
+kind: multiHostKvm
+clusterName: seedemu-b61-multi-host-kvm
 
 hypervisors:
   - name: amd
@@ -18,6 +18,7 @@ hypervisors:
 
   - name: idc
     ip: 10.202.191.39
+    connection: ssh
     ssh:
       user: seed
       key: ~/.ssh/id_ed25519
@@ -40,20 +41,40 @@ multiHostKvm:
     cidr: 10.255.80.0/24
     vniBase: 4280
     dstPort: 4790
+  fabricVxlan:
+    vniBase: 6100
+    dstPort: 4789
 
 master:
   placement: amd
+  name: seed-k3s-master
   vcpus: 16
   memoryMb: 32768
   diskGb: 120
 
 workers:
+  namePrefix: seed-k3s-worker
   vcpus: 4
   memoryMb: 16384
   diskGb: 80
 
 fabric:
-  type: ovn
+  type: macvlan-vlan
+  mtu: 1400
+  vlanTrunks:
+    - name: trunk0
+      masterInterface: ens3
+      vlanStart: 1
+      vlanEnd: 4094
+
+cni:
+  cniType: macvlan
+  localLinkCniType: macvlan
+  attachedCniType: macvlan
+  defaultMasterInterface: ens3
+
+k3s:
+  version: v1.29.15+k3s1
 
 registry:
   port: 5000

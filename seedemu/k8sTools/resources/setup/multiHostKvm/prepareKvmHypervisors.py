@@ -19,6 +19,8 @@ SHELL_BODY = r'''#!/usr/bin/env bash
 #   - Enables IPv4 forwarding on each hypervisor.
 #   - Optionally creates point-to-point VXLAN route tunnels.
 #   - Installs static routes between the hypervisor VM subnets.
+#   - For VLAN-backed fabrics, creates one unnumbered libvirt bridge and one
+#     VXLAN flood domain per trunk so tagged L2 frames cross hypervisors.
 #
 # Execution context:
 #   Run from the generated setup directory before createMultiHostKvmVms.py.
@@ -111,6 +113,51 @@ validateConfig() {
     python3 "${HELPER}" --config "${CONFIG_PATH}" validate
 }
 
+prepareFabricTrunks() {
+    # Create the shared L2 trunk bridges for $1=name, $2=ip, $3=connection,
+    # $4=sshUser, $5=sshKey, $6=remoteWorkDir.
+    local name="$1"
+    local ip="$2"
+    local connection="$3"
+    local ssh_user="$4"
+    local ssh_key="$5"
+    local remote_work_dir="$6"
+    local trunk_name network_name bridge_name master_interface vlan_start vlan_end
+    local vxlan_interface vni dst_port local_ip peer_ips first_peer
+    local network_xml remote_xml
+
+    while IFS=$'\t' read -r trunk_name network_name bridge_name master_interface vlan_start vlan_end vxlan_interface vni dst_port local_ip peer_ips; do
+        [ -n "${trunk_name}" ] || continue
+        network_xml="${TMP_DIR}/${name}-${trunk_name}.xml"
+        remote_xml="${remote_work_dir}/${trunk_name}-network.xml"
+        python3 "${HELPER}" --config "${CONFIG_PATH}" write-host-fabric-network-xml \
+            --trunk "${trunk_name}" \
+            --output "${network_xml}" >/dev/null
+        copyFileToHost "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
+            "${network_xml}" "${remote_xml}"
+
+        echo "  fabric ${trunk_name}: network=${network_name} bridge=${bridge_name} guest=${master_interface} VLAN=${vlan_start}-${vlan_end} VNI=${vni}"
+        first_peer="${peer_ips%%,*}"
+        runHostCommand "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" "
+            set -euo pipefail
+            virsh net-info $(printf '%q' "${network_name}") >/dev/null 2>&1 || virsh net-define $(printf '%q' "${remote_xml}") >/dev/null
+            virsh net-start $(printf '%q' "${network_name}") >/dev/null 2>&1 || true
+            virsh net-autostart $(printf '%q' "${network_name}") >/dev/null 2>&1 || true
+            sudo -n ip link del $(printf '%q' "${vxlan_interface}") >/dev/null 2>&1 || true
+            if [ -n $(printf '%q' "${first_peer}") ]; then
+                underlay_dev=\$(ip route get $(printf '%q' "${first_peer}") | awk '{for (i=1;i<=NF;i++) if (\$i==\"dev\") {print \$(i+1); exit}}')
+                [ -n \"\${underlay_dev}\" ] || { echo 'Cannot determine fabric underlay device for $(printf '%q' "${first_peer}")' >&2; exit 1; }
+                sudo -n ip link add $(printf '%q' "${vxlan_interface}") type vxlan id $(printf '%q' "${vni}") local $(printf '%q' "${local_ip}") dstport $(printf '%q' "${dst_port}") dev \"\${underlay_dev}\"
+                sudo -n ip link set $(printf '%q' "${vxlan_interface}") master $(printf '%q' "${bridge_name}")
+                sudo -n ip link set $(printf '%q' "${vxlan_interface}") up
+                for peer_ip in \$(printf '%s' $(printf '%q' "${peer_ips}") | tr ',' ' '); do
+                    sudo -n bridge fdb append 00:00:00:00:00:00 dev $(printf '%q' "${vxlan_interface}") dst \"\${peer_ip}\"
+                done
+            fi
+        "
+    done < <(python3 "${HELPER}" --config "${CONFIG_PATH}" host-fabric-trunks-tsv --host "${name}")
+}
+
 prepareHost() {
     # Args are read from one hosts-tsv row.
     local name="$1"
@@ -131,7 +178,7 @@ prepareHost() {
         --output "${network_xml}" >/dev/null
 
     runHostCommand "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
-        "sudo -n true && command -v virsh >/dev/null && command -v virt-install >/dev/null && command -v qemu-img >/dev/null && command -v docker >/dev/null && command -v curl >/dev/null && command -v ssh >/dev/null"
+        "sudo -n true && command -v virsh >/dev/null && command -v virt-install >/dev/null && command -v qemu-img >/dev/null && command -v docker >/dev/null && command -v curl >/dev/null && command -v ssh >/dev/null && command -v bridge >/dev/null"
     runHostCommand "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
         "mkdir -p $(printf '%q' "${remote_work_dir}")"
     copyFileToHost "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" "${network_xml}" "${remote_xml}"
@@ -148,6 +195,8 @@ prepareHost() {
             sudo -n iptables -t nat -C POSTROUTING -s $(printf '%q' "${cidr}") ! -d 10.0.0.0/8 -j MASQUERADE >/dev/null 2>&1 || sudo -n iptables -t nat -A POSTROUTING -s $(printf '%q' "${cidr}") ! -d 10.0.0.0/8 -j MASQUERADE
         fi
     "
+
+    prepareFabricTrunks "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" "${remote_work_dir}"
 
     while IFS=$'\t' read -r tunnel_name vni dst_port local_ip peer_ip local_tunnel_cidr peer_tunnel_ip peer_name; do
         [ -n "${tunnel_name}" ] || continue
