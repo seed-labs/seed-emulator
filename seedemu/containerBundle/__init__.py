@@ -1,4 +1,5 @@
+from .ContainerBundle import ContainerBundle
 from .VisualizationBundle import VisualizationBundle
 from .EthExplorerBundle import EthExplorerBundle
 
-all = ["VisualizationBundle", "EthExplorerBundle"]
+all = ["ContainerBundle", "VisualizationBundle", "EthExplorerBundle"]

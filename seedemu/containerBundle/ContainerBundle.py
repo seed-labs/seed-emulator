@@ -1,79 +1,90 @@
-"""API skeletons for the design in docs/designs/container_bundle.md.
-
-All methods are declarations only; container generation is not implemented.
-Pseudocode in docstrings describes the intended behavior, not executable code.
-"""
+"""Container bundles and their independently owned prepared containers."""
 
 from __future__ import annotations
+from hashlib import md5
+from os import mkdir, chdir
 from yaml import safe_dump
 from textwrap import indent
 from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import InitVar, dataclass, field
 
 from seedemu.core.Emulator import Emulator
-from seedemu.core.Network import Network
 
 
+@dataclass(eq=False)
 class ContainerBundle:
-    _emulator: Emulator
-    __suffix: str
-    __containers: Dict[str, PreparedContainer]
-    __default_network: Tuple[str, str, List[str]]
-    __ports: List[int]
-    __internal_hostname_ip_mappings: Dict[str, str]
-    __external_hostname_ip_mappings: Dict[str, str]
-    _required_port_number: int
+    emulator: InitVar[Optional[Emulator]] = None
+    suffix: InitVar[str] = ""
+    _emulator: Optional[Emulator] = field(default=None, init=False, repr=False)
+    _suffix: str = field(default="", init=False)
+    _containers: Dict[str, PreparedContainer] = field(default_factory=dict, init=False)
+    _default_network: Optional[Tuple[str, str, List[str]]] = field(default=None, init=False)
+    _ports: List[int] = field(default_factory=list, init=False)
+    _internal_hostname_ip_mappings: Dict[str, str] = field(default_factory=dict, init=False)
+    _external_hostname_ip_mappings: Dict[str, str] = field(default_factory=dict, init=False)
+    _required_port_number: int = field(default=0, init=False)
 
-    def __init__(self, emulator: Emulator, suffix: str) -> None:
-        pass
+    def __post_init__(self, emulator: Optional[Emulator], suffix: str) -> None:
+        self._emulator = emulator
+        self._suffix = suffix
 
     def _createContainer(self, local_name: str, suffix: str) -> PreparedContainer:
-        container = PreparedContainer(local_name, suffix)
-        self.__containers.update(local_name, container)
+        container = PreparedContainer(name=local_name, suffix=suffix)
+        self._containers.update({local_name: container})
 
         return container
 
     def getContainer(self, local_name: str) -> PreparedContainer:
-        return self.__containers[local_name]
+        return self._containers[local_name]
 
     def getContainers(self) -> Dict[str, PreparedContainer]:
-        return self.__containers.copy()
+        return self._containers.copy()
 
-    def getEmulator(self) -> Emulator:
-        return self.__emulator
+    def getEmulator(self) -> Optional[Emulator]:
+        return self._emulator
 
     def getSuffix(self) -> str:
-        return self.__suffix
+        return self._suffix
 
-    def setDefaultNetwork(self, name: str, prefix: str, ip_addresses: List[str]) -> None:
-        self.__default_network = (name, prefix, ip_addresses.copy())
+    def setDefaultNetwork(self, name: str, prefix: str = "", ip_addresses: Optional[List[str]] = None) -> None:
+        self._default_network = (name, prefix, list(ip_addresses or []))
 
-    def getDefaultNetwork(self) -> Tuple[str, str, List[str]]:
-        return (self.__default_network[0], self.__default_network[1], self.__default_network[2].copy())
+    def getDefaultNetwork(self) -> Optional[Tuple[str, str, List[str]]]:
+        if self._default_network is None:
+            return None
+        return (
+            self._default_network[0],
+            self._default_network[1],
+            self._default_network[2].copy(),
+        )
 
     def setPorts(self, ports: List[int]) -> None:
-        self.__ports = ports.copy()
+        self._ports = ports.copy()
 
     def getPorts(self) -> List[int]:
-        return self.__ports.copy()
+        return self._ports.copy()
 
     def getInternalHostnameIpMappings(self) -> Dict[str, str]:
-        return self.__internal_hostname_ip_mappings.copy()
+        return self._internal_hostname_ip_mappings.copy()
 
     def getExternalHostnameIpMappings(self) -> Dict[str, str]:
-        return self.__external_hostname_ip_mappings.copy()
+        return self._external_hostname_ip_mappings.copy()
 
     def configure(self) -> None:
-        assert (
-            len(self.__ports) < self._required_port_number,
-            f"The length of a self.__ports ({self.__ports}) be greater than or equal to {self._required_port_number}.",
-        )
-        
-    def install(self) -> tuple[str, str, dict, dict]:
+        if len(self._ports) < self._required_port_number:
+            raise ValueError(
+                f"At least {self._required_port_number} ports are required; "
+                f"got {len(self._ports)}."
+            )
+
+    def install(self) -> tuple[str, str]:
         services = {}
-        files = {}
-        etchosts_file = {}
-        for name, container in self.__containers.items():
-            services[name], files[name], etchosts_file[name] = container.install()
+        for name, container in self._containers.items():
+            services[name] = container.install()
+            ports = services[name].get('ports') or container._service_ports
+            if not ports:
+                continue
+            print(f"service {name}: port mapping {ports}")
 
         if not services:
             return "", ""
@@ -97,86 +108,109 @@ class ContainerBundle:
             if networks
             else ""
         )
-        return compose_services_txt, compose_networks_txt, files[name], etchosts_file[name]
+        return compose_services_txt, compose_networks_txt
 
-
+@dataclass(eq=False)
 class PreparedContainer:
-    __emulator: Emulator
-    __name: str
-    __suffix: str
-    __internal_networks: List[Tuple[str, str, str, Optional[str]]] = []
-    __external_network: Optional[Tuple[str, str, str]] = []
-    __files: Dict[str, str] = {}
-    __etchosts_file: str
+    name: InitVar[str] = ""
+    suffix: InitVar[str] = ""
+    _name: str = field(default="", init=False)
+    _suffix: str = field(default="", init=False)
+    _internal_networks: List[Tuple[str, str, str, Optional[str]]] = field(default_factory=list, init=False)
+    _external_network: List[Tuple[str, str, str]] = field(default_factory=list, init=False)
+    _files: Dict[str, str] = field(default_factory=dict, init=False)
+    service: Dict[str, Any] = field(default_factory=dict, init=False)
+    _service_ports: List[str] = field(default_factory=list, init=False)
 
-    service: Dict[str, Any] = {}
-
-    def __init__(self, name: str, suffix: str, etchosts_file: str = "etchosts") -> None:
-        self.__name = name
-        self.__suffix = suffix
-        self.__etchosts_file = etchosts_file
+    def __post_init__(self, name: str, suffix: str) -> None:
+        self._name = name
+        self._suffix = suffix
+        self.service['container_name'] = name
 
     def getName(self) -> str:
-        self.__name
+        return self._name
 
     def getHostname(self) -> str:
-        return self.__name + self.__suffix
+        return self._name + self._suffix
 
     def getInternalHostnameIpMappings(self) -> Dict[str, str]:
-        if not self.__internal_networks:
+        if not self._internal_networks:
             return {}
 
-        internal_networks = self.__internal_networks[0]
-        return {
-            internal_networks[1]: internal_networks[2]
-        }
+        internal_networks = self._internal_networks[0]
+        return {internal_networks[1]: internal_networks[2]}
 
     def getExternalHostnameIpMappings(self) -> Dict[str, str]:
         return {
             external_network[1]: external_network[2]
-            for external_network in (self.__external_network or [])
+            for external_network in (self._external_network or [])
         }
 
-    def install(self):
-        return {
-            "service": self.service,
-            "files": self.__files,
-            "etchosts_file": self.etchosts_file,
-        }
+    def install(self) -> Dict[str, Any]:
+        hostname = self.getHostname()
+        mkdir(hostname)
+        chdir(hostname)
+
+        dockerfile = self._computeDockerfile()
+        if dockerfile:
+            print(dockerfile, file=open("Dockerfile", "w"))
+
+        chdir("..")
+        return self.service
 
     def joinInternalNetwork(
         self,
-        network: Network,
-        hostname: str = '',
-        ip_address: str = '',
-        default_router: Optional[str] = '',
+        network: str,
+        hostname: str = "",
+        ip_address: str = "",
+        default_router: Optional[str] = "",
     ) -> None:
         internal_network = (network, hostname, ip_address, default_router)
-        if internal_network not in self.__internal_network:
-            self.__internal_network.append(internal_network)
+        if internal_network not in self._internal_networks:
+            self._internal_networks.append(internal_network)
 
         networks = self.service.setdefault("networks", [])
         if network not in networks:
             networks.append(network)
 
-    def joinExternalNetwork(self, network: str, hostname: str = '', ip_address: str = '') -> None:
+    def joinExternalNetwork(self, network: str, hostname: str = "", ip_address: str = "") -> None:
         """Attach to the bundle's single external network, identified by name."""
         external_network = (network, hostname, ip_address)
-        if external_network not in self.__external_network:
-            self.__external_network.append(external_network)
+        if external_network not in self._external_network:
+            self._external_network.append(external_network)
 
         networks = self.service.setdefault("networks", [])
         if network not in networks:
             networks.append(network)
 
-    def setComposeContent(self, content: dict) -> None:
+    def setContentAttribute(self, content: dict) -> None:
         self.service.update(content)
 
     def setDockerfile(self, content: str) -> None:
-        self.__files["Dockerfile"] = content
+        self._files["Dockerfile"] = content
 
     def setEtcHosts(self, content: str) -> None:
-        self.__files["__etchosts_file"] = content
+        self._files["__etchosts_file"] = content
 
-    def setFile(self, filename: str, content: str) -> str:
-        self.__files.update({filename: content})
+    def setFile(self, filename: str, content: str) -> None:
+        self._files.update({filename: content})
+
+    def _computeDockerfile(self) -> str:
+        if not self._files:
+            return ''
+        
+        dockerfile_lines = [
+            "FROM {}".format(self.service.pop("image")),
+            "ARG DEBIAN_FRONTEND=noninteractive",
+        ]
+
+        for filename, content in self._files.items():
+            dockerfile_lines.append(self._addFile(filename, content))
+
+        dockerfile = "\n".join(dockerfile_lines) + "\n"
+        return dockerfile
+
+    def _addFile(self, path: str, content: str) -> str:
+        staged_path = md5(path.encode("utf-8")).hexdigest()
+        print(content, file=open(staged_path, "w"))
+        return "COPY {} {}".format(staged_path, path)

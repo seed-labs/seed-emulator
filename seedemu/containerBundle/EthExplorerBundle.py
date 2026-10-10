@@ -1,4 +1,5 @@
-from ContainerBundle import ContainerBundle
+from .ContainerBundle import ContainerBundle
+from seedemu.core.enums import NetworkType
 
 SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE = "handsonsecurity/seedemu-ethexplorer-backend:1.0"
 SEEDEMU_ETH_EXPLORER_WEB_IMAGE = "handsonsecurity/seedemu-ethexplorer-web:1.0"
@@ -12,7 +13,7 @@ SEEDEMU_ETH_EXPLORER_WEB_INTERNAL_PORT = 5000
 
 class EthExplorerBundle(ContainerBundle):
     def __init__(self, emulator, suffix="eth.explorer"):
-        self._emulator = emulator
+        super().__init__(emulator=emulator, suffix=suffix)
         service_names = [
             "clickhouse",
             "postgres",
@@ -29,11 +30,12 @@ class EthExplorerBundle(ContainerBundle):
     def configure(self) -> None:
         self._required_port_number = 1
         super().configure()
-        for container in self.__containers.values():
-            container.joinExternalNetwork(self.__defaultNetwork.name)
+        if self._default_network:
+            for container in self._containers.values():
+                container.joinExternalNetwork(self._default_network[0])
 
-        clickhouse = self.__containers["clickhouse"]
-        clickhouse.setComposeContent(
+        clickhouse = self._containers["clickhouse"]
+        clickhouse.setContentAttribute(
             {
                 "image": CLICKHOUSE_IMAGE,
                 "environment": {
@@ -50,7 +52,7 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        postgres = self.__containers["postgres"]
+        postgres = self._containers["postgres"]
         postgres.setContentAttribute(
             {
                 "image": POSTGRES_IMAGE,
@@ -68,7 +70,7 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        alloy = self.__containers["alloy"]
+        alloy = self._containers["alloy"]
         alloy.setContentAttribute(
             {
                 "image": POSTGRES_IMAGE,
@@ -86,7 +88,7 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        redis = self.__containers["redis"]
+        redis = self._containers["redis"]
         redis.setContentAttribute(
             {
                 "image": REDIS_IMAGE,
@@ -100,7 +102,7 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        littlebigtable = self.__containers["littlebigtable"]
+        littlebigtable = self._containers["littlebigtable"]
         littlebigtable.setContentAttribute(
             {
                 "image": LITTLE_BIGTABLE_IMAGE,
@@ -108,7 +110,7 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        rawbigtable = self.__containers["rawbigtable"]
+        rawbigtable = self._containers["rawbigtable"]
         rawbigtable.setContentAttribute(
             {
                 "image": LITTLE_BIGTABLE_IMAGE,
@@ -116,9 +118,9 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        cl_host, beaconNetwork, el_host, gEthNetwork = self.getBeacon2GethEndpoints
+        cl_host, beaconNetwork, el_host, gEthNetwork = self.getBeaconAndGethEndpoints()
         
-        seedemu_ethexplorer_backend = self.__containers["seedemu-ethexplorer-backend"]
+        seedemu_ethexplorer_backend = self._containers["seedemu-ethexplorer-backend"]
         seedemu_ethexplorer_backend.setContentAttribute(
             {
                 "image": SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE,
@@ -149,7 +151,7 @@ class EthExplorerBundle(ContainerBundle):
         seedemu_ethexplorer_backend.joinInternalNetwork(network=beaconNetwork)
         seedemu_ethexplorer_backend.joinInternalNetwork(network=gEthNetwork)
 
-        seedemu_ethexplorer_web = self.__containers["seedemu-ethexplorer-web"]
+        seedemu_ethexplorer_web = self._containers["seedemu-ethexplorer-web"]
         seedemu_ethexplorer_web.setContentAttribute(
             {
                 "image": SEEDEMU_ETH_EXPLORER_WEB_IMAGE,
@@ -167,7 +169,7 @@ class EthExplorerBundle(ContainerBundle):
                     seedemu_ethexplorer_backend.getName(): {"condition": "service_healthy"},
                 },
                 "environment": {"EL_HOST": el_host, "CL_HOST": cl_host},
-                "ports": [f"{self.__ports.pop()}:{SEEDEMU_ETH_EXPLORER_WEB_INTERNAL_PORT}"],
+                "ports": [f"{self._ports.pop()}:{SEEDEMU_ETH_EXPLORER_WEB_INTERNAL_PORT}"],
             }
         )
         seedemu_ethexplorer_web.joinInternalNetwork(network=beaconNetwork)
@@ -183,9 +185,15 @@ class EthExplorerBundle(ContainerBundle):
             if beacon_host and gEth_host:
                 break
 
-            interface = obj.getInterfaces()[0]
+            interfaces = obj.getInterfaces()
+            if not interfaces:
+                continue
+            interface = interfaces[0]
             ip = str(interface.getAddress())
-            network = self._getRealNetName(interface.getNet())
+            net = interface.getNet()
+            scope, _, _ = net.getRegistryInfo()
+            # Match the network names emitted by the Docker compiler.
+            network = net.getName() if net.getType() == NetworkType.Bridge else f"net_{scope}_{net.getName()}"
             display_name = obj.getDisplayName() or obj.getName()
             if "-Beacon-" in display_name and beacon_host == "":
                 beacon_host = ip
