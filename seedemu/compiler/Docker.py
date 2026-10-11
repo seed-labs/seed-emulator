@@ -1,5 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
+from seedemu.containerBundle import ContainerBundle
 from seedemu.core import Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
@@ -491,6 +492,8 @@ class Docker(Compiler):
     __config: List[ Tuple[BaseOption , Scope] ] # all encountered Options for .env file
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
+
+    __containerBundles: List[ContainerBundle] = []
 
     def __init__(
         self,
@@ -1029,7 +1032,6 @@ class Docker(Compiler):
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
 
-
     def _getComposeNodeName(self, node: Node) -> str:
         """!
         @brief Given a node, compute its final container_name, as it will be
@@ -1512,10 +1514,10 @@ class Docker(Compiler):
                 net = self._getRealNetName(obj.getInterfaces()[0].getNet())
                 if "-Beacon-" in name and cl_host == "":
                     cl_host = ip
-                    gEthNetwork = net
+                    beaconNetwork = net
                 elif "-Geth-" in name and el_host == "":
                     el_host = ip
-                    beaconNetwork = net
+                    gEthNetwork = net
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
@@ -1525,6 +1527,11 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+        for containerBundle in self.__containerBundles:
+            bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
+            self.__services += bundle_services
+            self.__networks += bundle_networks
+            
         # Add the Internet Map contaienr to the emulator
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
@@ -1736,6 +1743,15 @@ class Docker(Compiler):
             self.__custom_services += '\n'
 
         return self
+
+    def addContainerBundle(self, containerBundle: ContainerBundle):
+        self.__containerBundles.append(containerBundle)
+
+    def _compileContainerBundle(self, containerBundle: ContainerBundle ) -> tuple[str, str]:
+        containerBundle.configure()
+        compose_services_txt, compose_networks_txt = containerBundle.install()
+
+        return compose_services_txt, compose_networks_txt
 
     def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ) -> str:
         """!
