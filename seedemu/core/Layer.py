@@ -87,9 +87,12 @@ class Layer(Printable, Registrable, DynamicConfigurable, Mergeable):
 
     def render(self, emulator: Emulator) -> None:
         """!
-        @brief Handle rendering.
+        @brief Optional rendering hook; the default performs no action.
+
+        Layers that only generate intents during configure can inherit this
+        hook. Layers that write node files or other output override it.
         """
-        raise NotImplementedError('render not implemented')
+        return None
 
     def _log(self, message: str) -> None:
         """!

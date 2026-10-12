@@ -43,9 +43,18 @@ CORE_FORWARDING_MODES = {
     CORE_FORWARDING_REDISTRIBUTE,
 }
 
-OSPF_MODE_LEGACY = "legacy"
-OSPF_MODE_ROUTER_TRANSIT_ONLY = "router-transit-only"
-OSPF_MODES = {OSPF_MODE_LEGACY, OSPF_MODE_ROUTER_TRANSIT_ONLY}
+IGP_MODE_OSPF = "ospf"
+IGP_MODE_RIP = "rip"
+IGP_MODES = {IGP_MODE_OSPF, IGP_MODE_RIP}
+
+IGP_INTERFACE_POLICY_ALL_LOCAL = "all-local"
+IGP_INTERFACE_POLICY_ROUTER_LINKS = "router-links"
+IGP_INTERFACE_POLICIES = {IGP_INTERFACE_POLICY_ALL_LOCAL, IGP_INTERFACE_POLICY_ROUTER_LINKS}
+
+_LEGACY_OSPF_INTERFACE_POLICIES = {
+    "legacy": IGP_INTERFACE_POLICY_ALL_LOCAL,
+    "router-transit-only": IGP_INTERFACE_POLICY_ROUTER_LINKS,
+}
 
 class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     """!
@@ -65,8 +74,9 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     __ibgp_mode_explicit: bool
     __bgp_scope: str
     __core_forwarding: str
-    __ospf_mode: str
-    __ospf_mode_explicit: bool
+    __igp_mode: str
+    __igp_mode_explicit: bool
+    __igp_interface_policy: Optional[str]
 
     def __init__(self, asn: int, subnetTemplate: str = "10.{}.0.0/16"):
         """!
@@ -87,8 +97,68 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         self.__ibgp_mode_explicit = False
         self.__bgp_scope = BGP_SCOPE_ALL_ROUTERS
         self.__core_forwarding = CORE_FORWARDING_PLAIN_IP
-        self.__ospf_mode = OSPF_MODE_LEGACY
-        self.__ospf_mode_explicit = False
+        self.__igp_mode = IGP_MODE_OSPF
+        self.__igp_mode_explicit = False
+        self.__igp_interface_policy = None
+
+    def setIgpMode(self, mode: str) -> AutonomousSystem:
+        """!
+        @brief Select this AS's interior routing protocol.
+
+        The default is ospf. This declares AS intent; Ospf/Rip layers derive
+        protocol policies and Routing renders the selected software backend.
+
+        @param mode ospf or rip (case-insensitive).
+        @returns self, for chaining API calls.
+        """
+        value = str(mode).strip().lower()
+        assert isinstance(mode, str) and value in IGP_MODES, (
+            "unsupported IGP mode: {}. valid values: {}"
+        ).format(mode, sorted(IGP_MODES))
+        self.__igp_mode = value
+        self.__igp_mode_explicit = True
+        return self
+
+    def getIgpMode(self) -> str:
+        """Get the selected IGP; components saved before this API default to OSPF."""
+        return getattr(self, "_AutonomousSystem__igp_mode", IGP_MODE_OSPF)
+
+    def hasIgpMode(self) -> bool:
+        """Return whether an IGP mode has been declared explicitly."""
+        return getattr(self, "_AutonomousSystem__igp_mode_explicit", False)
+
+    def setIgpInterfacePolicy(self, policy: str) -> AutonomousSystem:
+        """Select where the AS's IGP exchanges routing messages.
+
+        all-local activates every Local network; router-links only activates
+        Local networks joining at least two routers. Other interfaces remain
+        passive and can still advertise their prefixes. Protocol-specific
+        policy overrides remain the responsibility of the Ospf/Rip layers.
+        """
+        value = str(policy).strip().lower()
+        assert isinstance(policy, str) and value in IGP_INTERFACE_POLICIES, (
+            "unsupported IGP interface policy: {}. valid values: {}"
+        ).format(policy, sorted(IGP_INTERFACE_POLICIES))
+        self.__igp_interface_policy = value
+        return self
+
+    def getIgpInterfacePolicy(self) -> str:
+        """Return the effective interface policy, including legacy components.
+
+        Preserve established defaults: OSPF uses all-local, RIP uses
+        router-links. An explicit policy keeps its meaning across IGP changes.
+        """
+        policy = getattr(self, "_AutonomousSystem__igp_interface_policy", None)
+        if policy is not None:
+            return policy
+        if getattr(self, "_AutonomousSystem__ospf_mode_explicit", False):
+            return _LEGACY_OSPF_INTERFACE_POLICIES[getattr(self, "_AutonomousSystem__ospf_mode", "legacy")]
+        return IGP_INTERFACE_POLICY_ROUTER_LINKS if self.getIgpMode() == IGP_MODE_RIP else IGP_INTERFACE_POLICY_ALL_LOCAL
+
+    def hasIgpInterfacePolicy(self) -> bool:
+        """Return whether an interface policy was explicitly declared."""
+        return (getattr(self, "_AutonomousSystem__igp_interface_policy", None) is not None
+                or getattr(self, "_AutonomousSystem__ospf_mode_explicit", False))
 
     def setIbgpMode(self, mode: str) -> AutonomousSystem:
         """!
@@ -182,33 +252,18 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         return self
 
     def setOspfMode(self, mode: str) -> AutonomousSystem:
-        """!
-        @brief Set the AS-level OSPF interface classification mode.
-
-        The default is legacy when unset. Ospf records interface intent and
-        Routing renders backend-specific BIRD/FRR configuration.
-
-        @param mode legacy or router-transit-only.
-
-        @returns self, for chaining API calls.
-        """
-        value = str(mode or OSPF_MODE_LEGACY).strip().lower()
-        assert value in OSPF_MODES, "unsupported OSPF mode: {}".format(mode)
-        self.__ospf_mode = value
-        self.__ospf_mode_explicit = True
-        return self
+        """Compatibility adapter; use setIgpInterfacePolicy() in new code."""
+        value = str(mode or "legacy").strip().lower()
+        assert value in _LEGACY_OSPF_INTERFACE_POLICIES, "unsupported OSPF mode: {}".format(mode)
+        return self.setIgpInterfacePolicy(_LEGACY_OSPF_INTERFACE_POLICIES[value])
 
     def getOspfMode(self) -> str:
-        """!
-        @brief Get the AS-level OSPF interface classification mode.
-        """
-        return self.__ospf_mode
+        """Compatibility view of the shared IGP interface policy."""
+        return "legacy" if self.getIgpInterfacePolicy() == IGP_INTERFACE_POLICY_ALL_LOCAL else "router-transit-only"
 
     def hasOspfMode(self) -> bool:
-        """!
-        @brief Return whether an OSPF mode was explicitly set on this AS.
-        """
-        return self.__ospf_mode_explicit
+        """Compatibility adapter for hasIgpInterfacePolicy()."""
+        return self.hasIgpInterfacePolicy()
 
     def createBgpCluster(self, address: str) -> AutonomousSystem:
         """!
@@ -737,6 +792,10 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         out += 'AutonomousSystem {}:\n'.format(self.__asn)
 
         indent += 4
+        out += ' ' * indent
+        out += 'IGP: {}\n'.format(self.getIgpMode())
+        out += ' ' * indent
+        out += 'IGP interface policy: {}\n'.format(self.getIgpInterfacePolicy())
         out += ' ' * indent
         out += 'Networks:\n'
 

@@ -4,6 +4,7 @@ from .DefaultEbgpMerger import DefaultEbgpMerger
 from .DefaultRoutingMerger import DefaultRoutingMerger
 from .DefaultIbgpMerger import DefaultIbgpMerger
 from .DefaultOspfMerger import DefaultOspfMerger
+from .DefaultRipMerger import DefaultRipMerger
 from .DefaultMplsMerger import DefaultMplsMerger
 from .DefaultDnssecMerger import DefaultDnssecMerger
 from .DefaultCymruIpOriginServiceMerger import DefaultCymruIpOriginServiceMerger
@@ -15,7 +16,7 @@ from .DefaultBgpLookingGlassServiceMerger import DefaultBgpLookingGlassServiceMe
 
 DEFAULT_MERGERS = [
     DefaultBaseMerger(), DefaultEbgpMerger(), DefaultRoutingMerger(),
-    DefaultIbgpMerger(), DefaultOspfMerger(), DefaultMplsMerger(),
+    DefaultIbgpMerger(), DefaultOspfMerger(), DefaultRipMerger(), DefaultMplsMerger(),
     DefaultDnssecMerger(), DefaultCymruIpOriginServiceMerger(),
     DefaultWebServiceMerger(), DefaultDomainNameCachingServiceMerger(),
     DefaultReverseDomainNameServiceMerger(), DefaultDomainNameServiceMerger(),

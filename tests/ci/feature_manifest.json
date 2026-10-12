@@ -69,9 +69,32 @@
       "build_examples": [],
       "runtime_groups": [],
       "notes": "Keep declared as a gap until control-plane guard tests are merged here."
+    },
+    "routing-rip": {
+      "status": "covered",
+      "description": "Rip intent layer with shared AS IGP interface policies, hierarchical protocol options and BIRD/FRR rendering.",
+      "unit_groups": [
+        "rip-layer"
+      ],
+      "compile_examples": [
+        "internet-b51-rip"
+      ],
+      "build_examples": [
+        "internet-b51-rip"
+      ],
+      "runtime_groups": [],
+      "notes": "Docker runtime is exercised through B51 example.yaml and the GitHub example lifecycle matrix."
     }
   },
-  "unit_groups": {},
+  "unit_groups": {
+    "rip-layer": {
+      "description": "Rip API, AS-only IGP selection with default OSPF, shared interface policies, backend composition, component reuse and explicit RIP selection in a B00 copy.",
+      "pytest_args": [
+        "tests/test_rip_layer.py",
+        "tests/test_frr_exabgp_foundation.py"
+      ]
+    }
+  },
   "runtime_groups": {},
   "examples": {
     "basic-a00-simple-as": {
@@ -99,6 +122,24 @@
         "output",
         "base_internet.bin",
         "dns_component.bin"
+      ],
+      "expected": [
+        "output/docker-compose.yml"
+      ],
+      "compile": true,
+      "build": true
+    },
+    "internet-b51-rip": {
+      "description": "B00 mini Internet with AS-level setIgpMode selection, default OSPF and mixed BIRD/FRR backends.",
+      "script": "examples/internet/B51_rip/rip.py",
+      "args": [
+        "--platform",
+        "amd",
+        "--backend",
+        "mixed"
+      ],
+      "clean": [
+        "output"
       ],
       "expected": [
         "output/docker-compose.yml"
