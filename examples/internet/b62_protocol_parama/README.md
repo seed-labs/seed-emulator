@@ -20,7 +20,7 @@ ospf = Ospf().setTimers(tick=1, hello=1, dead=4)
 - `tick`: BIRD OSPF scheduler tick interval, in seconds.
 - `hello`: OSPF hello interval, in seconds.
 - `dead`: OSPF dead interval, in seconds.
-- Default values in SeedEMU are `tick=1`, `hello=1`, and `dead=4`.
+- Default values in SEED Emulator are `tick=1`, `hello=1`, and `dead=4`.
 - For BIRD, all three values are rendered. For FRR, `hello` and `dead` are
   rendered because FRR does not expose a matching OSPF `tick` command.
 
@@ -28,14 +28,14 @@ ospf = Ospf().setTimers(tick=1, hello=1, dead=4)
 
 - `holdTime`: BGP hold time, in seconds.
 - `keepaliveTime`: BGP keepalive interval, in seconds.
-- Default values in SeedEMU are `holdTime=36000` and `keepaliveTime=60`.
+- Default values in SEED Emulator are `holdTime=36000` and `keepaliveTime=60`.
 
 `Ibgp().setTimers(holdTime=..., keepaliveTime=...)`
 
 - Controls the same BGP hold and keepalive timers for iBGP sessions.
-- Default values in SeedEMU are `holdTime=36000` and `keepaliveTime=60`.
+- Default values in SEED Emulator are `holdTime=36000` and `keepaliveTime=60`.
 
-If these APIs are not called, SeedEMU uses the defaults above. Invalid timer
+If these APIs are not called, SEED Emulator uses the defaults above. Invalid timer
 values, such as non-positive values or `keepaliveTime >= holdTime`, raise an
 error during rendering.
 
