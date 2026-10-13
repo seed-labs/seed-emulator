@@ -2,6 +2,7 @@ from .Base import Base
 from .Routing import Routing, Router
 from .Ebgp import Ebgp, PeerRelationship
 from .Ospf import Ospf
+from .Rip import Rip
 from .Ibgp import Ibgp
 from .Dnssec import Dnssec
 from .Mpls import Mpls

@@ -3,6 +3,7 @@ from seedemu.core.enums import NetworkType, NodeRole
 from .Base import Base
 from seedemu.core import ScopedRegistry, Node, Graphable, Emulator, Layer
 from typing import Dict, List, Optional, Set, Tuple
+from ._igp_metadata import get_igp_protocol
 from ._bgp_metadata import (
     DEFAULT_BGP_HOLD_TIME,
     DEFAULT_BGP_KEEPALIVE_TIME,
@@ -40,7 +41,9 @@ class Ibgp(Layer, Graphable):
         self.__masked = set()
         self.__hold_time = DEFAULT_BGP_HOLD_TIME
         self.__keepalive_time = DEFAULT_BGP_KEEPALIVE_TIME
-        self.addDependency('Ospf', False, False)
+        self.addDependency('Routing', False, False)
+        self.addDependency('Ospf', False, True)
+        self.addDependency('Rip', False, True)
 
     def __dfs(self, start: Node, visited: List[Node], netname: str = 'self'):
         """!
@@ -133,13 +136,26 @@ class Ibgp(Layer, Graphable):
     def __is_ibgp_disabled(self, router: Node) -> bool:
         return hasattr(router, "isControlPlaneDisabled") and router.isControlPlaneDisabled("ibgp")
 
-    def __get_igp_table(self, emulator: Emulator, asn: int) -> str:
+    def __get_igp_tables(self, emulator: Emulator, asn: int, routers: List[Node]) -> Dict[str, str]:
+        """Resolve each local router's next-hop lookup table once per AS.
+
+        OSPF/RIP use their dedicated BIRD tables. MPLS resolves through master4;
+        a router without an IGP intent also uses master4 because no protocol
+        table will be rendered there. AS defaults alone do not create a table.
+        """
         reg = emulator.getRegistry()
         if reg.has('seedemu', 'layer', 'Mpls'):
             mpls = reg.get('seedemu', 'layer', 'Mpls')
             if hasattr(mpls, "getEnabled") and asn in mpls.getEnabled():
-                return "master4"
-        return "t_ospf"
+                return {router.getName(): "master4" for router in routers}
+        router_protocols = {router.getName(): get_igp_protocol(router) for router in routers}
+        protocols = set(router_protocols.values()) - {""}
+        if len(protocols) > 1:
+            raise ValueError("AS{} has multiple IGP providers: {}".format(asn, sorted(protocols)))
+        return {
+            name: "t_{}".format(protocol) if protocol else "master4"
+            for name, protocol in router_protocols.items()
+        }
 
     def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()
@@ -163,26 +179,27 @@ class Ibgp(Layer, Graphable):
                 name: router for name, router in routers_map.items()
                 if name in active_names
             }
-            igp_table = self.__get_igp_table(emulator, asn)
+            igp_tables = self.__get_igp_tables(emulator, asn, routers)
 
             if mode == IBGP_MODE_ROUTE_REFLECTOR:
                 clusters = asobj._aggregateBgpClusters()
-                self._render_rr_mode(asn, clusters, active_routers_map, igp_table)
+                self._render_rr_mode(asn, clusters, active_routers_map, igp_tables)
                 continue
 
             self._render_full_mesh_mode(
                 asn,
                 [active_routers_map[name] for name in sorted(active_routers_map.keys())],
-                igp_table,
+                igp_tables,
             )
 
-    def _render_rr_mode(self, asn: int, clusters: Dict[str, Tuple[Set[str], Set[str]]], routers_map: Dict[str, Node], igp_table: str = "t_ospf"):
+    def _render_rr_mode(self, asn: int, clusters: Dict[str, Tuple[Set[str], Set[str]]], routers_map: Dict[str, Node], igp_tables: Dict[str, str]):
         """!
         @brief Render Route Reflector based iBGP sessions for one AS.
 
         @param asn AS number being rendered.
         @param clusters mapping from cluster ID to RR names and client names.
         @param routers_map mapping from router name to router node.
+        @param igp_tables explicit per-router next-hop lookup tables.
         """
         self._log('setting up IBGP (Route Reflector) for as{}...'.format(asn))
 
@@ -215,7 +232,7 @@ class Ibgp(Layer, Graphable):
                             "peer_asn": asn,
                             "export_policy": "all",
                             "next_hop_self": False,
-                            "igp_table": igp_table,
+                            "igp_table": igp_tables[rr_name],
                             "passive": True,
                             "route_reflector_client": True,
                             "route_reflector_cluster_id": cluster_id,
@@ -234,7 +251,7 @@ class Ibgp(Layer, Graphable):
                             "peer_asn": asn,
                             "export_policy": "all",
                             "next_hop_self": True,
-                            "igp_table": igp_table,
+                            "igp_table": igp_tables[client_name],
                             "hold_time": self.__hold_time,
                             "keepalive_time": self.__keepalive_time,
                         },
@@ -267,7 +284,7 @@ class Ibgp(Layer, Graphable):
                         "peer_asn": asn,
                         "export_policy": "all",
                         "next_hop_self": False,
-                        "igp_table": igp_table,
+                        "igp_table": igp_tables[node_a.getName()],
                         "hold_time": self.__hold_time,
                         "keepalive_time": self.__keepalive_time,
                     },
@@ -283,7 +300,7 @@ class Ibgp(Layer, Graphable):
                         "peer_asn": asn,
                         "export_policy": "all",
                         "next_hop_self": False,
-                        "igp_table": igp_table,
+                        "igp_table": igp_tables[node_b.getName()],
                         "hold_time": self.__hold_time,
                         "keepalive_time": self.__keepalive_time,
                     },
@@ -295,12 +312,13 @@ class Ibgp(Layer, Graphable):
                     )
                 )
 
-    def _render_full_mesh_mode(self, asn: int, routers: List[Node], igp_table: str = "t_ospf"):
+    def _render_full_mesh_mode(self, asn: int, routers: List[Node], igp_tables: Dict[str, str]):
         """!
         @brief Render the legacy full-mesh iBGP sessions for one AS.
 
         @param asn AS number being rendered.
         @param routers routers participating in the legacy iBGP mesh.
+        @param igp_tables explicit per-router next-hop lookup tables.
         """
         self._log('setting up IBGP (Full Mesh) for as{}...'.format(asn))
         allowed_names = {router.getName() for router in routers}
@@ -331,7 +349,7 @@ class Ibgp(Layer, Graphable):
                         "peer_asn": asn,
                         "export_policy": "all",
                         "next_hop_self": False,
-                        "igp_table": igp_table,
+                        "igp_table": igp_tables[local.getName()],
                         "hold_time": self.__hold_time,
                         "keepalive_time": self.__keepalive_time,
                     },
