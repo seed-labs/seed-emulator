@@ -9,6 +9,11 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import InitVar, dataclass, field
 
 from seedemu.core.Emulator import Emulator
+from seedemu.core.enums import NetworkType
+
+SED_ETCHOSTS = """
+echo "{}" >> /etc/hosts
+"""
 
 
 @dataclass(eq=False)
@@ -46,7 +51,9 @@ class ContainerBundle:
     def getSuffix(self) -> str:
         return self._suffix
 
-    def setDefaultNetwork(self, name: str, prefix: str = "", ip_addresses: Optional[List[str]] = None) -> None:
+    def setDefaultNetwork(
+        self, name: str, prefix: str = "", ip_addresses: Optional[List[str]] = None
+    ) -> None:
         self._default_network = (name, prefix, list(ip_addresses or []))
 
     def getDefaultNetwork(self) -> Optional[Tuple[str, str, List[str]]]:
@@ -81,7 +88,7 @@ class ContainerBundle:
         services = {}
         for name, container in self._containers.items():
             services[name] = container.install()
-            ports = services[name].get('ports') or container._service_ports
+            ports = services[name].get("ports") or container._service_ports
             if not ports:
                 continue
             print(f"service {name}: port mapping {ports}")
@@ -89,8 +96,23 @@ class ContainerBundle:
         if not services:
             return "", ""
 
+        emulator_networks = set()
+        if self._emulator is not None:
+            for (_, object_type, _), network in self._emulator.getRegistry().getAll().items():
+                if object_type != "net":
+                    continue
+                scope, _, _ = network.getRegistryInfo()
+                network_name = network.getName()
+                if network.getType() != NetworkType.Bridge:
+                    network_name = f"net_{scope}_{network_name}"
+                emulator_networks.add(network_name)
+
+        # Keep service attachments, but do not redeclare emulator-owned networks.
         networks = {
-            network: {} for service in services.values() for network in service.get("networks", [])
+            network: {}
+            for service in services.values()
+            for network in service.get("networks", [])
+            if network not in emulator_networks
         }
         compose_services_txt = "".join(
             indent(
@@ -110,22 +132,52 @@ class ContainerBundle:
         )
         return compose_services_txt, compose_networks_txt
 
+    def getEmuHostNetworkInfo(self):
+        """Return host network information using the Docker Compose network name."""
+        for (_, node_type, _), node in self._emulator.getRegistry().getAll().items():
+            if node_type != "hnode":
+                continue
+
+            for interface in node.getInterfaces():
+                address = interface.getAddress()
+                if address is None:
+                    continue
+
+                network = interface.getNet()
+                router = network.getDefaultRouter()
+                scope, _, _ = network.getRegistryInfo()
+                network_name = network.getName()
+                if network.getType() != NetworkType.Bridge:
+                    network_name = f"net_{scope}_{network_name}"
+
+                return (
+                    network_name,
+                    node.getName(),
+                    str(address),
+                    str(router) if router is not None else None,
+                )
+
+
 @dataclass(eq=False)
 class PreparedContainer:
     name: InitVar[str] = ""
     suffix: InitVar[str] = ""
     _name: str = field(default="", init=False)
     _suffix: str = field(default="", init=False)
-    _internal_networks: List[Tuple[str, str, str, Optional[str]]] = field(default_factory=list, init=False)
+    _internal_networks: List[Tuple[str, str, str, Optional[str]]] = field(
+        default_factory=list, init=False
+    )
     _external_network: List[Tuple[str, str, str]] = field(default_factory=list, init=False)
     _files: Dict[str, str] = field(default_factory=dict, init=False)
     service: Dict[str, Any] = field(default_factory=dict, init=False)
     _service_ports: List[str] = field(default_factory=list, init=False)
+    _start_commands: List[str] = field(default_factory=list, init=False)
+    _etchost_content: str = field(default="", init=False)
 
     def __post_init__(self, name: str, suffix: str) -> None:
         self._name = name
         self._suffix = suffix
-        self.service['container_name'] = name
+        self.service["container_name"] = name
 
     def getName(self) -> str:
         return self._name
@@ -151,13 +203,21 @@ class PreparedContainer:
         mkdir(hostname)
         chdir(hostname)
 
+        etchosts_content = self._files.pop("__etchosts_file", '')
+        if etchosts_content:
+            self.setFile("/tmp/etc-hosts", etchosts_content)
+            self._start_commands.insert(1, "cat /tmp/etc-hosts >> /etc/hosts")
+
+        if self._start_commands:
+            self.setFile("/start.sh", '\n'.join(self._start_commands))
+
         dockerfile = self._computeDockerfile()
         if dockerfile:
             print(dockerfile, file=open("Dockerfile", "w"))
 
         chdir("..")
         return self.service
-
+    
     def joinInternalNetwork(
         self,
         network: str,
@@ -166,6 +226,8 @@ class PreparedContainer:
         default_router: Optional[str] = "",
     ) -> None:
         internal_network = (network, hostname, ip_address, default_router)
+        if not self._internal_networks:
+            self._etchost_content = f"{self.service.get('ip', '')} {self.getHostname()}"
         if internal_network not in self._internal_networks:
             self._internal_networks.append(internal_network)
 
@@ -186,9 +248,6 @@ class PreparedContainer:
     def setContentAttribute(self, content: dict) -> None:
         self.service.update(content)
 
-    def setDockerfile(self, content: str) -> None:
-        self._files["Dockerfile"] = content
-
     def setEtcHosts(self, content: str) -> None:
         self._files["__etchosts_file"] = content
 
@@ -197,11 +256,12 @@ class PreparedContainer:
 
     def _computeDockerfile(self) -> str:
         if not self._files:
-            return ''
-        
+            return ""
+
         dockerfile_lines = [
-            "FROM {}".format(self.service.pop("image")),
+            "FROM {}".format(self.service.pop("image", '')),
             "ARG DEBIAN_FRONTEND=noninteractive",
+            "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 && rm -rf /var/lib/apt/lists/*"
         ]
 
         for filename, content in self._files.items():
@@ -213,4 +273,6 @@ class PreparedContainer:
     def _addFile(self, path: str, content: str) -> str:
         staged_path = md5(path.encode("utf-8")).hexdigest()
         print(content, file=open(staged_path, "w"))
+        if path.endswith('.sh'):
+            return "COPY {} {}\nRUN chmod +x {}".format(staged_path, path, path)
         return "COPY {} {}".format(staged_path, path)

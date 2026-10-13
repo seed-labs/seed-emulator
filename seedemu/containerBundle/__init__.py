@@ -1,5 +1,5 @@
 from .ContainerBundle import ContainerBundle
-from .VisualizationBundle import VisualizationBundle
-from .EthExplorerBundle import EthExplorerBundle
+from .InternetMap import InternetMap
+from .EthExplorer import EthExplorer
 
-all = ["ContainerBundle", "VisualizationBundle", "EthExplorerBundle"]
+all = ["ContainerBundle", "InternetMap", "EthExplorer"]

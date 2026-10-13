@@ -1,5 +1,5 @@
+import types
 from .ContainerBundle import ContainerBundle
-from seedemu.core.enums import NetworkType
 
 SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE = "handsonsecurity/seedemu-ethexplorer-backend:1.0"
 SEEDEMU_ETH_EXPLORER_WEB_IMAGE = "handsonsecurity/seedemu-ethexplorer-web:1.0"
@@ -9,9 +9,87 @@ REDIS_IMAGE = "redis:7-alpine"
 LITTLE_BIGTABLE_IMAGE = "gobitfly/little_bigtable:latest"
 
 SEEDEMU_ETH_EXPLORER_WEB_INTERNAL_PORT = 5000
+DOCKER_LOGGOING_SET = {
+    "driver": "json-file",
+    "options": {"max-size": "200m", "max-file": 1},
+}
+
+BACKEND_START_SH = [
+    '#!/bin/sh',
+    'DEFAULT_ROUTE="{default_route}"',
+    'IFACE=$(ip route get "$DEFAULT_ROUTE" | awk \'{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}\')',
+    'echo "gateway=$DEFAULT_ROUTE interface=$IFACE"',
+    'ip route del default 2>/dev/null || true',
+    'ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"',
+    'stopit() {',
+    '  echo "trapped SIGINT"',
+    '  exit 0',
+    '}',
+    'trap stopit SIGINT',
+    'echo "run provision-explorer-config-custom.sh ..."',
+    'cd /app/local_deployment',
+    'chmod +x provision-explorer-config-custom.sh',
+    './provision-explorer-config-custom.sh',
+    'if [ $? -eq 0 ]; then',
+    '  echo "SUCCESS: script executed normally"',
+    'else',
+    '  echo "ERROR: script failed"',
+    '  exit 1',
+    'fi',
+    'cd /app',
+    'echo "start ..."',
+    'echo "run eth1indexer"',
+    "bc eth1indexer -config /app/local_deployment/config.yml -concurrency 1 -blocks.tracemode 'geth' &",
+    'echo "run rewards-exporter"',
+    'bc rewards-exporter -config /app/local_deployment/config.yml &',
+    'echo "run statistics"',
+    'bc statistics -config /app/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled -deposits.enabled &',
+    'echo "end."',
+    'while true; do',
+    '  date',
+    '  sleep 1',
+    'done',
+]
+
+FRONTEND_START_SH = [
+    '#!/bin/bash',
+    'DEFAULT_ROUTE="{default_route}"',
+    'IFACE=$(ip route get "$DEFAULT_ROUTE" | awk \'{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}\')',
+    'echo "gateway=$DEFAULT_ROUTE interface=$IFACE"',
+    'ip route del default 2>/dev/null || true',
+    'ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"',
+    'stopit() {',
+    '  echo "trapped SIGINT"',
+    '  exit 0',
+    '}',
+    'trap stopit SIGINT',
+    'echo "run provision-explorer-config-custom.sh ..."',
+    'cd /app/local-deployment',
+    'chmod +x provision-explorer-config-custom.sh',
+    './provision-explorer-config-custom.sh',
+    'if [ $? -eq 0 ]; then',
+    '  echo "SUCCESS: script executed normally"',
+    'else',
+    '  echo "ERROR: script failed"',
+    '  exit 1',
+    'fi',
+    'cd /app',
+    'echo "start ..."',
+    'echo "run explorer"',
+    '/app/explorer -config /app/local-deployment/config.yml &',
+    'echo "run validator-tagger"',
+    '/app/validator-tagger -config /app/local-deployment/config.yml -schedule true &',
+    'echo "run frontend-data-updater"',
+    '/app/frontend-data-updater -config /app/local-deployment/config.yml &',
+    'echo "end."',
+    'while true; do',
+    '  date',
+    '  sleep 1',
+    'done',
+]
 
 
-class EthExplorerBundle(ContainerBundle):
+class EthExplorer(ContainerBundle):
     def __init__(self, emulator, suffix="eth.explorer"):
         super().__init__(emulator=emulator, suffix=suffix)
         service_names = [
@@ -26,6 +104,8 @@ class EthExplorerBundle(ContainerBundle):
         ]
         for service_name in service_names:
             self._createContainer(service_name, suffix)
+        self.__beacon_host = self.__geth_host = ""
+        self._emu_internal_network = self.getEmuHostNetworkInfo()
 
     def configure(self) -> None:
         self._required_port_number = 1
@@ -118,8 +198,6 @@ class EthExplorerBundle(ContainerBundle):
             }
         )
 
-        cl_host, beaconNetwork, el_host, gEthNetwork = self.getBeaconAndGethEndpoints()
-        
         seedemu_ethexplorer_backend = self._containers["seedemu-ethexplorer-backend"]
         seedemu_ethexplorer_backend.setContentAttribute(
             {
@@ -142,14 +220,17 @@ class EthExplorerBundle(ContainerBundle):
                     "postgres": {"condition": "service_healthy"},
                     "alloy": {"condition": "service_healthy"},
                     "redis": {"condition": "service_healthy"},
-                    "littlebigtable": {"condition": "service_healthy"},
-                    "rawbigtable": {"condition": "service_healthy"},
+                    "littlebigtable": {"condition": "service_started"},
+                    "rawbigtable": {"condition": "service_started"},
                 },
-                "environment": {"EL_HOST": el_host, "CL_HOST": cl_host},
+                "environment": {"CL_HOST": self.__beacon_host, "EL_HOST": self.__geth_host},
+                "build": f"./{seedemu_ethexplorer_backend.getHostname()}",
+                "logging": DOCKER_LOGGOING_SET,
             }
         )
-        seedemu_ethexplorer_backend.joinInternalNetwork(network=beaconNetwork)
-        seedemu_ethexplorer_backend.joinInternalNetwork(network=gEthNetwork)
+        seedemu_ethexplorer_backend.joinInternalNetwork(*self._emu_internal_network)
+        BACKEND_START_SH[1] = BACKEND_START_SH[1].format(default_route=self._emu_internal_network[3])
+        seedemu_ethexplorer_backend._start_commands = BACKEND_START_SH
 
         seedemu_ethexplorer_web = self._containers["seedemu-ethexplorer-web"]
         seedemu_ethexplorer_web.setContentAttribute(
@@ -164,42 +245,28 @@ class EthExplorerBundle(ContainerBundle):
                     "postgres": {"condition": "service_healthy"},
                     "alloy": {"condition": "service_healthy"},
                     "redis": {"condition": "service_healthy"},
-                    "littlebigtable": {"condition": "service_healthy"},
-                    "rawbigtable": {"condition": "service_healthy"},
+                    "littlebigtable": {"condition": "service_started"},
+                    "rawbigtable": {"condition": "service_started"},
                     seedemu_ethexplorer_backend.getName(): {"condition": "service_healthy"},
                 },
-                "environment": {"EL_HOST": el_host, "CL_HOST": cl_host},
+                "environment": {"CL_HOST": self.__beacon_host, "EL_HOST": self.__geth_host},
                 "ports": [f"{self._ports.pop()}:{SEEDEMU_ETH_EXPLORER_WEB_INTERNAL_PORT}"],
+                "build": f"./{seedemu_ethexplorer_web.getHostname()}",
+                "logging": DOCKER_LOGGOING_SET,
             }
         )
-        seedemu_ethexplorer_web.joinInternalNetwork(network=beaconNetwork)
-        seedemu_ethexplorer_web.joinInternalNetwork(network=gEthNetwork)
+        seedemu_ethexplorer_web.joinInternalNetwork(*self._emu_internal_network)
+        FRONTEND_START_SH[1] = FRONTEND_START_SH[1].format(default_route=self._emu_internal_network[3])
+        seedemu_ethexplorer_web._start_commands = FRONTEND_START_SH
 
-    def getBeaconAndGethEndpoints(self) -> tuple[str, str, str, str]:
-        registry = self._emulator.getRegistry()
-        beacon_host = gEth_host = beaconNetwork = gEthNetwork = ""
+    def getBeaconHost(self) -> str:
+        return self.__beacon_host
 
-        for (_, type, _), obj in registry.getAll().items():
-            if type != "hnode":
-                continue
-            if beacon_host and gEth_host:
-                break
+    def getGethHost(self) -> str:
+        return self.__geth_host
 
-            interfaces = obj.getInterfaces()
-            if not interfaces:
-                continue
-            interface = interfaces[0]
-            ip = str(interface.getAddress())
-            net = interface.getNet()
-            scope, _, _ = net.getRegistryInfo()
-            # Match the network names emitted by the Docker compiler.
-            network = net.getName() if net.getType() == NetworkType.Bridge else f"net_{scope}_{net.getName()}"
-            display_name = obj.getDisplayName() or obj.getName()
-            if "-Beacon-" in display_name and beacon_host == "":
-                beacon_host = ip
-                beaconNetwork = network
-            elif "-Geth-" in display_name and gEth_host == "":
-                gEth_host = ip
-                gEthNetwork = network
+    def setBeaconHost(self, beacon_host) -> None:
+        self.__beacon_host = beacon_host
 
-        return (beacon_host, beaconNetwork, gEth_host, gEthNetwork)
+    def setGethHost(self, geth_host) -> None:
+        self.__geth_host = geth_host

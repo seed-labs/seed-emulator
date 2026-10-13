@@ -190,14 +190,24 @@ def run(
 
     if render:
         emu.render()
-
+    
     output_dir = Path(output or SCRIPT_DIR / "output").resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    docker = Docker(
-        internetMapEnabled=True,
-        etherViewEnabled=ether_view_enabled,
-        platform=platform,
-    )
+    docker = Docker(internetMapEnabled=False, platform=platform)
+
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    internet_map_bundle.setDefaultNetwork("internet_map_network")
+    internet_map_bundle.setPorts(list(range(8080, 8089)))
+    docker.addContainerBundle(internet_map_bundle)
+
+    eth_explorer_bundle = EthExplorer(emu, ".eth.explorer.seed")
+    eth_explorer_bundle.setDefaultNetwork("eth_explorer_network")
+    eth_explorer_bundle.setPorts(list(range(8090, 8099)))
+    blockchain = emu.getLayer("EthereumService").getBlockchainByName('pos')
+    eth_explorer_bundle.setBeaconHost(blockchain.getBeaconBootNodeIP()[0])
+    eth_explorer_bundle.setGethHost(blockchain.getGethBootNodeIP()[0])
+    docker.addContainerBundle(eth_explorer_bundle)
+
     emu.compile(docker, str(output_dir), override=override)
 
 

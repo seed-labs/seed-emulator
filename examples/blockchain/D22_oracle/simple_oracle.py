@@ -53,7 +53,7 @@ def installSoftware(node: Node):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the D22 oracle example.")
     parser.add_argument("legacy_args", nargs="*", help="legacy form: [poa|pos] [amd|arm]")
-    parser.add_argument("--consensus", choices=["poa", "pos"])
+    parser.add_argument("--consensus", default=str("pos"), choices=["poa", "pos"])
     parser.add_argument("--platform", choices=["amd", "arm"])
     parser.add_argument("--output", default=str(SCRIPT_DIR / "output"))
     parser.add_argument("--dumpfile")
@@ -217,7 +217,22 @@ def run(
 
     output_dir = Path(output or SCRIPT_DIR / "output").resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    docker = Docker(etherViewEnabled=ether_view_enabled, platform=platform)
+    docker = Docker(internetMapEnabled=False, platform=platform)
+        
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    internet_map_bundle.setDefaultNetwork("internet_map_network")
+    internet_map_bundle.setPorts(list(range(8080, 8089)))
+    docker.addContainerBundle(internet_map_bundle)
+
+    eth_explorer_bundle = EthExplorer(emu, ".eth.explorer.seed")
+    eth_explorer_bundle.setDefaultNetwork("eth_explorer_network")
+    eth_explorer_bundle.setPorts(list(range(8090, 8099)))
+    eth = emu.getLayer("EthereumService")
+    blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
+    eth_explorer_bundle.setBeaconHost(blockchain.getBeaconBootNodeIP()[0])
+    eth_explorer_bundle.setGethHost(blockchain.getGethBootNodeIP()[0])
+    docker.addContainerBundle(eth_explorer_bundle)
+        
     emu.compile(docker, str(output_dir), override=override)
 
 
