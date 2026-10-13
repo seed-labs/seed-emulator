@@ -114,7 +114,7 @@ server {{
 """
 
 
-class VisualizationBundle(ContainerBundle):
+class InternetMap(ContainerBundle):
     def __init__(self, emulator, suffix="map.seed"):
         super().__init__(emulator=emulator, suffix=suffix)
         service_names = [

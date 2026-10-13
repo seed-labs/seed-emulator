@@ -160,8 +160,21 @@ for asn in asns:
 
 emu.render()
 
-# Enable internetMap and etherView for visualization
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
+docker = Docker(internetMapEnabled=False, platform=platform)
+        
+internet_map_bundle = InternetMap(emu, ".map.seed")
+internet_map_bundle.setDefaultNetwork("internet_map_network")
+internet_map_bundle.setPorts(list(range(8080, 8089)))
+docker.addContainerBundle(internet_map_bundle)
+
+eth_explorer_bundle = EthExplorer(emu, ".eth.explorer.seed")
+eth_explorer_bundle.setDefaultNetwork("eth_explorer_network")
+eth_explorer_bundle.setPorts(list(range(8090, 8099)))
+eth = emu.getLayer("EthereumService")
+blockchain = eth.getBlockchainByName(eth.getBlockchainNames()[0])
+eth_explorer_bundle.setBeaconHost(blockchain.getBeaconBootNodeIP()[0])
+eth_explorer_bundle.setGethHost(blockchain.getGethBootNodeIP()[0])
+docker.addContainerBundle(eth_explorer_bundle)
 
 # Compile the emulator to output
 emu.compile(docker, './output', override=True)
