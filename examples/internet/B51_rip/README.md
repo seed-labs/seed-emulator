@@ -65,9 +65,10 @@ updates. RIP passive Local interfaces can still receive updates. External RIP
 links and loopbacks never exchange RIP, regardless of policy or overrides.
 Layer stubs, masks and RIP interface options retain their existing precedence.
 
-Without an explicit interface policy, OSPF uses `all-local` and RIP uses
-`router-links`, preserving both protocols' previous defaults. An explicitly
-selected policy keeps its meaning when `setIgpMode()` changes the protocol.
+Without an explicit interface policy, both OSPF and RIP use `all-local`.
+Changing `setIgpMode()` preserves the effective interface policy, whether it
+is the shared default or an explicitly selected value. To make host-facing
+Local networks passive, explicitly select `router-links` or use a layer override.
 The AS also exposes `getIgpInterfacePolicy()` and `hasIgpInterfacePolicy()`.
 The old `setOspfMode("legacy"|"router-transit-only")` methods remain compatibility
 adapters: `legacy` maps to `all-local`, and `router-transit-only` maps to
@@ -87,11 +88,13 @@ RIP's BIRD configuration now uses four top-level `RoutingFileTemplates`
 entries, matching OSPF's template organization. FRR selects one `igp_body`
 from the router's actual OSPF/RIP identity before combining BGP and MPLS.
 
-The completed source passed consolidated validation: 147 regressions, four
+The 2026-10-09 source revision passed validation: 147 regressions, four
 static CI checks, all three real backends, and an ordinary mixed down/up
 restart. Each real run passed 4,386 interface ping directions. Earlier
-validation sections below describe earlier source versions. The latest
-status is recorded in
+validation sections below describe earlier source versions. Those runtime
+results predate the unified `all-local` default; current changes and validation
+are recorded in [codex_worklog.md](codex_worklog.md). The 2026-10-09 acceptance
+is recorded in
 [Section 19 of add_rip.md](../../../add_rip.md#19-2026-10-09as-唯一选择协议删除层范围与空-render).
 
 ## Select RIP in a B00 copy

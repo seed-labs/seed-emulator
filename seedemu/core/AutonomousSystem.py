@@ -145,15 +145,15 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     def getIgpInterfacePolicy(self) -> str:
         """Return the effective interface policy, including legacy components.
 
-        Preserve established defaults: OSPF uses all-local, RIP uses
-        router-links. An explicit policy keeps its meaning across IGP changes.
+        Both OSPF and RIP default to all-local. Explicit policies and legacy
+        component choices keep their meaning across IGP changes.
         """
         policy = getattr(self, "_AutonomousSystem__igp_interface_policy", None)
         if policy is not None:
             return policy
         if getattr(self, "_AutonomousSystem__ospf_mode_explicit", False):
             return _LEGACY_OSPF_INTERFACE_POLICIES[getattr(self, "_AutonomousSystem__ospf_mode", "legacy")]
-        return IGP_INTERFACE_POLICY_ROUTER_LINKS if self.getIgpMode() == IGP_MODE_RIP else IGP_INTERFACE_POLICY_ALL_LOCAL
+        return IGP_INTERFACE_POLICY_ALL_LOCAL
 
     def hasIgpInterfacePolicy(self) -> bool:
         """Return whether an interface policy was explicitly declared."""

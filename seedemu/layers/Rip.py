@@ -22,8 +22,9 @@ class Rip(Layer):
     """Compose RIP requirements independently of BIRD/FRR and the compiler.
 
     Options resolve as layer defaults < network < router < interface. The AS's
-    IGP interface policy provides passive defaults; by default internal links
-    with at least two routers are active and host-facing links are passive.
+    IGP interface policy defaults to all-local, activating all internal Local
+    networks. Selecting router-links makes host-facing and single-router
+    Local networks passive while retaining prefix advertisement.
     External links contribute connected prefixes for BGP
     next-hop resolution, but never receive or transmit RIP messages.
     ASes explicitly select this protocol through setIgpMode("rip").
