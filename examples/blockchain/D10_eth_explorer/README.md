@@ -1,178 +1,204 @@
 # D10 Eth Explorer Example
 
-This example demonstrates how to build an Ethereum PoS private network in SEED Emulator and automatically attach a blockchain explorer visualization component to it. The visualization is adapted from the open-source projects [eth2-beaconchain-explorer](https://github.com/gobitfly/eth2-beaconchain-explorer.git) and [beaconchain](https://github.com/gobitfly/beaconchain.git). The related Docker build files are located in [`docker_images/seedemu-ethexplorer`](../../../docker_images/seedemu-ethexplorer).
+This example builds an Ethereum PoS private network and attaches the explorer implemented by [`EthExplorer`](../../../seedemu/containerBundle/EthExplorer.py). The explorer indexes execution-layer and consensus-layer data and provides a Web UI for blocks, transactions, epochs, slots, and validators.
 
-Unlike the Internet Map, which focuses on containers, ASes, network links, and topology, the Eth Explorer connects to the Geth execution-layer node and the Beacon consensus-layer node inside the emulated network. It indexes on-chain data and presents blocks, epochs, slots, validators, and execution-layer transactions through a web UI. With both visualizations enabled, the example lets users inspect both the emulated Internet topology and the Ethereum PoS chain state.
+The D10 entry point, [`ethereum_pos.py`](ethereum_pos.py), delegates network construction and bundle registration to [D01](../D01_ethereum_pos/ethereum_pos.py). D01 creates Geth/Beacon node pairs, validator clients, a Beacon setup node, and an Internet topology. It registers both `InternetMap` and `EthExplorer` with the Docker compiler.
 
-## Example Goals
+## Run this example
 
-`ethereum_pos.py` performs the following tasks:
-
-- Creates a base Internet topology with 10 stub ASes: `150-154` and `160-164`.
-- Creates an Ethereum PoS node set based on the command-line argument.
-- Creates Geth nodes, Beacon nodes, and Validator Client nodes for the PoS network.
-- Creates a `BeaconSetupNode` to generate Beacon chain configuration, validator keys, genesis data, and other bootstrapping materials.
-- Configures bootnodes for both the execution layer and the consensus layer.
-- Enables HTTP RPC on Geth nodes so the explorer backend can read execution-layer data.
-- Enables both `internetMapEnabled=True` and `etherViewEnabled=True` when compiling the Docker output.
-
-The first command-line argument controls the node scale. If the argument is `N`, the script creates:
-
-| Type | Count | Purpose |
-| --- | --- | --- |
-| Geth nodes | `N` | Ethereum execution-layer nodes that provide blocks, transactions, account state, and JSON-RPC APIs |
-| Beacon nodes | `N` | Ethereum consensus-layer nodes that maintain Beacon Chain state, slots, epochs, attestations, and related consensus data |
-| Validator Client nodes | `3 * N` | Validator clients that connect to Beacon nodes and participate in PoS validation |
-| BeaconSetupNode | `1` | Generates and distributes configuration and keys required to start the PoS private chain |
-
-The script automatically calculates how many hosts each stub AS needs and binds the virtual nodes to those hosts. To support larger deployments, it also expands the host IP range of `net0` in each stub AS.
-
-## How to Run
-
-Run the following commands from the project root:
+From the project root:
 
 ```bash
 cd examples/blockchain/D10_eth_explorer
-python ethereum_pos.py <beacon_node_count> [amd|arm]
-```
-
-Example:
-
-```bash
-python ethereum_pos.py 3 amd
-```
-
-Arguments:
-
-- `<beacon_node_count>`: The number of Beacon/Geth nodes to create. This also affects the number of Validator Client nodes.
-- `amd`: Generate Docker configuration for AMD64. This is the default.
-- `arm`: Generate Docker configuration for ARM64 hosts.
-
-After the script finishes, it generates an `output` directory in the current example directory. Start the emulation from that directory:
-
-```bash
+python ethereum_pos.py --beacon-nodes 3 --validators-per-beacon 3 --platform amd
 cd output
-docker compose up
+docker compose up --build
 ```
-When the simulator generates the docker-compose.yml, it will select a Beacon node (`CL_HOST`) by filtering based on the container name containing `"-Beacon-"`, and select a Geth node (`EL_HOST`) by filtering based on `"-Geth-"`.
-Startup may take some time. The explorer backend waits for the databases, ClickHouse, Redis, Bigtable emulator services, and Geth/Beacon nodes to become available. It then initializes schemas, reads the chain genesis information, and starts indexing data.
 
-## Access Points
+The legacy invocation `python ethereum_pos.py 3 amd` is also supported. `--platform arm` selects ARM64 output; the explorer images must also support the target architecture. `--output` changes the generated directory. `--dumpfile` saves the emulator and returns before rendering or compiling bundles.
 
-The example compiles the Docker output with:
+With the current D01 port configuration, open the explorer at **http://127.0.0.1:8098**. D01 supplies `list(range(8090, 8099))`, and EthExplorer takes the last port, `8098`. The container listens on port `5000` internally. Startup and initial indexing can take time.
+
+## Attach EthExplorer to an existing emulator
+
+Import the bundle from `seedemu.containerBundle`. Create it after rendering the emulator, register it with the Docker compiler, and compile:
 
 ```python
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
+from seedemu import Platform
+from seedemu.compiler import Docker
+from seedemu.containerBundle import EthExplorer
+
+# emu is an existing emulator with a configured EthereumService PoS chain.
+# Render first so host interfaces and Ethereum bootnode IPs are available.
+emu.render()
+
+docker = Docker(platform=Platform.AMD64)
+explorer = EthExplorer(emu, ".eth.explorer.seed")
+explorer.setPorts([8090])
+docker.addContainerBundle(explorer)
+emu.compile(docker, "./output", override=True)
 ```
 
-After startup, two main visualization entry points are available:
+Then run `docker compose up --build` inside `output` and open `http://127.0.0.1:8090`.
 
-| Service | Default URL | Function |
-| --- | --- | --- |
-| Internet Map | `http://127.0.0.1:8080/map.html` | Shows the SEED Emulator network topology, ASes, hosts, containers, and links |
-| Eth Explorer | `http://127.0.0.1:5000` | Shows the Ethereum PoS private chain through a blockchain explorer UI |
+`Docker.addContainerBundle()` registers the bundle. During compilation, the compiler calls `configure()` and then `install()` to produce the Compose services, network definitions, build directories, startup scripts, and configuration files. Application code normally does not call these lifecycle methods directly. Configure and compile a fresh bundle for each build: configuration consumes ports and modifies startup scripts.
 
-If a local port is already in use, adjust the port through the `Docker` constructor in `ethereum_pos.py`, for example with `internetMapPort` or `etherViewPort`.
+The current integration uses `addContainerBundle()`. The older `Docker(etherViewEnabled=True, etherViewPort=...)` examples do not describe this bundle API.
 
-## Visualization Architecture
+## Constructor and prerequisites
 
-The Eth Explorer services are automatically injected into the generated `docker-compose.yml` by the Docker compiler. The core services are:
+```python
+explorer = EthExplorer(emulator=emu, suffix=".eth.explorer.seed")
+```
 
-| Service | Purpose |
+| Argument | Meaning |
 | --- | --- |
-| `seedemu-ethexplorer-web` | Built from `eth2-beaconchain-explorer`; provides the web UI, search, validator tagging, and frontend data updates |
-| `seedemu-ethexplorer-backend` | Built from `beaconchain/backend`; handles execution-layer and consensus-layer indexing, statistics, and schema initialization |
-| `postgres` | Stores explorer business data and indexed results |
-| `clickhouse` | Stores analytical chain data for efficient statistical queries |
-| `redis` | Provides cache and session storage |
-| `littlebigtable` / `rawbigtable` | Emulate Bigtable storage to preserve compatibility with the original projects' data access model |
+| `emulator` | The emulator containing the Ethereum service and reachable emulated hosts. |
+| `suffix` | Appended to bundle hostnames and generated build directory names. The constructor default is `"eth.explorer"`; include a leading dot explicitly if desired. |
 
-The compiler looks for nodes whose display names contain `Geth-` and `Beacon-` in the emulated topology. The first matched nodes are used as the explorer data sources and passed to the explorer through environment variables:
+The emulator must contain an `EthereumService` with at least one blockchain. Automatic node selection requires that blockchain to expose Beacon and Geth bootnode IPs. Geth HTTP RPC and the Beacon API must be enabled and reachable from the explorer containers.
 
-- `EL_HOST`: The execution-layer Geth node address.
-- `CL_HOST`: The consensus-layer Beacon node address.
+The constructor also finds the first registered host interface with an IP address and records its network and default router. The backend and Web containers later join this emulated network and route through that router to reach the chain nodes. Provide a rendered topology with a usable host interface and gateway; setting RPC host addresses alone does not create network connectivity.
 
-The explorer containers are attached to `beacon-network` and to the relevant emulated networks, so they can access both the database services and the Geth/Beacon nodes inside the emulation.
+The suffix changes generated hostnames/build directories. Compose service keys and `container_name` values remain fixed names such as `postgres` and `seedemu-ethexplorer-web`; a different suffix alone does not isolate multiple explorer bundles in one Compose project.
 
-## Docker Image Layout
+## Configure the bundle network
 
-The customized image files are located in [`docker_images/seedemu-ethexplorer`](../../../docker_images/seedemu-ethexplorer):
-
-```text
-docker_images/seedemu-ethexplorer
-├── docker-compose.yml
-├── beaconchain/backend
-│   ├── Dockerfile
-│   ├── start.sh
-│   └── local_deployment/
-└── eth2-beaconchain-explorer
-    ├── Dockerfile
-    ├── start.sh
-    └── local-deployment/
-```
-
-Key files:
-
-- `eth2-beaconchain-explorer/Dockerfile` builds `explorer`, `validator-tagger`, and `frontend-data-updater`.
-- `eth2-beaconchain-explorer/start.sh` generates the runtime configuration and starts the web service and frontend data update tasks.
-- `beaconchain/backend/Dockerfile` builds the `bc` backend command.
-- `beaconchain/backend/start.sh` initializes Bigtable, Postgres, and ClickHouse schemas, then starts `eth1indexer`, `rewards-exporter`, `statistics`, and other backend tasks.
-- The two `provision-explorer-config-custom.sh` scripts dynamically generate `config.yml` from the emulated chain, including the genesis timestamp, genesis validators root, chain ID, network ID, Geth RPC address, and Beacon API address.
-
-These images are referenced by the SEED Emulator Docker compiler as:
+EthExplorer already provides a default bridge network, so `setDefaultNetwork()` is optional. The current default is:
 
 ```python
-SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE = "handsonsecurity/seedemu-ethexplorer-backend:1.0"
-SEEDEMU_ETH_EXPLORER_WEB_IMAGE = "handsonsecurity/seedemu-ethexplorer-web:1.0"
+network = {
+    "name": "ethExplorer_network",
+    "prefix": ".eth",
+    "ip_addresses": [
+        "172.20.0.10",
+        "172.20.0.11",
+        "172.20.0.12",
+        "172.20.0.13",
+        "172.20.0.14",
+        "172.20.0.15",
+        "172.20.0.16",
+    ],
+    "network_config": {
+        "driver": "bridge",
+        "ipam": {
+            "config": [{"subnet": "172.20.0.0/24", "gateway": "172.20.0.1"}]
+        },
+    },
+}
+
+# Optional: override the default before compilation.
+explorer.setDefaultNetwork(**network)
 ```
 
-## Explorer Features
+The dictionary is expanded into keyword arguments. The equivalent call is `explorer.setDefaultNetwork(name=..., prefix=..., ip_addresses=..., network_config=...)`.
 
-The Eth Explorer UI is based on the open-source Beacon Chain Explorer and is configured for the local test chain. Common features include:
+| Field | Meaning |
+| --- | --- |
+| `name` | Compose network key used by all seven bundle services. |
+| `prefix` | Stored network metadata; the current EthExplorer implementation does not use it to generate hostnames or allocate addresses. It is separate from the constructor's `suffix`. |
+| `ip_addresses` | Static IPv4 addresses assigned in container creation order. |
+| `network_config` | Compose network configuration, including bridge driver, subnet, and gateway. Pass a dictionary; the setter calls `.copy()` on it. |
 
-- Viewing the overall chain status, such as the current epoch, slot, finalized/checkpoint state, and participation rate.
-- Inspecting Beacon Chain slots and blocks, including proposer, block root, state root, attestations, and other consensus-layer data.
-- Viewing the validator list and individual validator details, including activation status, balance, proposal activity, and attestation performance.
-- Inspecting execution-layer blocks and transactions to understand data produced and synchronized by Geth nodes.
-- Searching by slot, epoch, block, validator, and other chain objects.
-- Viewing aggregated statistics, such as validator, block, reward, and chain activity data.
+`ip_addresses` must be nonempty and contain at least as many entries as `explorer.getContainers()`. The current bundle contains **seven containers**, so fewer than seven addresses trigger an assertion in `setDefaultNetwork()`. Extra addresses are unused. Supply unique addresses within the configured subnet, exclude the gateway, and avoid overlap with the emulated topology or other Docker networks. The assertions check presence and count; they do not validate subnet membership or uniqueness.
 
-Immediately after the emulation starts, the explorer may not show complete data. This is expected while Geth, Beacon nodes, database schema initialization, and indexing tasks are still starting. Wait for several slots or check the `seedemu_ethexplorer_backend` and `seedemu_ethexplorer_web` logs to confirm indexing progress.
+Default address assignment:
 
-## Relationship with Internet Map
+| Order | Service | Default IP | Role |
+| --- | --- | --- | --- |
+| 1 | `clickhouse` | `172.20.0.10` | Analytical chain storage |
+| 2 | `postgres` | `172.20.0.11` | Relational explorer data |
+| 3 | `redis` | `172.20.0.12` | Cache and session storage |
+| 4 | `littlebigtable` | `172.20.0.13` | Bigtable emulator |
+| 5 | `rawbigtable` | `172.20.0.14` | Raw-data Bigtable emulator |
+| 6 | `seedemu-ethexplorer-backend` | `172.20.0.15` | Indexing, rewards, and statistics |
+| 7 | `seedemu-ethexplorer-web` | `172.20.0.16` | Explorer UI and frontend update tasks |
 
-This example enables two visualization layers:
+All services join the bundle bridge network. The backend and Web service additionally join the selected emulated host network. When serializing Compose, the bundle uses `network_config` for its network and avoids redeclaring emulator-owned networks.
 
-- Internet Map focuses on the network emulation layer. It is useful for observing AS topology, host placement, container status, and network connectivity.
-- Eth Explorer focuses on the blockchain application layer. It is useful for observing execution-layer and consensus-layer data of the PoS private chain.
+## Select Beacon and Geth nodes
 
-Using both together helps debug experiments from both the network and blockchain perspectives. For example, if a Beacon node appears abnormal in the explorer, users can switch to the Internet Map to inspect the AS, host state, and network connectivity of that node.
+By default, `configure()` selects the first blockchain returned by `EthereumService.getBlockchainNames()`, then uses:
 
-## Troubleshooting
+```python
+blockchain.getBeaconBootNodeIP()[0]  # CL_HOST
+blockchain.getGethBootNodeIP()[0]    # EL_HOST
+```
 
-### Cannot access `http://127.0.0.1:5000`
+Selection uses the Ethereum service API, rather than matching container display names. Override either address before compilation:
 
-First check whether `output/docker-compose.yml` contains `seedemu-ethexplorer-web`, and confirm that the containers are running:
+```python
+explorer.setBeaconHost("10.150.0.71")  # Replace with a reachable Beacon node IP.
+explorer.setGethHost("10.150.0.72")    # Replace with a reachable Geth node IP.
+```
+
+These setters accept host addresses, not complete URLs or `host:port` strings. The YAML templates build the execution-layer URL as `http://$EL_HOST:$EL_PORT`; API ports come from the image's runtime configuration. Both containers receive `CL_HOST` and `EL_HOST` environment variables.
+
+For an emulator with multiple blockchains, set both hosts to nodes on the intended chain. Even with both overrides, the current implementation still looks up the first blockchain during configuration, so an Ethereum service and at least one blockchain remain required.
+
+`getBeaconHost()` and `getGethHost()` return the selected values. They are initially empty unless explicitly set; automatically selected values are populated during compilation.
+
+## Set the Web port
+
+```python
+explorer.setPorts([8090])  # Host 8090 -> container 5000.
+```
+
+At least one port is required; otherwise compilation raises `ValueError`. The setter copies the supplied list. The Web service consumes its last element using `.pop()`:
+
+```python
+explorer.setPorts(list(range(8090, 8099)))  # Publishes host port 8098.
+```
+
+Only one port is used by EthExplorer. Additional ports in the list do not publish additional explorer endpoints. Use a single-element list when you want an explicit URL. This port setting is separate from `InternetMap.setPorts()`.
+
+## Configuration templates and startup
+
+`BACKEND_CONFIG_YML` and `FRONTEND_CONFIG_YML` are defined in `EthExplorer.py`. During `configure()`, Python `.format()` replaces these five placeholders with the corresponding service's static IP:
+
+| Placeholder | Service |
+| --- | --- |
+| `{CLICKHOUSE_HOST}` | `clickhouse` |
+| `{POSTGRES_HOST}` | `postgres` |
+| `{REDIS_HOST}` | `redis` |
+| `{LBT_HOST}` | `littlebigtable` |
+| `{RBT_HOST}` | `rawbigtable` |
+
+Other placeholders, such as `$EL_HOST`, `$CL_HOST`, `$POSTGRES_DB`, `$GENESIS_TIMESTAMP`, and `$SERVER_PORT`, remain in shell-style form after Python formatting. The formatted templates are written into each container at `/tmp/config.yml`.
+
+The backend uses `/app/local_deployment`; the Web service uses `/app/local-deployment`. Each startup script configures its route and runs `provision-explorer-config-custom.sh`, then copies `/tmp/config.yml` over the runtime `config.yml` in its deployment directory. The backend starts `eth1indexer`, `rewards-exporter`, and `statistics`; the Web container starts `explorer`, `validator-tagger`, and `frontend-data-updater`.
+
+**Current implementation detail:** the copy of `/tmp/config.yml` is a plain `cat`, with no explicit shell substitution at that step. Therefore, the remaining `$...` placeholders are preserved in the copied file. If startup reports invalid configuration values, inspect the generated file and the image's configuration-loading behavior rather than assuming that Python formatting or the copy expanded those variables.
+
+Compose health checks gate startup on ClickHouse, Postgres, and Redis. The Bigtable services must be started. The Web service also waits for the backend health check, which checks for the Postgres `blocks` table; this does not guarantee that chain indexing has caught up.
+
+The explorer image sources are in [`docker_images/seedemu-ethexplorer`](../../../docker_images/seedemu-ethexplorer). The bundle references `handsonsecurity/seedemu-ethexplorer-backend:1.0` and `handsonsecurity/seedemu-ethexplorer-web:1.0`, and generates build contexts that add its files and startup scripts.
+
+## Inspect and troubleshoot
+
+From the generated output directory:
 
 ```bash
+docker compose config
 docker compose ps
+docker compose logs -f seedemu-ethexplorer-backend seedemu-ethexplorer-web
 ```
 
-If port `5000` is already occupied, update `Docker(etherViewPort=...)` and regenerate the output.
+| Symptom | What to check |
+| --- | --- |
+| IP assertion during `setDefaultNetwork()` | Supply a nonempty list with at least seven IP addresses. |
+| Missing port error during compilation | Call `setPorts([host_port])` before compiling. |
+| Missing blockchain or bootnode lookup failure | Render the emulator, configure the Ethereum service and bootnodes, or set explicit node hosts. |
+| Network or route setup failure | Check the selected emulated host interface, its gateway, subnet overlap, and reachability of the chain nodes. |
+| Cannot open the Web UI | Check the last supplied host port, port conflicts, Compose status, and backend health. D10 currently uses `8098`, not `5000`. |
+| UI has no chain data | Wait for chain genesis and indexing, then inspect Geth RPC, Beacon API, database health, and explorer logs. |
+| Invalid YAML values or literal `$...` in configuration | Inspect `/tmp/config.yml` and the copied runtime config; confirm how the image resolves the remaining placeholders. |
 
-### The explorer starts but shows no chain data
-
-This is common during the early stage of a local private-chain startup. The explorer needs to wait for:
-
-- Geth HTTP RPC to become available.
-- Beacon API to become available.
-- Genesis information to be readable.
-- Postgres, ClickHouse, Redis, and Bigtable emulator services to become ready.
-- Backend indexing tasks to finish initialization and begin writing data.
-
-Check logs to locate startup or indexing issues:
+To inspect the effective runtime configuration:
 
 ```bash
-docker compose logs -f seedemu-ethexplorer-backend
-docker compose logs -f seedemu-ethexplorer-web
+docker compose exec seedemu-ethexplorer-backend cat /app/local_deployment/config.yml
+docker compose exec seedemu-ethexplorer-web cat /app/local-deployment/config.yml
 ```
+
+InternetMap complements the explorer by showing network topology and connectivity; EthExplorer shows chain state and indexing results. Register and configure each bundle separately, with nonoverlapping networks and host ports.

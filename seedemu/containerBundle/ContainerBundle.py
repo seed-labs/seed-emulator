@@ -1,9 +1,9 @@
 """Container bundles and their independently owned prepared containers."""
 
 from __future__ import annotations
+import yaml
 from hashlib import md5
 from os import mkdir, chdir
-from yaml import safe_dump
 from textwrap import indent
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import InitVar, dataclass, field
@@ -16,6 +16,21 @@ echo "{}" >> /etc/hosts
 """
 
 
+class IndentDumper(yaml.SafeDumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
+
+
+def safe_dump_pretty(data) -> str:
+    return yaml.dump(
+        data,
+        Dumper=IndentDumper,
+        sort_keys=False,
+        default_flow_style=False,
+        indent=2,
+    )
+
+
 @dataclass(eq=False)
 class ContainerBundle:
     emulator: InitVar[Optional[Emulator]] = None
@@ -23,7 +38,7 @@ class ContainerBundle:
     _emulator: Optional[Emulator] = field(default=None, init=False, repr=False)
     _suffix: str = field(default="", init=False)
     _containers: Dict[str, PreparedContainer] = field(default_factory=dict, init=False)
-    _default_network: Optional[Tuple[str, str, List[str]]] = field(default=None, init=False)
+    _default_network: Optional[Dict[str, Any]] = field(default=None, init=False)
     _ports: List[int] = field(default_factory=list, init=False)
     _internal_hostname_ip_mappings: Dict[str, str] = field(default_factory=dict, init=False)
     _external_hostname_ip_mappings: Dict[str, str] = field(default_factory=dict, init=False)
@@ -52,18 +67,25 @@ class ContainerBundle:
         return self._suffix
 
     def setDefaultNetwork(
-        self, name: str, prefix: str = "", ip_addresses: Optional[List[str]] = None
+        self,
+        name: str,
+        prefix: str = "",
+        ip_addresses: List[str] = None,
+        network_config: Dict[str, Any] = None,
     ) -> None:
-        self._default_network = (name, prefix, list(ip_addresses or []))
-
-    def getDefaultNetwork(self) -> Optional[Tuple[str, str, List[str]]]:
-        if self._default_network is None:
-            return None
-        return (
-            self._default_network[0],
-            self._default_network[1],
-            self._default_network[2].copy(),
+        assert ip_addresses, 'The "ip_addresses" field cannot be left blank.'
+        assert len(ip_addresses) >= len(self._containers), (
+            'The "ip_addresses" field must contain at least one address per container.'
         )
+        self._default_network = {
+            "name": name,
+            "prefix": prefix,
+            "ip_addresses": list(ip_addresses),
+            "network_config": network_config.copy()
+        }
+
+    def getDefaultNetwork(self) -> Optional[Dict[str, Any]]:
+        return self._default_network
 
     def setPorts(self, ports: List[int]) -> None:
         self._ports = ports.copy()
@@ -107,24 +129,28 @@ class ContainerBundle:
                     network_name = f"net_{scope}_{network_name}"
                 emulator_networks.add(network_name)
 
-        # Keep service attachments, but do not redeclare emulator-owned networks.
         networks = {
-            network: {}
+            network: (
+                self._default_network["network_config"]
+                if self._default_network is not None and network == self._default_network["name"]
+                else {}
+            )
             for service in services.values()
             for network in service.get("networks", [])
             if network not in emulator_networks
         }
         compose_services_txt = "".join(
             indent(
-                safe_dump({name: service}, sort_keys=False, default_flow_style=False, indent=4),
+                safe_dump_pretty({name: service}),
                 "    ",
             )
             + "\n"
             for name, service in services.items()
         )
+
         compose_networks_txt = (
             indent(
-                safe_dump(networks, sort_keys=False, default_flow_style=False, indent=4),
+                safe_dump_pretty(networks),
                 "    ",
             )
             if networks
@@ -172,7 +198,7 @@ class PreparedContainer:
     service: Dict[str, Any] = field(default_factory=dict, init=False)
     _service_ports: List[str] = field(default_factory=list, init=False)
     _start_commands: List[str] = field(default_factory=list, init=False)
-    _etchost_content: str = field(default="", init=False)
+    _start_script_name: str = field(default="/start.sh", init=False)
 
     def __post_init__(self, name: str, suffix: str) -> None:
         self._name = name
@@ -203,13 +229,13 @@ class PreparedContainer:
         mkdir(hostname)
         chdir(hostname)
 
-        etchosts_content = self._files.pop("__etchosts_file", '')
+        etchosts_content = self._files.pop("__etchosts_file", "")
         if etchosts_content:
             self.setFile("/tmp/etc-hosts", etchosts_content)
             self._start_commands.insert(1, "cat /tmp/etc-hosts >> /etc/hosts")
 
         if self._start_commands:
-            self.setFile("/start.sh", '\n'.join(self._start_commands))
+            self.setFile(self._start_script_name, "\n".join(self._start_commands))
 
         dockerfile = self._computeDockerfile()
         if dockerfile:
@@ -217,7 +243,7 @@ class PreparedContainer:
 
         chdir("..")
         return self.service
-    
+
     def joinInternalNetwork(
         self,
         network: str,
@@ -226,24 +252,22 @@ class PreparedContainer:
         default_router: Optional[str] = "",
     ) -> None:
         internal_network = (network, hostname, ip_address, default_router)
-        if not self._internal_networks:
-            self._etchost_content = f"{self.service.get('ip', '')} {self.getHostname()}"
         if internal_network not in self._internal_networks:
             self._internal_networks.append(internal_network)
 
         networks = self.service.setdefault("networks", [])
         if network not in networks:
-            networks.append(network)
+            networks.update({network: {}})
 
-    def joinExternalNetwork(self, network: str, hostname: str = "", ip_address: str = "") -> None:
+    def joinExternalNetwork(self, network: str, hostname: str, ip_address: str) -> None:
         """Attach to the bundle's single external network, identified by name."""
         external_network = (network, hostname, ip_address)
         if external_network not in self._external_network:
             self._external_network.append(external_network)
 
-        networks = self.service.setdefault("networks", [])
+        networks = self.service.setdefault("networks", {})
         if network not in networks:
-            networks.append(network)
+            networks.update({network: {"ipv4_address": ip_address}})
 
     def setContentAttribute(self, content: dict) -> None:
         self.service.update(content)
@@ -259,9 +283,9 @@ class PreparedContainer:
             return ""
 
         dockerfile_lines = [
-            "FROM {}".format(self.service.pop("image", '')),
+            "FROM {}".format(self.service.pop("image", "")),
             "ARG DEBIAN_FRONTEND=noninteractive",
-            "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 && rm -rf /var/lib/apt/lists/*"
+            "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 && rm -rf /var/lib/apt/lists/*",
         ]
 
         for filename, content in self._files.items():
@@ -273,6 +297,6 @@ class PreparedContainer:
     def _addFile(self, path: str, content: str) -> str:
         staged_path = md5(path.encode("utf-8")).hexdigest()
         print(content, file=open(staged_path, "w"))
-        if path.endswith('.sh'):
+        if path.endswith(".sh"):
             return "COPY {} {}\nRUN chmod +x {}".format(staged_path, path, path)
         return "COPY {} {}".format(staged_path, path)
