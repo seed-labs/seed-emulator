@@ -5,8 +5,38 @@ SEEDEMU_INTERNET_MAP_TOPLOGY_IMAGE = "handsonsecurity/seedemu-internet-toplogy:1
 SEEDEMU_INTERNET_MAP_GEOGRAPHIC_IMAGE = "handsonsecurity/seedemu-internet-map-geographic:1.0"
 SEEDEMU_TRAFFIC_OBSERVER_SERVICE_IMAGE = "handsonsecurity/seedemu-traffic-observer-service:1.0"
 
+DEFAULT_NETWORK = {
+    "name": "internetMap_network",
+    "prefix": ".map",
+    "ip_addresses": [
+        "172.30.0.10",
+        "172.30.0.11",
+        "172.30.0.12",
+        "172.30.0.13",
+    ],
+    "network_config": {
+        "driver": "bridge",
+        "ipam": {"config": [{"subnet": "172.30.0.0/24", "gateway": "172.30.0.1"}]},
+    },
+}
+
 NGINX_CONF_PATH = "/etc/nginx/conf.d/default.conf"
 SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT = 7071
+START_SH = [
+    "#!/bin/sh",
+    "set -eu",
+    "nginx -g 'daemon off;' &",
+    "nginx_pid=$!",
+    "trap 'kill \"$nginx_pid\" 2> /dev/null || true' INT TERM",
+    "while true; do",
+    '    if ! kill -0 "$nginx_pid" 2> /dev/null; then',
+    '        wait "$nginx_pid"',
+    "        exit $?",
+    "    fi",
+    "    sleep 2",
+    "done",
+]
+START_SCRIPT_NAME = "/entrypoint.sh"
 SEEDEMU_INTERNET_MAP_TOPLOGY_NGINX_CONF = """
 upstream seedemu_emulator_service {{
     server {}:{};
@@ -117,6 +147,7 @@ server {{
 class InternetMap(ContainerBundle):
     def __init__(self, emulator, suffix="map.seed"):
         super().__init__(emulator=emulator, suffix=suffix)
+        self._default_network = DEFAULT_NETWORK
         service_names = [
             "seedemu_emulator_service",
             "seedemu_internet_map_toplogy",
@@ -129,7 +160,7 @@ class InternetMap(ContainerBundle):
     def configure(self) -> None:
         self._required_port_number = 3
         super().configure()
-        
+
         seedemu_traffic_observer_service = self._containers["seedemu_traffic_observer_service"]
         seedemu_traffic_observer_service_port = self._ports.pop()
         seedemu_traffic_observer_service.setContentAttribute(
@@ -154,6 +185,15 @@ class InternetMap(ContainerBundle):
         )
         seedemu_traffic_observer_service._service_ports = [seedemu_traffic_observer_service_port]
 
+        default_network_name = self._default_network["name"]
+        ip_addresses = self._default_network["ip_addresses"]
+        for index, container in enumerate(self._containers.values()):
+            if container is seedemu_traffic_observer_service:
+                continue
+            container.joinExternalNetwork(
+                default_network_name, container.getHostname(), ip_addresses[index]
+            )
+
         seedemu_emulator_service = self._containers["seedemu_emulator_service"]
         seedemu_emulator_service.setContentAttribute(
             {
@@ -162,6 +202,9 @@ class InternetMap(ContainerBundle):
                 "environment": {"BACKEND_ENV": "production"},
             }
         )
+        seedemu_emulator_service_ip = seedemu_emulator_service.service["networks"][
+            default_network_name
+        ]["ipv4_address"]
 
         seedemu_internet_map_toplogy = self._containers["seedemu_internet_map_toplogy"]
         seedemu_internet_map_toplogy.setContentAttribute(
@@ -175,8 +218,13 @@ class InternetMap(ContainerBundle):
         seedemu_internet_map_toplogy.setFile(
             NGINX_CONF_PATH,
             SEEDEMU_INTERNET_MAP_TOPLOGY_NGINX_CONF.format(
-                seedemu_emulator_service.getName(), SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT
+                seedemu_emulator_service.getHostname(), SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT
             ),
+        )
+        seedemu_internet_map_toplogy._start_commands = START_SH
+        seedemu_internet_map_toplogy._start_script_name = START_SCRIPT_NAME
+        seedemu_internet_map_toplogy.setEtcHosts(
+            "\n".join([f"{seedemu_emulator_service_ip} {seedemu_emulator_service.getHostname()}"])
         )
 
         seedemu_internet_map_geographic = self._containers["seedemu_internet_map_geographic"]
@@ -192,17 +240,15 @@ class InternetMap(ContainerBundle):
         seedemu_internet_map_geographic.setFile(
             NGINX_CONF_PATH,
             SEEDEMU_INTERNET_MAP_GEOGRAPHIC_NGINX_CONF.format(
-                seedemu_emulator_service.getName(),
+                seedemu_emulator_service.getHostname(),
                 SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT,
                 seedemu_traffic_observer_service.service.get("environment", {}).get(
                     "TRAFFIC_CONTROL_ADDR"
                 )[1:],
             ),
         )
-
-        if self._default_network:
-            default_network_name = self._default_network[0]
-            for container in self._containers.values():
-                if container is seedemu_traffic_observer_service:
-                    continue
-                container.joinExternalNetwork(default_network_name)
+        seedemu_internet_map_geographic._start_commands = START_SH
+        seedemu_internet_map_geographic._start_script_name = START_SCRIPT_NAME
+        seedemu_internet_map_geographic.setEtcHosts(
+            "\n".join([f"{seedemu_emulator_service_ip} {seedemu_emulator_service.getHostname()}"])
+        )
