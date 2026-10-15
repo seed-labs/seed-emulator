@@ -74,14 +74,14 @@ class ContainerBundle:
         network_config: Dict[str, Any] = None,
     ) -> None:
         assert ip_addresses, 'The "ip_addresses" field cannot be left blank.'
-        assert len(ip_addresses) >= len(self._containers), (
-            'The "ip_addresses" field must contain at least one address per container.'
-        )
+        assert len(ip_addresses) >= len(
+            self._containers
+        ), 'The "ip_addresses" field must contain at least one address per container.'
         self._default_network = {
             "name": name,
             "prefix": prefix,
             "ip_addresses": list(ip_addresses),
-            "network_config": network_config.copy()
+            "network_config": network_config.copy(),
         }
 
     def getDefaultNetwork(self) -> Optional[Dict[str, Any]]:
@@ -176,12 +176,12 @@ class ContainerBundle:
                 if network.getType() != NetworkType.Bridge:
                     network_name = f"net_{scope}_{network_name}"
 
-                return (
-                    network_name,
-                    node.getName(),
-                    str(address),
-                    str(router) if router is not None else None,
-                )
+                return {
+                    "network": network_name,
+                    "hostname": node.getName(),
+                    "ip_address": str(address),
+                    "default_route": str(router) if router is not None else None,
+                }
 
 
 @dataclass(eq=False)
@@ -249,9 +249,9 @@ class PreparedContainer:
         network: str,
         hostname: str = "",
         ip_address: str = "",
-        default_router: Optional[str] = "",
+        default_route: Optional[str] = "",
     ) -> None:
-        internal_network = (network, hostname, ip_address, default_router)
+        internal_network = (network, hostname, ip_address, default_route)
         if internal_network not in self._internal_networks:
             self._internal_networks.append(internal_network)
 

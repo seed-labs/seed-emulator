@@ -32,121 +32,6 @@ DEFAULT_NETWORK = {
     },
 }
 
-BACKEND_CONFIG_YML = """
-justV2: false
-# Database credentials
-readerDatabase:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-writerDatabase:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-alloyReader:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-alloyWriter:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-bigtable:
-  project: explorer
-  instance: explorer
-  emulator: true
-  emulatorPort: $LBT_PORT
-  emulatorHost: {LBT_HOST}
-rawBigtable:
-  project: rawExplorer
-  instance: rawExplorer
-  emulator: true
-  emulatorPort: $RBT_PORT
-  emulatorHost: {RBT_HOST}
-eth1ErigonEndpoint: 'http://$EL_HOST:$EL_PORT'
-eth1GethEndpoint: 'http://$EL_HOST:$EL_PORT'
-redisCacheEndpoint: '{REDIS_HOST}:$REDIS_PORT'
-redisSessionStoreEndpoint: '{REDIS_HOST}:$REDIS_SESSIONS_PORT'
-tieredCacheProvider: 'redis'
-
-clickHouseEnabled: true
-validatorTagger:
-  enabled: true
-  schedulerEnabled: true
-
-# Chain network configuration (example will work for the prysm testnet)
-chain:
-  name: "mainnet"
-
-  genesisTimestamp: $GENESIS_TIMESTAMP
-  genesisValidatorsRoot: $GENESIS_VALIDATORSROOT
-  clConfigPath: ./local_deployment/mainnet.chain.yml
-  pectraWithdrawalRequestContractAddress: "0x0000000000000000000000000000000000000000"
-  pectraConsolidationRequestContractAddress: "0x0000000000000000000000000000000000000000"
-
-clickhouse:
-  readerDatabase:
-    user: beacon
-    password: "pass"
-    name: beaconchain
-    host: {CLICKHOUSE_HOST}
-    port: $CLICKHOUSE_PORT
-    ssl: false
-
-  writerDatabase:
-    user: beacon
-    password: "pass"
-    name: beaconchain
-    host: {CLICKHOUSE_HOST}
-    port: $CLICKHOUSE_PORT
-    ssl: false
-
-# Note: It is possible to run either the frontend or the indexer or both at the same time
-# Frontend config
-frontend:
-  sessionSameSiteNone: false
-  siteDomain: "localhost:$SERVER_PORT"
-  siteName: 'Open Source Ethereum (ETH) Testnet Explorer' # Name of the site, displayed in the title tag
-  siteSubtitle: "Showing a local testnet."
-  csrfAuthKey: '0123456789abcdef000000000000000000000000000000000000000000000000'
-  jwtSigningSecret: "0123456789abcdef000000000000000000000000000000000000000000000000"
-  jwtIssuer: "beaconcha.in"
-  jwtValidityInMinutes: 30
-  server:
-    host: "0.0.0.0" # Address to listen on
-    port: $SERVER_PORT # Port to listen on
-  readerDatabase:
-    name: $POSTGRES_DB
-    host: {POSTGRES_HOST}
-    port: $POSTGRES_PORT
-    user: $POSTGRES_USER
-    password: $POSTGRES_PASSWORD
-  writerDatabase:
-    name: $POSTGRES_DB
-    host: {POSTGRES_HOST}
-    port: $POSTGRES_PORT
-    user: $POSTGRES_USER
-    password: $POSTGRES_PASSWORD
-  sessionSecret: "11111111111111111111111111111111"
-
-# Indexer config
-indexer:
-  enabled: true # Enable or disable the indexing service
-  fullIndexOnStartup: false # Perform a one time full db index on startup
-  indexMissingEpochsOnStartup: false # Check for missing epochs and export them after startup
-  node:
-    host: $CL_HOST
-    port: $CL_PORT
-    type: lighthouse
-"""
 BACKEND_START_SH = [
     "#!/bin/sh",
     'DEFAULT_ROUTE="{default_route}"',
@@ -169,7 +54,18 @@ BACKEND_START_SH = [
     '  echo "ERROR: script failed"',
     "  exit 1",
     "fi",
-    "cat /tmp/config.yml > /app/local_deployment/config.yml",
+    # Replace service hosts while preserving values resolved by provisioning.
+    "sed -i "
+    "-e '/^[[:space:]]*readerDatabase:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^[[:space:]]*writerDatabase:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^alloyReader:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^alloyWriter:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^clickhouse:/,/^[^[:space:]#]/ s|^\\([[:space:]]*host:\\).*|\\1 {CLICKHOUSE_HOST}|' "
+    "-e '/^bigtable:/,/^[[:space:]]*emulatorHost:/ s|^\\([[:space:]]*emulatorHost:\\).*|\\1 {LBT_HOST}|' "
+    "-e '/^rawBigtable:/,/^[[:space:]]*emulatorHost:/ s|^\\([[:space:]]*emulatorHost:\\).*|\\1 {RBT_HOST}|' "
+    "-e \"s|^redisCacheEndpoint: '.*:|redisCacheEndpoint: '{REDIS_HOST}:|\" "
+    "-e \"s|^redisSessionStoreEndpoint: '.*:|redisSessionStoreEndpoint: '{REDIS_HOST}:|\" "
+    "/app/local_deployment/config.yml || exit 1",
     "cd /app",
     'echo "start ..."',
     'echo "run eth1indexer"',
@@ -184,122 +80,6 @@ BACKEND_START_SH = [
     "  sleep 1",
     "done",
 ]
-FRONTEND_CONFIG_YML = """
-justV2: false
-# Database credentials
-readerDatabase:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-writerDatabase:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-alloyReader:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-alloyWriter:
-  name: $POSTGRES_DB
-  host: {POSTGRES_HOST}
-  port: $POSTGRES_PORT
-  user: $POSTGRES_USER
-  password: $POSTGRES_PASSWORD
-bigtable:
-  project: explorer
-  instance: explorer
-  emulator: true
-  emulatorPort: $LBT_PORT
-  emulatorHost: {LBT_HOST}
-rawBigtable:
-  project: rawExplorer
-  instance: rawExplorer
-  emulator: true
-  emulatorPort: $RBT_PORT
-  emulatorHost: {RBT_HOST}
-eth1ErigonEndpoint: 'http://$EL_HOST:$EL_PORT'
-eth1GethEndpoint: 'http://$EL_HOST:$EL_PORT'
-redisCacheEndpoint: '{REDIS_HOST}:$REDIS_PORT'
-redisSessionStoreEndpoint: '{REDIS_HOST}:$REDIS_SESSIONS_PORT'
-tieredCacheProvider: 'redis'
-
-clickHouseEnabled: true
-validatorTagger:
-  enabled: true
-  schedulerEnabled: true
-
-# Chain network configuration (example will work for the prysm testnet)
-chain:
-  name: "mainnet"
-
-  genesisTimestamp: $GENESIS_TIMESTAMP
-  genesisValidatorsRoot: $GENESIS_VALIDATORSROOT
-  clConfigPath: ./local-deployment/mainnet.chain.yml
-  pectraWithdrawalRequestContractAddress: "0x0000000000000000000000000000000000000000"
-  pectraConsolidationRequestContractAddress: "0x0000000000000000000000000000000000000000"
-
-clickhouse:
-  readerDatabase:
-    user: beacon
-    password: "pass"
-    name: beaconchain
-    host: {CLICKHOUSE_HOST}
-    port: $CLICKHOUSE_PORT
-    ssl: false
-
-  writerDatabase:
-    user: beacon
-    password: "pass"
-    name: beaconchain
-    host: {CLICKHOUSE_HOST}
-    port: $CLICKHOUSE_PORT
-    ssl: false
-
-# Note: It is possible to run either the frontend or the indexer or both at the same time
-# Frontend config
-frontend:
-  enabled: true
-  sessionSameSiteNone: false
-  siteDomain: "localhost:$SERVER_PORT"
-  siteName: 'Open Source Ethereum (ETH) Testnet Explorer' # Name of the site, displayed in the title tag
-  siteSubtitle: "Showing a local testnet."
-  csrfAuthKey: '0123456789abcdef000000000000000000000000000000000000000000000000'
-  jwtSigningSecret: "0123456789abcdef000000000000000000000000000000000000000000000000"
-  jwtIssuer: "beaconcha.in"
-  jwtValidityInMinutes: 30
-  server:
-    host: "0.0.0.0" # Address to listen on
-    port: $SERVER_PORT # Port to listen on
-  readerDatabase:
-    name: $POSTGRES_DB
-    host: {POSTGRES_HOST}
-    port: $POSTGRES_PORT
-    user: $POSTGRES_USER
-    password: $POSTGRES_PASSWORD
-  writerDatabase:
-    name: $POSTGRES_DB
-    host: {POSTGRES_HOST}
-    port: $POSTGRES_PORT
-    user: $POSTGRES_USER
-    password: $POSTGRES_PASSWORD
-  sessionSecret: "11111111111111111111111111111111"
-
-# Indexer config
-indexer:
-  enabled: true # Enable or disable the indexing service
-  fullIndexOnStartup: false # Perform a one time full db index on startup
-  indexMissingEpochsOnStartup: false # Check for missing epochs and export them after startup
-  node:
-    host: $CL_HOST
-    port: $CL_PORT
-    type: lighthouse
-"""
 FRONTEND_START_SH = [
     "#!/bin/bash",
     'DEFAULT_ROUTE="{default_route}"',
@@ -322,7 +102,18 @@ FRONTEND_START_SH = [
     '  echo "ERROR: script failed"',
     "  exit 1",
     "fi",
-    "cat /tmp/config.yml > /app/local_deployment/config.yml",
+    # Replace service hosts while preserving values resolved by provisioning.
+    "sed -i "
+    "-e '/^[[:space:]]*readerDatabase:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^[[:space:]]*writerDatabase:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^alloyReader:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^alloyWriter:/,/^[[:space:]]*host:/ s|^\\([[:space:]]*host:\\).*|\\1 {POSTGRES_HOST}|' "
+    "-e '/^clickhouse:/,/^[^[:space:]#]/ s|^\\([[:space:]]*host:\\).*|\\1 {CLICKHOUSE_HOST}|' "
+    "-e '/^bigtable:/,/^[[:space:]]*emulatorHost:/ s|^\\([[:space:]]*emulatorHost:\\).*|\\1 {LBT_HOST}|' "
+    "-e '/^rawBigtable:/,/^[[:space:]]*emulatorHost:/ s|^\\([[:space:]]*emulatorHost:\\).*|\\1 {RBT_HOST}|' "
+    "-e \"s|^redisCacheEndpoint: '.*:|redisCacheEndpoint: '{REDIS_HOST}:|\" "
+    "-e \"s|^redisSessionStoreEndpoint: '.*:|redisSessionStoreEndpoint: '{REDIS_HOST}:|\" "
+    "/app/local-deployment/config.yml || exit 1",
     "cd /app",
     'echo "start ..."',
     'echo "run explorer"',
@@ -478,21 +269,22 @@ class EthExplorer(ContainerBundle):
                 "logging": DOCKER_LOGGOING_SET,
             }
         )
-        seedemu_ethexplorer_backend.joinInternalNetwork(*self._emu_internal_network)
-        BACKEND_START_SH[1] = BACKEND_START_SH[1].format(
-            default_route=self._emu_internal_network[3]
+        seedemu_ethexplorer_backend.joinInternalNetwork(**self._emu_internal_network)
+        backend_start_commands = BACKEND_START_SH.copy()
+        backend_start_commands[1] = backend_start_commands[1].format(
+            default_route=self._emu_internal_network["default_route"]
         )
-        seedemu_ethexplorer_backend._start_commands = BACKEND_START_SH
-        seedemu_ethexplorer_backend.setFile(
-            "/tmp/config.yml",
-            BACKEND_CONFIG_YML.format(
+        backend_start_commands = [
+            command.format(
                 POSTGRES_HOST=postgres_ip,
                 CLICKHOUSE_HOST=clickhouse_ip,
                 LBT_HOST=littlebigtable_ip,
                 RBT_HOST=rawbigtable_ip,
                 REDIS_HOST=redis_ip,
-            ),
-        )
+            ) if command.startswith("sed -i ") else command
+            for command in backend_start_commands
+        ]
+        seedemu_ethexplorer_backend._start_commands = backend_start_commands
 
         seedemu_ethexplorer_web = self._containers["seedemu-ethexplorer-web"]
         seedemu_ethexplorer_web.setContentAttribute(
@@ -515,21 +307,22 @@ class EthExplorer(ContainerBundle):
                 "logging": DOCKER_LOGGOING_SET,
             }
         )
-        seedemu_ethexplorer_web.joinInternalNetwork(*self._emu_internal_network)
-        FRONTEND_START_SH[1] = FRONTEND_START_SH[1].format(
-            default_route=self._emu_internal_network[3]
+        seedemu_ethexplorer_web.joinInternalNetwork(**self._emu_internal_network)
+        frontend_start_commands = FRONTEND_START_SH.copy()
+        frontend_start_commands[1] = frontend_start_commands[1].format(
+            default_route=self._emu_internal_network["default_route"]
         )
-        seedemu_ethexplorer_web._start_commands = FRONTEND_START_SH
-        seedemu_ethexplorer_web.setFile(
-            "/tmp/config.yml",
-            FRONTEND_CONFIG_YML.format(
+        frontend_start_commands = [
+            command.format(
                 POSTGRES_HOST=postgres_ip,
                 CLICKHOUSE_HOST=clickhouse_ip,
                 LBT_HOST=littlebigtable_ip,
                 RBT_HOST=rawbigtable_ip,
                 REDIS_HOST=redis_ip,
-            ),
-        )
+            ) if command.startswith("sed -i ") else command
+            for command in frontend_start_commands
+        ]
+        seedemu_ethexplorer_web._start_commands = frontend_start_commands
 
     def getBeaconHost(self) -> str:
         return self.__beacon_host
