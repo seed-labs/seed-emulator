@@ -79,7 +79,6 @@ runtime:
       services:
         - clickhouse
         - postgres
-        - alloy
         - redis
         - littlebigtable
         - rawbigtable
@@ -91,7 +90,7 @@ runtime:
 
     - name: D10 EthExplorer homepage is ready
       type: http
-      url: http://127.0.0.1:5000/
+      url: http://127.0.0.1:8098/
       retries: 90
       interval: 5
       timeout: 10
@@ -148,14 +147,14 @@ probes:
 
   - name: D10 EthExplorer API docs are reachable
     type: http
-    url: http://127.0.0.1:5000/api/v1/docs
+    url: http://127.0.0.1:8098/api/v1/docs
     retries: 30
     interval: 5
     timeout: 10
 
   - name: D10 EthExplorer latest-state API is reachable
     type: http
-    url: http://127.0.0.1:5000/api/v1/latestState
+    url: http://127.0.0.1:8098/api/v1/latestState
     expect_body_regex: "(?i)(slot|epoch|head|finalized)"
     retries: 90
     interval: 5

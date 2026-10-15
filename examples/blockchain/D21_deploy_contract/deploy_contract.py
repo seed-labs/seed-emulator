@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         help="legacy form: [poa|pos] [amd|arm]",
     )
-    parser.add_argument("--consensus", choices=["poa", "pos"])
+    parser.add_argument("--consensus", default=str("pos"), choices=["poa", "pos"])
     parser.add_argument("--platform", choices=["amd", "arm"])
     parser.add_argument("--output", default=str(SCRIPT_DIR / "output"))
     parser.add_argument("--dumpfile")
@@ -136,7 +136,57 @@ def run(
 
     output_dir = Path(output or SCRIPT_DIR / "output").resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    docker = Docker(etherViewEnabled=ether_view_enabled, platform=platform)
+    docker = Docker(platform=platform)
+    
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Customize the bundle network; provide at least one IP per container, in creation order.
+    # All IPs must belong to the configured subnet, which should not overlap other networks.
+    internet_map_bundle.setDefaultNetwork(
+        name="internetMap_network",
+        prefix=".map",
+        ip_addresses=[
+            "172.30.0.10",
+            "172.30.0.11",
+            "172.30.0.12",
+            "172.30.0.13",
+        ],
+        network_config={
+            "driver": "bridge",
+            "ipam": {"config": [{"subnet": "172.30.0.0/24", "gateway": "172.30.0.1"}]},
+        },
+    )
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
+
+    # Add an Ethereum explorer with an indexing backend, a Web frontend, and supporting services.
+    eth_explorer_bundle = EthExplorer(emu, ".eth.explorer.seed")
+    # Configure a separate explorer network with one static IP per container.
+    eth_explorer_bundle.setDefaultNetwork(
+        name="ethExplorer_network",
+        prefix=".eth",
+        ip_addresses=[
+            "172.20.0.10",
+            "172.20.0.11",
+            "172.20.0.12",
+            "172.20.0.13",
+            "172.20.0.14",
+            "172.20.0.15",
+            "172.20.0.16",
+        ],
+        network_config={
+            "driver": "bridge",
+            "ipam": {"config": [{"subnet": "172.20.0.0/24", "gateway": "172.20.0.1"}]},
+        },
+    )
+    # The explorer Web frontend needs at least 1 host port; ports are taken from the list's end.
+    eth_explorer_bundle.setPorts(list(range(8090, 8099)))
+    # Include the explorer bundle in this Docker compilation.
+    docker.addContainerBundle(eth_explorer_bundle)
+        
     emu.compile(docker, str(output_dir), override=override)
 
 
