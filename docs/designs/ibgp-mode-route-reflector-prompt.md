@@ -2,7 +2,7 @@
 
 **按照以下 Prompt 执行：**
 
-请在 SeedEMU 中把 iBGP 的模式选择和默认 Route Reflector 配置上移到
+请在 SEED Emulator 中把 iBGP 的模式选择和默认 Route Reflector 配置上移到
 `AutonomousSystem` 类，而不是继续让 `Ibgp` 层通过是否存在 RR 来推断。
 
 ## 目标

@@ -1,0 +1,138 @@
+clusterName: seedemu-b61-kvm
+nodes:
+- name: seedemu-b61-kvm-master
+  role: master
+  ip: 192.168.122.198
+  vcpus: 12
+  memoryMb: 10240
+  diskGb: 80
+  ssh:
+    user: ubuntu
+    key: /home/lxl/.ssh/id_ed25519
+- name: seedemu-b61-kvm-worker1
+  role: worker
+  ip: 192.168.122.199
+  vcpus: 6
+  memoryMb: 10240
+  diskGb: 80
+  ssh:
+    user: ubuntu
+    key: /home/lxl/.ssh/id_ed25519
+- name: seedemu-b61-kvm-worker2
+  role: worker
+  ip: 192.168.122.200
+  vcpus: 6
+  memoryMb: 10240
+  diskGb: 80
+  ssh:
+    user: ubuntu
+    key: /home/lxl/.ssh/id_ed25519
+- name: seedemu-b61-kvm-worker3
+  role: worker
+  ip: 192.168.122.201
+  vcpus: 6
+  memoryMb: 10240
+  diskGb: 80
+  ssh:
+    user: ubuntu
+    key: /home/lxl/.ssh/id_ed25519
+registry:
+  port: 5000
+k3s:
+  version: v1.29.15+k3s1
+fabric:
+  type: macvlan-vlan
+cni:
+  cniType: macvlan
+  localLinkCniType: macvlan
+  attachedCniType: macvlan
+  defaultMasterInterface: ens2
+outputs:
+  tmpDir: /tmp/seedemu-k8s-tools-build-t3hndikk/setup/tmp
+  kubeconfig: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/kubeconfig.yaml
+  inventory: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/inventory.yaml
+kind: kvm
+sourceConfig: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/configKvmMacvlan.yaml
+k8sTools:
+  destroy:
+    type: kvm
+    state:
+      clusterName: seedemu-b61-kvm
+      kvm:
+        network: default
+        diskDir: /data/lxl/k8sTools/seedemu-k8s-tools-build-t3hndikk-ff10a1e5/disks
+        cloudInitDir: /tmp/seedemu-k8s-tools-build-t3hndikk/setup/cloud-init
+      outputs:
+        k3sConfig: /tmp/seedemu-k8s-tools-build-t3hndikk/setup/configK3s.yaml
+        tmpDir: /tmp/seedemu-k8s-tools-build-t3hndikk/setup/tmp
+        kubeconfig: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/kubeconfig.yaml
+        inventory: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/inventory.yaml
+      nodes:
+      - name: seedemu-b61-kvm-master
+        role: master
+        ip: 192.168.122.198
+        mac: 52:54:00:64:10:10
+        vcpus: 12
+        memoryMb: 10240
+        diskGb: 80
+      - name: seedemu-b61-kvm-worker1
+        role: worker
+        ip: 192.168.122.199
+        mac: 52:54:00:64:10:11
+        vcpus: 6
+        memoryMb: 10240
+        diskGb: 80
+      - name: seedemu-b61-kvm-worker2
+        role: worker
+        ip: 192.168.122.200
+        mac: 52:54:00:64:10:12
+        vcpus: 6
+        memoryMb: 10240
+        diskGb: 80
+      - name: seedemu-b61-kvm-worker3
+        role: worker
+        ip: 192.168.122.201
+        mac: 52:54:00:64:10:13
+        vcpus: 6
+        memoryMb: 10240
+        diskGb: 80
+    config:
+      kind: kvm
+      clusterName: seedemu-b61-kvm
+      fabric:
+        type: macvlan-vlan
+      cni:
+        cniType: macvlan
+        localLinkCniType: macvlan
+        attachedCniType: macvlan
+        defaultMasterInterface: ens2
+      k3s:
+        version: v1.29.15+k3s1
+      defaults:
+        masterName: seedemu-b61-kvm-master
+        workerNamePrefix: seedemu-b61-kvm-worker
+      master:
+        vcpus: 12
+        memoryMb: 10240
+        diskGb: 80
+      workers:
+        count: 3
+        vcpus: 6
+        memoryMb: 10240
+        diskGb: 80
+      ssh:
+        user: ubuntu
+        key: ~/.ssh/id_ed25519
+      registry:
+        port: 5000
+      kvm:
+        storageDir: .
+        diskDir: /data/lxl/k8sTools/seedemu-k8s-tools-build-t3hndikk-ff10a1e5/disks
+        cloudInitDir: cloud-init
+        baseImagePath: /data/lxl/k8sTools/seedemu-k8s-tools-build-t3hndikk-ff10a1e5/base/jammy-server-cloudimg-amd64.img
+      outputs:
+        tmpDir: /tmp/seedemu-k8s-tools-build-t3hndikk/setup/tmp
+        kubeconfig: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/kubeconfig.yaml
+        inventory: /home/lxl/seed-emulator-k8s-new/examples/internet/B61_k8s_compile/inventory.yaml
+        k3sConfig: /tmp/seedemu-k8s-tools-build-t3hndikk/setup/configK3s.yaml
+        kvmState: kvmState.yaml
