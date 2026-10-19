@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, Iterable, Optional
 from seedemu.testing import EthereumRuntimeTest
 
 
-EXPLORER_URL = os.environ.get("D10_ETH_EXPLORER_URL", "http://127.0.0.1:5000").rstrip("/")
+EXPLORER_URL = os.environ.get("D10_ETH_EXPLORER_URL", "http://127.0.0.1:8098").rstrip("/")
 EXPLORER_SERVICE = "seedemu-ethexplorer-web"
 
 
