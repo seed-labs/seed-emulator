@@ -40,3 +40,26 @@ The runtime integration stage is kept as an explicit entry point for future
 Docker runtime probes. The current manifest does not enable any runtime group on
 this branch, so the stage is a reserved hook unless new groups are added to
 `feature_manifest.json`.
+
+The `routing-rip` feature registers `tests/test_rip_layer.py` together with the
+existing routing regression tests, and compiles/builds
+`examples/internet/B51_rip/rip.py`. Its runtime lifecycle is available through
+`B51_rip/example.yaml` and the GitHub workflow's B51 matrix entry:
+
+The B51 script selects RIP with AS `setIgpMode("rip")` calls and leaves the
+remaining ASes at their OSPF default, without mask calls or layer AS scopes.
+`Ospf()` and `Rip()` have no `asns`, `setAsns()` or `getAsns()` API; installing
+Rip alone never changes an unset AS's OSPF default.
+Its single RIP class is `Rip`, matching `Ospf`. Both layers consume the AS's
+`setIgpInterfacePolicy("all-local"|"router-links")` declaration; B51 demonstrates
+`router-links` on AS2 (RIP) and AS3 (OSPF). Unset policies preserve the existing
+OSPF all-local and RIP router-links defaults.
+It uses ordinary Docker addresses and announces IX LANs through BGP. B00
+retains its original OSPF script and uses the same ordinary Docker mode.
+Runtime validation requires `net.bridge.bridge-nf-call-iptables=0` on the
+Docker host, as configured persistently on the local server. Neither B51 nor
+its runtime tests change host sysctls or add firewall exemptions.
+
+```sh
+python3 seedemu/testing/cli.py all examples/internet/B51_rip/example.yaml --artifact-dir ci-artifacts/b51-rip
+```

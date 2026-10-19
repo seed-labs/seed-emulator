@@ -4,19 +4,14 @@ from hashlib import sha1
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from seedemu.core import Router
-from seedemu.core.enums import NetworkType
 
 
 BGP_SESSION_INTENTS_ATTR = "__bgp_session_intents"
 BGP_CONNECTED_EXPORT_ATTR = "__bgp_connected_export"
 BGP_CONNECTED_EXPORT_RENDERED_ATTR = "__bgp_connected_export_rendered"
 BGP_BOOTSTRAPPED_ATTR = "__bgp_bootstrapped"
-OSPF_INTERFACE_INTENTS_ATTR = "__ospf_interface_intents"
 MPLS_LDP_INTENT_ATTR = "__mpls_ldp_intent"
 
-DEFAULT_OSPF_TICK = 1
-DEFAULT_OSPF_HELLO = 1
-DEFAULT_OSPF_DEAD = 4
 DEFAULT_BGP_HOLD_TIME = 36000
 DEFAULT_BGP_KEEPALIVE_TIME = 60
 
@@ -156,23 +151,6 @@ def normalize_bgp_timers(
     return {
         "hold_time": hold,
         "keepalive_time": keepalive,
-    }
-
-
-def normalize_ospf_timers(
-    tick: Any = DEFAULT_OSPF_TICK,
-    hello: Any = DEFAULT_OSPF_HELLO,
-    dead: Any = DEFAULT_OSPF_DEAD,
-) -> Dict[str, int]:
-    normalized_tick = _positive_int(tick, "OSPF tick")
-    normalized_hello = _positive_int(hello, "OSPF hello")
-    normalized_dead = _positive_int(dead, "OSPF dead")
-    if normalized_dead <= normalized_hello:
-        raise ValueError("OSPF dead must be larger than hello")
-    return {
-        "tick": normalized_tick,
-        "hello": normalized_hello,
-        "dead": normalized_dead,
     }
 
 
@@ -414,91 +392,6 @@ def install_router_bgp_session(node: Router, session: Dict[str, Any]) -> Dict[st
     if not normalized["route_server_client"]:
         mark_bgp_connected_export(node)
     return normalized
-
-
-def classify_ospf_interfaces(
-    node: Router,
-    *,
-    stubs: Iterable[str] = (),
-    masked: Iterable[str] = (),
-) -> Tuple[List[str], List[str]]:
-    stub_names = {str(name) for name in stubs}
-    masked_names = {str(name) for name in masked}
-    active: List[str] = []
-    passive: List[str] = ["dummy0"]
-    for iface in node.getInterfaces():
-        net = iface.getNet()
-        name = str(net.getName())
-        if name in masked_names:
-            continue
-        if name in stub_names or net.getType() != NetworkType.Local:
-            passive.append(name)
-            continue
-        active.append(name)
-    return active, passive
-
-
-def set_ospf_interface_intents(
-    node: Router,
-    active: Iterable[str],
-    passive: Iterable[str],
-    *,
-    tick: int = DEFAULT_OSPF_TICK,
-    hello: int = DEFAULT_OSPF_HELLO,
-    dead: int = DEFAULT_OSPF_DEAD,
-) -> None:
-    timers = normalize_ospf_timers(tick, hello, dead)
-    node.setAttribute(
-        OSPF_INTERFACE_INTENTS_ATTR,
-        {
-            "active": sorted({str(name) for name in active}),
-            "passive": sorted({str(name) for name in passive}),
-            "timers": timers,
-        },
-    )
-
-
-def get_ospf_interface_intents(node: Router) -> Dict[str, List[str]]:
-    raw = node.getAttribute(OSPF_INTERFACE_INTENTS_ATTR, {}) or {}
-    return {
-        "active": [str(name) for name in list(raw.get("active", []) or [])],
-        "passive": [str(name) for name in list(raw.get("passive", []) or [])],
-    }
-
-
-def set_mpls_ldp_intent(
-    node: Router,
-    interfaces: Iterable[str],
-    *,
-    platform_labels: int = 1048575,
-) -> None:
-    node.setAttribute(
-        MPLS_LDP_INTENT_ATTR,
-        {
-            "interfaces": sorted({str(name) for name in interfaces}),
-            "platform_labels": int(platform_labels),
-        },
-    )
-
-
-def get_mpls_ldp_intent(node: Router) -> Dict[str, Any]:
-    raw = node.getAttribute(MPLS_LDP_INTENT_ATTR, {}) or {}
-    return {
-        "interfaces": [str(name) for name in list(raw.get("interfaces", []) or [])],
-        "platform_labels": int(raw.get("platform_labels", 1048575)),
-    }
-
-
-def has_mpls_ldp_intent(node: Router) -> bool:
-    return bool(get_mpls_ldp_intent(node)["interfaces"])
-def get_ospf_timers(node: Router) -> Dict[str, int]:
-    raw = node.getAttribute(OSPF_INTERFACE_INTENTS_ATTR, {}) or {}
-    timers = raw.get("timers", {}) if isinstance(raw, dict) else {}
-    return normalize_ospf_timers(
-        timers.get("tick", DEFAULT_OSPF_TICK),
-        timers.get("hello", DEFAULT_OSPF_HELLO),
-        timers.get("dead", DEFAULT_OSPF_DEAD),
-    )
 
 
 def set_mpls_ldp_intent(

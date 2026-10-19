@@ -48,6 +48,35 @@ two not running any service.
 Makers.makeStubAs(emu, base, 153, 101, [web, None, None])
 ```
 
+## Runtime Network Options for the Custom Host
+
+The custom `AS154/host_new` node uses the following runtime options:
+
+```python
+from seedemu.core import OptionMode, OptionRegistry
+
+o = OptionRegistry().sysctl_netipv4_conf_rp_filter(
+    {"all": False, "default": False, "net0": False},
+    mode=OptionMode.RUN_TIME,
+)
+new_host.setOption(o)
+
+o = OptionRegistry().sysctl_netipv4_udp_rmem_min(5000, mode=OptionMode.RUN_TIME)
+new_host.setOption(o)
+```
+
+`OptionRegistry` creates Linux `sysctl` settings, and `new_host.setOption(o)`
+attaches each setting only to `host_new`. `OptionMode.RUN_TIME` applies them
+when the container or Kubernetes Pod starts.
+
+- The first option sets `net.ipv4.conf.{all,default,net0}.rp_filter=0`. This
+  disables reverse-path filtering globally, for newly created interfaces, and
+  explicitly on `net0`. It prevents Linux from dropping valid packets when the
+  forward and return paths differ, which is common in BGP topologies.
+- The second option sets `net.ipv4.udp_rmem_min=5000`, reserving a minimum
+  5,000-byte receive buffer for each UDP socket during UDP memory pressure. It
+  helps UDP applications and does not directly affect ICMP `ping`.
+
 ## Standard Arguments
 
 The example accepts both the legacy platform argument and the newer named
@@ -95,4 +124,3 @@ The readiness stage checks representative transit routers, stub routers, and
 stub hosts. The probe stage checks cross-AS reachability across different parts
 of the mini Internet. The `test_runtime.py` program demonstrates custom runtime
 validation, including a check for the AS154 host with the customized IP address.
-

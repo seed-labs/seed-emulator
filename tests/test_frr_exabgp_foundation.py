@@ -6,7 +6,8 @@ import pytest
 
 from seedemu.core import Binding, Emulator, Filter
 from seedemu.layers import Base, Ebgp, Ibgp, Mpls, Ospf, PeerRelationship, Routing
-from seedemu.layers._bgp_metadata import get_bgp_sessions, get_ospf_interface_intents
+from seedemu.layers._bgp_metadata import get_bgp_sessions
+from seedemu.layers._igp_metadata import get_ospf_interface_intents
 from seedemu.services import ExaBgpService
 
 
@@ -452,7 +453,7 @@ def test_ospf_router_transit_only_mode_keeps_host_network_passive():
 
     bird_conf = _file_content(r1, "/etc/bird/bird.conf")
     frr_conf = _file_content(emu.getRegistry().get("2", "rnode", "r2"), "/etc/frr/frr.conf")
-    assert 'interface "transit" { hello 1; dead count 2; }' in bird_conf
+    assert 'interface "transit" { hello 1; dead 4; }' in bird_conf
     assert 'interface "hostnet" { stub; }' in bird_conf
     assert "interface transit\n ip ospf area 0" in frr_conf
     assert "interface hostnet2\n ip ospf area 0\n ip ospf passive" in frr_conf

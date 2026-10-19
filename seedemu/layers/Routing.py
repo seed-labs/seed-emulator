@@ -4,6 +4,15 @@ from seedemu.core import (ScopedRegistry, Node, Interface, Network, Emulator,
 from seedemu.core.enums import NetworkType
 from typing import Dict, List, Set, Tuple
 from ipaddress import IPv4Network
+import json
+from ._igp_metadata import (
+    get_igp_protocol,
+    get_ospf_interface_intents,
+    get_ospf_timers,
+    get_rip_interface_intents,
+    get_rip_timers,
+    prepare_as_igp_modes,
+)
 from ._bgp_metadata import (
     BGP_EXPORT_LOCAL_AND_CUSTOMER,
     BGP_BACKEND_BIRD,
@@ -11,8 +20,6 @@ from ._bgp_metadata import (
     get_bgp_backend,
     get_bgp_sessions,
     get_mpls_ldp_intent,
-    get_ospf_interface_intents,
-    get_ospf_timers,
     has_bgp_connected_export,
     ensure_bird_bgp_base,
     render_frr_community,
@@ -72,6 +79,37 @@ RoutingFileTemplates['bird_ospf_interface'] = """\
 
 RoutingFileTemplates['bird_ospf_stub_interface'] = """\
         interface "{interfaceName}" {{ stub; }};
+"""
+
+RoutingFileTemplates['bird_rip_connected_body'] = """\
+    ipv4 {{ table t_rip; import all; export none; }};
+{interfaces}"""
+
+RoutingFileTemplates['bird_rip_connected_interface'] = """\
+    interface {interfaceName};
+"""
+
+RoutingFileTemplates['bird_rip_body'] = """\
+    ipv4 {{
+        table t_rip;
+        import all;
+        export where source = RTS_DEVICE || source = RTS_RIP;
+    }};
+    infinity 16;
+{interfaces}"""
+
+RoutingFileTemplates['bird_rip_interface'] = """\
+    interface {interfaceName} {{
+        version {version};
+        version only yes;
+        metric {metric};
+        passive {passive};
+        split horizon {splitHorizon};
+        poison reverse {poisonReverse};
+        update time {update};
+        timeout time {timeout};
+        garbage time {garbage};
+    }};
 """
 
 FrrFileTemplates: Dict[str, str] = {}
@@ -351,11 +389,118 @@ class Routing(Layer):
     def _render_bird_control_plane(self, rnode: Router):
         sessions = get_bgp_sessions(rnode)
         self._render_bird_ospf(rnode)
+        self._render_bird_rip(rnode)
         if sessions or has_bgp_connected_export(rnode):
             include_tables = not sessions or any(not session["route_server_client"] for session in sessions)
             ensure_bird_bgp_base(rnode, include_tables=include_tables)
         for session in sessions:
             rnode.addProtocol('bgp', session["render_name"], render_bird_protocol_body(session))
+
+    def _render_bird_rip(self, router: Router):
+        """Translate router's RIP intent into an isolated BIRD routing table."""
+        intent = get_rip_interface_intents(router)
+        if not intent:
+            return
+        router.addTable("t_rip")
+        interfaces = intent["interfaces"]
+        if interfaces:
+            connected_interfaces = "".join(
+                RoutingFileTemplates['bird_rip_connected_interface'].format(
+                    interfaceName=json.dumps(item["name"]),
+                )
+                for item in interfaces
+            )
+            router.addProtocol(
+                "direct", "rip_connected",
+                RoutingFileTemplates['bird_rip_connected_body'].format(interfaces=connected_interfaces),
+            )
+        rip_interfaces = []
+        for item in interfaces:
+            if not item["exchange"]:
+                continue
+            options = item["options"]
+            rip_interfaces.append(RoutingFileTemplates['bird_rip_interface'].format(
+                interfaceName=json.dumps(item["name"]),
+                version=options["version"],
+                metric=options["metric"],
+                passive="yes" if options["passive"] else "no",
+                splitHorizon="yes" if options["split_horizon"] else "no",
+                poisonReverse="yes" if options["poison_reverse"] else "no",
+                update=options["update"],
+                timeout=options["timeout"],
+                garbage=options["garbage"],
+            ))
+        router.addProtocol(
+            "rip", "rip1",
+            RoutingFileTemplates['bird_rip_body'].format(interfaces="".join(rip_interfaces)),
+        )
+        # No reverse pipe: BGP and kernel routes must never be redistributed to RIP.
+        router.addTablePipe("t_rip")
+
+    def _render_frr_rip(self, router: Router) -> str:
+        """Render router's RIP intent; reject unsupported per-interface FRR timers."""
+        intent = get_rip_interface_intents(router)
+        if not intent:
+            return ""
+        interfaces = intent["interfaces"]
+        participating = [item for item in interfaces if item["exchange"]]
+        timer_sets = {
+            tuple(item["options"][key] for key in ("update", "timeout", "garbage"))
+            for item in participating
+        }
+        if len(timer_sets) > 1:
+            raise ValueError(
+                "FRR RIP uses router-wide timers; AS{}/{} requests different interface timers"
+                .format(router.getAsn(), router.getName())
+            )
+        if timer_sets:
+            timers = next(iter(timer_sets))
+        else:
+            defaults = get_rip_timers(router)
+            timers = tuple(defaults[key] for key in ("update", "timeout", "garbage"))
+        if any(timer < 5 for timer in timers):
+            raise ValueError(
+                "FRR RIP timers must be at least 5 seconds; AS{}/{} requests {}"
+                .format(router.getAsn(), router.getName(), timers)
+            )
+        body = []
+        for item in participating:
+            options = item["options"]
+            body.append("interface {}\n".format(item["name"]))
+            body.append(" ip rip send version {}\n ip rip receive version {}\n".format(
+                options["version"], options["version"],
+            ))
+            if not options["split_horizon"]:
+                body.append(" no ip rip split-horizon\n")
+            elif options["poison_reverse"]:
+                body.append(" ip rip split-horizon poisoned-reverse\n")
+            else:
+                body.append(" ip rip split-horizon\n")
+            body.append("!\n")
+        prefixes = sorted({item["prefix"] for item in interfaces})
+        for index, prefix in enumerate(prefixes, 1):
+            body.append("ip prefix-list PL_CONNECTED_TO_RIP seq {} permit {}\n".format(index * 10, prefix))
+        if prefixes:
+            body.append("route-map RM_CONNECTED_TO_RIP permit 10\n match ip address prefix-list PL_CONNECTED_TO_RIP\n!\n")
+        if any(item["options"]["metric"] != 1 for item in participating):
+            body.append("access-list SEED_RIP_METRIC permit any\n!\n")
+        body.append("router rip\n version {}\n".format(intent["defaults"]["version"]))
+        # Explicit passive entries work on FRR 8.4 as well as newer versions;
+        # 8.4's non-passive-interface northbound callback inverts exceptions.
+        body.append(" timers basic {} {} {}\n no passive-interface default\n".format(*timers))
+        for item in participating:
+            body.append(" network {}\n".format(item["name"]))
+            if item["options"]["passive"]:
+                body.append(" passive-interface {}\n".format(item["name"]))
+            if item["options"]["metric"] != 1:
+                # FRR's inbound offset replaces the normal +1 increment.
+                body.append(" offset-list SEED_RIP_METRIC in {} {}\n".format(
+                    item["options"]["metric"], item["name"],
+                ))
+        if prefixes:
+            body.append(" redistribute connected metric 1 route-map RM_CONNECTED_TO_RIP\n")
+        body.append("!\n")
+        return "".join(body)
 
     def _render_frr_connected_export(self, router: Router) -> Tuple[str, bool]:
         prefixes: List[str] = []
@@ -536,6 +681,7 @@ class Routing(Layer):
         *,
         bgp: bool,
         ospf: bool,
+        rip: bool,
         mpls_interfaces: List[str],
         platform_labels: int,
     ) -> str:
@@ -544,6 +690,8 @@ class Routing(Layer):
             daemons.append("bgpd")
         if ospf or mpls_interfaces:
             daemons.append("ospfd")
+        if rip:
+            daemons.append("ripd")
         if mpls_interfaces:
             daemons.append("ldpd")
         return FrrFileTemplates["start_script"].format(
@@ -559,10 +707,15 @@ class Routing(Layer):
         )
 
     def _render_frr_control_plane(self, router: Router, *, include_ospf: bool = True, include_bgp: bool = True):
-        ospf_body = self._render_frr_ospf(router) if include_ospf else ""
+        igp = get_igp_protocol(router)
+        igp_body = ""
+        if igp == "rip":
+            igp_body = self._render_frr_rip(router)
+        elif igp == "ospf" and include_ospf:
+            igp_body = self._render_frr_ospf(router)
         bgp_body = self._render_frr_bgp(router) if include_bgp else ""
         mpls_body, mpls_interfaces, platform_labels = self._render_frr_mpls(router)
-        body = ospf_body + bgp_body + mpls_body
+        body = igp_body + bgp_body + mpls_body
         router.setFile(
             "/etc/frr/frr.conf",
             FrrFileTemplates["managed_block"].format(
@@ -574,7 +727,8 @@ class Routing(Layer):
             "/frr_start",
             self._render_frr_start_script(
                 bgp=bool(bgp_body),
-                ospf=bool(ospf_body),
+                ospf=igp == "ospf" and bool(igp_body),
+                rip=igp == "rip" and bool(igp_body),
                 mpls_interfaces=mpls_interfaces,
                 platform_labels=platform_labels,
             ),
@@ -586,6 +740,7 @@ class Routing(Layer):
     def configure(self, emulator: Emulator):
         super().configure(emulator)
         reg = emulator.getRegistry()
+        prepare_as_igp_modes(emulator)
         for ((scope, type, name), obj) in reg.getAll().items():
             if type == 'rs':
                 rs_node: Node = obj
