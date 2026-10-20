@@ -1,0 +1,113 @@
+{
+  "activeSlotsCoeff": 0.05,
+  "epochLength": 432000,
+  "genDelegs": {
+    "0413e0c2b4176b1ca2e9b82583d1cc54d0809f37c15eff6164094fb4": {
+      "delegate": "690e9baf25e16e95a724920f1fef68272c268636d1e1ca61ff8f9acf",
+      "vrf": "449c674839261f7c7df1cc24fe46024b0050ed09ca69c076476e59a597263e05"
+    },
+    "4343458bab5fa2268f1049c95853fc7106d755c15e3b28e95e6ca98e": {
+      "delegate": "25a15c0e36241b98a3f500b19a8d3016bcd5a4755a3071f40e6cf7a5",
+      "vrf": "9c014628a54af48ab71f400756848b685cf4894532c67e4945b06b7987b8ef2d"
+    },
+    "c37ddaafe21a7f3cf39622029439f63bd59b97f29ab9ba3069347225": {
+      "delegate": "3c0abf088537c88a80a5a89c4290a471dbd44608bf96b1b6adaff6f2",
+      "vrf": "e9e4e223388911d2601f0881bb35e64051fd46fa0b4ae93be4996a3777581b61"
+    }
+  },
+  "initialFunds": {
+    "00116784b99a7173edc75fabb006e75e78762624ce4f1b4cd45924cd006d6b846b7c301a244a875612b04c90ae8fe4b8360e8b5ebeed71dfd9": 150000000000,
+    "00298fe1aa753d0410a8d66d28a1fec9c857e18e94cda7dbe4091a7d43638502189c826bd5bc16da5431ab1665caa34a4a54af7a5a7dcc8cc7": 150000000000,
+    "00c1e03be1e0c054fbe7fe9ace0d88a0421595fda7b2f24d87ac589a109306df57fcd038581ab676c8ee8794436f636c2202103c42c306f8f1": 150000000000
+  },
+  "maxKESEvolutions": 60,
+  "maxLovelaceSupply": 1000000000000,
+  "networkId": "Testnet",
+  "networkMagic": 4242,
+  "protocolParams": {
+    "a0": 0,
+    "decentralisationParam": 0,
+    "eMax": 18,
+    "extraEntropy": {
+      "tag": "NeutralNonce"
+    },
+    "keyDeposit": 400000,
+    "maxBlockBodySize": 65536,
+    "maxBlockHeaderSize": 1100,
+    "maxTxSize": 16384,
+    "minFeeA": 1,
+    "minFeeB": 0,
+    "minPoolCost": 0,
+    "minUTxOValue": 0,
+    "nOpt": 100,
+    "poolDeposit": 0,
+    "protocolVersion": {
+      "major": 2,
+      "minor": 0
+    },
+    "rho": 0.1,
+    "tau": 0.1
+  },
+  "securityParam": 2160,
+  "slotLength": 1,
+  "slotsPerKESPeriod": 129600,
+  "staking": {
+    "pools": {
+      "906d290167ebc5dd57c5f3cac714a408c4f29f620b022a94a682cff3": {
+        "accountAddress": {
+          "credential": {
+            "keyHash": "4f94839ac855e15b680ecc5dfaa4234d19d69fb2ee0f1684c8b2143b"
+          },
+          "network": "Testnet"
+        },
+        "cost": 0,
+        "margin": 0,
+        "metadata": null,
+        "owners": [],
+        "pledge": 0,
+        "poolId": "906d290167ebc5dd57c5f3cac714a408c4f29f620b022a94a682cff3",
+        "relays": [],
+        "vrf": "498ce31383f05e9896ffb120b0c199b5119fb316b6ba75ddceaf32c485d1af5d"
+      },
+      "95ab5c6ac240c5d9624f7bd219e660d2c59926adad42c68194111fd0": {
+        "accountAddress": {
+          "credential": {
+            "keyHash": "47aaa67dcf954a279584d932bcffd36a5b0494d7a767f42984337a98"
+          },
+          "network": "Testnet"
+        },
+        "cost": 0,
+        "margin": 0,
+        "metadata": null,
+        "owners": [],
+        "pledge": 0,
+        "poolId": "95ab5c6ac240c5d9624f7bd219e660d2c59926adad42c68194111fd0",
+        "relays": [],
+        "vrf": "eca2d5bb122802abb6a49594ebf8d85951851e8a1f0bc2dc6f7733ef1629246f"
+      },
+      "e2ebad7a81e5fbfcc0e862e38d3100d159a8051886a8afb4575fa2d8": {
+        "accountAddress": {
+          "credential": {
+            "keyHash": "157fd6ffe53692a29b57ac30e964d1a758364fd1334c76fdf80d2734"
+          },
+          "network": "Testnet"
+        },
+        "cost": 0,
+        "margin": 0,
+        "metadata": null,
+        "owners": [],
+        "pledge": 0,
+        "poolId": "e2ebad7a81e5fbfcc0e862e38d3100d159a8051886a8afb4575fa2d8",
+        "relays": [],
+        "vrf": "a62046a3c13a634438460c2f1fe90c35482711d4b6d6bfe571ec1cbd14bd5869"
+      }
+    },
+    "stake": {
+      "638502189c826bd5bc16da5431ab1665caa34a4a54af7a5a7dcc8cc7": "e2ebad7a81e5fbfcc0e862e38d3100d159a8051886a8afb4575fa2d8",
+      "6d6b846b7c301a244a875612b04c90ae8fe4b8360e8b5ebeed71dfd9": "95ab5c6ac240c5d9624f7bd219e660d2c59926adad42c68194111fd0",
+      "9306df57fcd038581ab676c8ee8794436f636c2202103c42c306f8f1": "906d290167ebc5dd57c5f3cac714a408c4f29f620b022a94a682cff3"
+    }
+  },
+  "systemStart": "2026-10-15T10:31:47Z",
+  "updateQuorum": 5
+}
