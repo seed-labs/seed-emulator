@@ -1,0 +1,19 @@
+{
+  "1000": {
+    "schema_version": 1,
+    "sensor_id": "AGRI_001",
+    "timestamp": "2026-10-16T13:30:00Z",
+    "measurements": {
+      "temperature": {
+        "value": 245,
+        "scale": 100,
+        "unit": "C"
+      },
+      "humidity": {
+        "value": 625,
+        "scale": 10,
+        "unit": "%"
+      }
+    }
+  }
+}
