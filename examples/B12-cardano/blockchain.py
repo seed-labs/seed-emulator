@@ -37,7 +37,7 @@ CARDANO_CLI = (
 )
 
 CONFIG_DIR = (
-    PROJECT_DIR / "config/private-testnet-conway"
+    PROJECT_DIR / "config/private-testnet-conway-v2"
 )
 
 OUTPUT_DIR = PROJECT_DIR / "output"
@@ -209,13 +209,13 @@ for index, asn in enumerate(cardano_ases, start=1):
     if index in (1, 2, 3):
 
         pool_dir = (
-    		PROJECT_DIR
-    		/ "config"
-    		/ "generated"
-    		/ "testnet-02"
-    		/ "pools-keys"
-    		/ f"pool{index}"
-	)
+            PROJECT_DIR
+            / "config"
+            / "generated"
+            / "testnet-conway-v2"
+            / "pools-keys"
+            / f"pool{index}"
+    )
 
         for filename in ("kes.skey", "vrf.skey", "opcert.cert"):
 
@@ -253,7 +253,7 @@ for index, asn in enumerate(cardano_ases, start=1):
         Path.home()
         / "field-project"
         / "cardano-data"
-        / "testnet-conway-113"
+        / "testnet-conway-113-v2"
         / f"as{asn}"
     )
 

@@ -68,3 +68,50 @@ config/generated/**/utxo-keys/
 
 # Historical configuration backups
 config_backup*/
+
+# ============================================
+# Generated Cardano testnet credentials
+# ============================================
+
+# Exclude generated testnet material, including
+# signing keys, operational certificates and counters
+/config/generated/testnet-conway-v2/
+
+# Exclude additional private key formats
+*.skey
+*.key
+
+# Exclude generated operational state
+*.counter
+
+# ============================================
+# Experimental outputs
+# ============================================
+
+# Generated transaction runs
+/data/transaction-test-v2/runs/
+
+# Preserve experiment scripts separately from results
+/data/performance-test/results/
+
+# Local transaction history
+/data/transaction-test/transaction_history.csv
+
+# ============================================
+# Aiken smart contract generated files
+# ============================================
+
+/smart-contract/**/build/
+
+# ============================================
+# Transaction test v2
+# ============================================
+
+/data/transaction-test-v2/runs/
+/data/transaction-test-v2/transaction_history.csv
+
+# ============================================
+# Generated Cardano addresses
+# ============================================
+
+/data/transaction-test-v2/*.addr
