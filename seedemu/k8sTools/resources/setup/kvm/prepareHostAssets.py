@@ -301,7 +301,11 @@ main() {
     echo "image_cache_dir=${HOST_IMAGE_CACHE_DIR}"
     echo "seedemu_docker_dir=${seedEmulatorDockerDir}"
     prepareBaseImage
-    prepareImageCache
+    if [ "${kvmPrepareImageCache}" = "true" ]; then
+        prepareImageCache
+    else
+        echo "Skipping host Docker image cache preparation (kvm.prepareImageCache=false)."
+    fi
     echo "Setup assets are ready."
 }
 

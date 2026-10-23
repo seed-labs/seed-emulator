@@ -197,6 +197,11 @@ createHostVms() {
 
     syncDirToHost "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
         "${SETUP_DIR}/kvm" "${remote_work_dir}/kvm"
+    # manageKvmConfig.py adds the setup directory to sys.path and imports this
+    # shared normalizer.  The host-local staging directory must preserve that
+    # parent/sibling layout on both local and remote hypervisors.
+    copyFileToHost "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
+        "${SETUP_DIR}/normalizeResources.py" "${remote_work_dir}/normalizeResources.py"
     copyFileToHost "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}" \
         "${host_kvm_yaml}" "${remote_work_dir}/kvm.yaml"
     copyVmSshKeyToHost "${name}" "${ip}" "${connection}" "${ssh_user}" "${ssh_key}"

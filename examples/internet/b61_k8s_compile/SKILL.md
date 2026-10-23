@@ -24,9 +24,9 @@ simulation that will run on Kubernetes/K3s through `seedemu.k8sTools`.
 3. Inspect the active example files.
    - `examples/internet/b61_k8s_compile/mini_internet_k8s.py`
    - `examples/internet/b61_k8s_compile/k8sTools.py`
-   - `examples/internet/b61_k8s_compile/configKvmOvn.yaml`
-   - `examples/internet/b61_k8s_compile/configK3sOvn.yaml`
-   - `examples/internet/b61_k8s_compile/configMultiHostKvmOvn.yaml`
+   - `examples/internet/b61_k8s_compile/configKvmMacvlan.yaml`
+   - `examples/internet/b61_k8s_compile/configPhysicalMacvlan.yaml`
+   - `examples/internet/b61_k8s_compile/configMultiHostKvmMacvlan.yaml`
 
 Avoid loading generated `output/`, `configK3s.yaml`, or `kubeconfig.yaml`
 unless the task specifically concerns runtime artifacts.
@@ -66,7 +66,7 @@ From `examples/internet/b61_k8s_compile`:
 ```bash
 python3 ./mini_internet_k8s.py
 python3 ./k8sTools.py build \
-  --input configKvmOvn.yaml \
+  --input configKvmMacvlan.yaml \
   --config-k3s configK3s.yaml \
   --kubeconfig kubeconfig.yaml
 python3 ./k8sTools.py up -f ./output -k kubeconfig.yaml -d configK3s.yaml
@@ -74,9 +74,9 @@ python3 ./k8sTools.py down -f ./output -k kubeconfig.yaml
 python3 ./k8sTools.py destroy -d configK3s.yaml
 ```
 
-Use `--input configK3sOvn.yaml` for existing physical machines, or
-`--input configMultiHostKvmOvn.yaml` for KVM VMs distributed across multiple
-physical hypervisors.
+Use `--input configPhysicalMacvlan.yaml` for existing physical machines, or
+`--input configMultiHostKvmMacvlan.yaml` for KVM VMs distributed across
+multiple physical hypervisors.
 
 All `k8sTools.py` commands accept `--keep-temp` when the temporary copied
 setup/running resources need to be inspected after a failed run.

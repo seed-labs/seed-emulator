@@ -42,6 +42,17 @@ def runCommand(args: list[str], *, cwd: str | Path | None = None, stdin=None) ->
     return subprocess.run(args, cwd=str(cwd) if cwd is not None else None, stdin=stdin, check=True)
 
 
+def runScript(args: list[str], script: str) -> subprocess.CompletedProcess:
+    """Run a shell script through stdin on the local host or an SSH target.
+
+    Args:
+        args: Command argv ending in a shell that reads stdin.
+        script: Script body to provide to stdin.
+    """
+    print("+ " + " ".join(str(arg) for arg in args))
+    return subprocess.run(args, input=script, text=True, check=True)
+
+
 def helperOutput(args: list[str]) -> str:
     """Run ``manageK8sManifest.py`` and return stripped stdout.
 
@@ -69,6 +80,7 @@ def context(config: Path) -> dict[str, str]:
         "sshKey",
         "masterConnection",
         "cniMasterInterface",
+        "cniMtu",
         "networkBackend",
         "attachedCniType",
         "rolloutTimeoutSeconds",
@@ -397,6 +409,8 @@ def renderKustomization(config: Path) -> dict[str, str]:
             values["networkBackend"],
             "--cni-master-interface",
             values["cniMasterInterface"],
+            "--cni-mtu",
+            values["cniMtu"],
             "--attached-cni-type",
             values["attachedCniType"],
             "--output",
@@ -407,9 +421,172 @@ def renderKustomization(config: Path) -> dict[str, str]:
     return values
 
 
+def nodeAccessRecords(config: Path) -> list[dict[str, str]]:
+    """Return node access records from configK3s.yaml via the manifest helper."""
+    raw = helperOutput(["node-access", "--config", str(config)])
+    records: list[dict[str, str]] = []
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        while len(parts) < 5:
+            parts.append("")
+        name, ip, connection, ssh_user, ssh_key = parts[:5]
+        records.append(
+            {
+                "name": name,
+                "ip": ip,
+                "connection": connection,
+                "sshUser": ssh_user,
+                "sshKey": ssh_key,
+            }
+        )
+    return records
+
+
+def macvlanVlanRowsByNode(values: dict[str, str], node_records: list[dict[str, str]]) -> str:
+    """Return TSV rows for VLAN parent links required on each K3s node."""
+    return helperOutput(
+        [
+            "macvlan-vlan-interfaces-by-node",
+            "--manifest",
+            values["manifest"],
+            "--cni-master-interface",
+            values["cniMasterInterface"],
+            "--nodes",
+            *[record["name"] for record in node_records],
+        ]
+    )
+
+
+def prepareMacvlanVlanInterfaces(config: Path, values: dict[str, str]) -> None:
+    """Create required VLAN parent interfaces on scheduled K3s nodes.
+
+    Args:
+        config: Path to configRunning.yaml.
+        values: Resolved running context from renderKustomization().
+
+    VLAN-backed macvlan/ipvlan/bridge delegates require parent links before CNI ADD.
+    Pinned workloads only need their VLAN parents on the selected node; unpinned
+    workloads are expanded to all nodes by the manifest helper for safety.
+    """
+    node_records = nodeAccessRecords(config)
+    if not node_records:
+        raise SystemExit("No K3s nodes found while preparing macvlan VLAN interfaces")
+
+    vlan_rows = macvlanVlanRowsByNode(values, node_records)
+    if not vlan_rows:
+        return
+
+    row_count = len([line for line in vlan_rows.splitlines() if line.strip()])
+    print(f"[k8s_up] preparing {row_count} node-scoped VLAN-backed CNI parent entries across {len(node_records)} node(s)")
+    script = f"""#!/usr/bin/env bash
+set -euo pipefail
+: "${{TARGET_NODE:?TARGET_NODE is required}}"
+if command -v modprobe >/dev/null 2>&1; then
+    modprobe 8021q >/dev/null 2>&1 || true
+fi
+declare -A seen_base=()
+while IFS=$'\\t' read -r node iface base vlan bridge namespace name; do
+    [ "${{node}}" = "${{TARGET_NODE}}" ] || continue
+    [ -n "${{iface}}" ] || continue
+    [ "${{bridge}}" = "-" ] && bridge=""
+    if ! ip link show "${{base}}" >/dev/null 2>&1; then
+        echo "missing base interface ${{base}} for VLAN ${{vlan}} (${{namespace}}/${{name}})" >&2
+        exit 1
+    fi
+    if [ -z "${{seen_base[${{base}}]:-}}" ]; then
+        ip link set "${{base}}" up
+        seen_base["${{base}}"]=1
+    fi
+    if ! ip link show "${{iface}}" >/dev/null 2>&1; then
+        ip link add link "${{base}}" name "${{iface}}" type vlan id "${{vlan}}"
+    fi
+    master_path="$(readlink "/sys/class/net/${{iface}}/master" 2>/dev/null || true)"
+    current_master=""
+    [ -n "${{master_path}}" ] && current_master="$(basename "${{master_path}}")"
+    if [ -n "${{bridge}}" ]; then
+        if [ ! -x /opt/cni/bin/bridge ]; then
+            mkdir -p /opt/cni/bin
+            for candidate in /var/lib/rancher/k3s/data/cni/bridge /var/lib/rancher/k3s/data/*/bin/cni /usr/lib/cni/bridge; do
+                if [ -x "${{candidate}}" ]; then
+                    ln -sf "${{candidate}}" /opt/cni/bin/bridge
+                    break
+                fi
+            done
+        fi
+        if [ ! -x /opt/cni/bin/bridge ]; then
+            echo "missing bridge CNI plugin for VLAN-backed bridge network ${{namespace}}/${{name}}" >&2
+            exit 1
+        fi
+        if ! ip link show "${{bridge}}" >/dev/null 2>&1; then
+            ip link add name "${{bridge}}" type bridge
+        fi
+        ip link set "${{bridge}}" up
+        if [ "${{current_master}}" != "${{bridge}}" ]; then
+            [ -z "${{current_master}}" ] || ip link set "${{iface}}" nomaster
+            ip link set "${{iface}}" master "${{bridge}}"
+        fi
+    elif [ -n "${{current_master}}" ]; then
+        ip link set "${{iface}}" nomaster
+    fi
+    ip link set "${{iface}}" up
+done <<'EOF_VLANS'
+{vlan_rows}
+EOF_VLANS
+"""
+
+    for record in node_records:
+        planned_count = sum(
+            1
+            for line in vlan_rows.splitlines()
+            if line.strip() and line.split("\t", 1)[0] == record["name"]
+        )
+        print(f"[k8s_up] prepare VLAN-backed CNI parents on {record['name']} ({record['ip']}) planned={planned_count}")
+        if planned_count == 0:
+            continue
+        if record["connection"] == "local":
+            runScript(["sudo", "-n", "env", f"TARGET_NODE={record['name']}", "bash", "-s"], script)
+            continue
+        ssh_target = f"{record['sshUser']}@{record['ip']}"
+        runScript(
+            [
+                "ssh",
+                "-i",
+                record["sshKey"],
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "LogLevel=ERROR",
+                "-o",
+                "BatchMode=yes",
+                ssh_target,
+                f"sudo -n env TARGET_NODE={shlex.quote(record['name'])} bash -s",
+            ],
+            script,
+        )
+
+
 def namespaceForManifest(manifest: str) -> str:
     """Return namespace from one Kubernetes manifest path."""
     return helperOutput(["namespace", "--manifest", manifest])
+
+
+def ensureNamespace(kubeconfig: str, namespace: str) -> None:
+    """Create the manifest namespace if it is absent."""
+    if not namespace:
+        raise SystemExit("Cannot deploy workload without a namespace")
+    exists = subprocess.run(
+        ["kubectl", "--kubeconfig", kubeconfig, "get", "namespace", namespace],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if exists.returncode == 0:
+        return
+    runCommand(["kubectl", "--kubeconfig", kubeconfig, "create", "namespace", namespace])
 
 
 def deploy(config: Path) -> None:
@@ -427,6 +604,8 @@ def deploy(config: Path) -> None:
     print(f"network_backend={values['networkBackend']}")
     print(f"kubeconfig={values['kubeconfig']}")
     print(f"namespace={namespace}")
+    ensureNamespace(values["kubeconfig"], namespace)
+    prepareMacvlanVlanInterfaces(config, values)
     runCommand(["kubectl", "--kubeconfig", values["kubeconfig"], "apply", "-k", values["outputDir"]])
     waitReady(config)
 

@@ -11,14 +11,19 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import ipaddress
 import os
 import re
 import shlex
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from normalizeResources import normalizeMemory
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -60,6 +65,7 @@ def normalizeConfig(data: dict[str, Any]) -> None:
     for section in ("master", "workers"):
         value = data.get(section)
         if isinstance(value, dict):
+            normalizeMemory(value)
             for old, new in {"memory_mb": "memoryMb", "disk_gb": "diskGb", "name_prefix": "namePrefix"}.items():
                 if old in value and new not in value:
                     value[new] = value.pop(old)
@@ -248,6 +254,97 @@ def routingTunnelConfig(data: dict[str, Any]) -> dict[str, Any]:
         "vniBase": int(raw.get("vniBase") or 4280),
         "dstPort": int(raw.get("dstPort") or 4790),
     }
+
+
+def fabricVlanTrunks(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return validated L2 trunks shared by all KVM hypervisors.
+
+    Args:
+        data: Parsed global multi-host KVM YAML.
+
+    Each trunk becomes one extra NIC in every VM and one VXLAN-extended,
+    unnumbered libvirt bridge on every hypervisor. VLAN tags remain intact
+    across the physical-host boundary.
+    """
+    fabric_type = str(getNested(data, "fabric.type", "none")).strip().lower().replace("_", "-")
+    if fabric_type not in {"macvlan-vlan", "bridge-vlan", "ipvlan-vlan"}:
+        return []
+    mtu = int(getNested(data, "fabric.mtu", 1400))
+    if mtu < 576 or mtu > 9000:
+        raise SystemExit(f"fabric.mtu must be in range 576..9000, got {mtu}")
+    raw_trunks = getNested(data, "fabric.vlanTrunks")
+    if not isinstance(raw_trunks, list) or not raw_trunks:
+        raise SystemExit(f"fabric.type={fabric_type} requires a non-empty fabric.vlanTrunks list")
+
+    cluster_token = hashlib.sha1(clusterName(data).encode("utf-8")).hexdigest()[:4]
+    vxlan_cfg = getNested(data, "multiHostKvm.fabricVxlan", {})
+    if not isinstance(vxlan_cfg, dict):
+        raise SystemExit("multiHostKvm.fabricVxlan must be a mapping when provided")
+    vni_base = int(vxlan_cfg.get("vniBase") or 6200)
+    dst_port = int(vxlan_cfg.get("dstPort") or 4789)
+
+    trunks: list[dict[str, Any]] = []
+    for index, raw in enumerate(raw_trunks):
+        if not isinstance(raw, dict):
+            raise SystemExit(f"fabric.vlanTrunks[{index}] must be a mapping")
+        name = str(raw.get("name") or f"trunk{index}").strip()
+        master_interface = str(raw.get("masterInterface") or f"ens{index + 3}").strip()
+        vlan_start = int(raw.get("vlanStart") or 1)
+        vlan_end = int(raw.get("vlanEnd") or 4094)
+        network_name = str(raw.get("networkName") or f"{clusterName(data)}-fabric{index}").strip()
+        bridge_name = str(raw.get("bridgeName") or f"br{cluster_token}f{index}").strip()
+        vxlan_interface = str(raw.get("vxlanInterface") or f"vx{cluster_token}f{index}").strip()
+        vni = int(raw.get("vxlanVni") or (vni_base + index))
+        trunk_dst_port = int(raw.get("vxlanDstPort") or dst_port)
+
+        if not name:
+            raise SystemExit(f"fabric.vlanTrunks[{index}] requires a non-empty name")
+        if not master_interface or master_interface == "ens2":
+            raise SystemExit(
+                f"fabric.vlanTrunks[{index}].masterInterface must be a dedicated VM NIC "
+                "(ens3 or later); ens2 is the routed K3s management NIC"
+            )
+        if vlan_start < 1 or vlan_end > 4094 or vlan_start > vlan_end:
+            raise SystemExit(
+                f"fabric.vlanTrunks[{index}] VLAN range must satisfy 1 <= vlanStart <= vlanEnd <= 4094"
+            )
+        if len(bridge_name) > 15 or len(vxlan_interface) > 15:
+            raise SystemExit(
+                f"fabric.vlanTrunks[{index}] bridge/VXLAN interface names must be at most 15 characters"
+            )
+        if vni < 1 or vni > 16777215:
+            raise SystemExit(f"fabric.vlanTrunks[{index}].vxlanVni is outside 1..16777215")
+        if trunk_dst_port < 1 or trunk_dst_port > 65535:
+            raise SystemExit(f"fabric.vlanTrunks[{index}].vxlanDstPort is outside 1..65535")
+        trunks.append(
+            {
+                "name": name,
+                "networkName": network_name,
+                "bridgeName": bridge_name,
+                "masterInterface": master_interface,
+                "vlanStart": vlan_start,
+                "vlanEnd": vlan_end,
+                "vxlanInterface": vxlan_interface,
+                "vni": vni,
+                "dstPort": trunk_dst_port,
+                "mtu": mtu,
+            }
+        )
+
+    for field in ("name", "networkName", "bridgeName", "masterInterface", "vxlanInterface", "vni"):
+        values = [str(item[field]) for item in trunks]
+        duplicates = sorted({value for value in values if values.count(value) > 1})
+        if duplicates:
+            raise SystemExit(f"duplicate fabric.vlanTrunks {field}: {duplicates}")
+    return trunks
+
+
+def requireFabricTrunk(data: dict[str, Any], trunk_name: str) -> dict[str, Any]:
+    """Return one configured fabric trunk by name."""
+    for trunk in fabricVlanTrunks(data):
+        if trunk["name"] == trunk_name:
+            return trunk
+    raise SystemExit(f"unknown fabric trunk: {trunk_name}")
 
 
 def tunnelRows(data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -523,6 +620,31 @@ def printHostTunnelsTsv(args: argparse.Namespace) -> None:
         )
 
 
+def printHostFabricTrunksTsv(args: argparse.Namespace) -> None:
+    """Print L2 fabric trunk rows consumed by hypervisor setup."""
+    data = loadYaml(args.config)
+    host = requireHost(hostList(data), args.host)
+    peers = [item["ip"] for item in hostList(data) if item["name"] != host["name"]]
+    for trunk in fabricVlanTrunks(data):
+        print(
+            "\t".join(
+                [
+                    str(trunk["name"]),
+                    str(trunk["networkName"]),
+                    str(trunk["bridgeName"]),
+                    str(trunk["masterInterface"]),
+                    str(trunk["vlanStart"]),
+                    str(trunk["vlanEnd"]),
+                    str(trunk["vxlanInterface"]),
+                    str(trunk["vni"]),
+                    str(trunk["dstPort"]),
+                    str(host["ip"]),
+                    ",".join(str(peer) for peer in peers),
+                ]
+            )
+        )
+
+
 def hostVmSshKeyPaths(data: dict[str, Any], host_name: str) -> tuple[str, str]:
     """Return local source key and hypervisor-local target key paths.
 
@@ -575,6 +697,20 @@ def writeHostNetworkXml(args: argparse.Namespace) -> None:
     print(output)
 
 
+def writeHostFabricNetworkXml(args: argparse.Namespace) -> None:
+    """Write one unnumbered libvirt network XML for a VLAN trunk."""
+    trunk = requireFabricTrunk(loadYaml(args.config), args.trunk)
+    xml = f"""<network>
+  <name>{trunk['networkName']}</name>
+  <bridge name='{trunk['bridgeName']}' stp='off' delay='0'/>
+</network>
+"""
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(xml, encoding="utf-8")
+    print(output)
+
+
 def writeHostLocalKvm(args: argparse.Namespace) -> None:
     """Write host-local kvm.yaml consumed by kvm/createKvmVms.py."""
     data = loadYaml(args.config)
@@ -606,6 +742,7 @@ def writeHostLocalKvm(args: argparse.Namespace) -> None:
             "cloudInitDir": f"{host_work_dir}/cloud-init",
             "baseImagePath": f"{host_work_dir}/base/jammy-server-cloudimg-amd64.img",
             "skipK3sConfig": True,
+            "prepareImageCache": host["connection"] == "local",
         },
         "outputs": {
             "tmpDir": f"{host_work_dir}/tmp",
@@ -614,6 +751,18 @@ def writeHostLocalKvm(args: argparse.Namespace) -> None:
     }
     if seedemu:
         payload["seedemu"] = copy.deepcopy(seedemu)
+    trunks = fabricVlanTrunks(data)
+    if trunks:
+        payload["kvm"]["extraNetworks"] = [
+            {
+                "name": trunk["networkName"],
+                "bridge": trunk["bridgeName"],
+                "model": "virtio",
+                "trunk": trunk["name"],
+                "masterInterface": trunk["masterInterface"],
+            }
+            for trunk in trunks
+        ]
     writeYaml(args.output, payload)
     print(args.output)
 
@@ -653,6 +802,7 @@ def writeState(args: argparse.Namespace) -> None:
         "nodes": vmPlan(data),
         "routingTunnel": routingTunnelConfig(data),
         "tunnelRows": tunnelRows(data),
+        "fabricVlanTrunks": fabricVlanTrunks(data),
         "outputs": {
             "configK3s": outputPath(data, "k3sConfig", SETUP_DIR / "configK3s.yaml"),
             "kubeconfig": outputPath(data, "kubeconfig", SETUP_DIR / f"{clusterName(data)}.kubeconfig.yaml"),
@@ -745,6 +895,27 @@ def printStateTunnelsTsv(args: argparse.Namespace) -> None:
         )
 
 
+def printStateFabricTrunksTsv(args: argparse.Namespace) -> None:
+    """Print L2 fabric interfaces and libvirt networks for cleanup."""
+    data = loadState(args.state)
+    trunks = data.get("fabricVlanTrunks") if isinstance(data.get("fabricVlanTrunks"), list) else []
+    for trunk in trunks:
+        print(
+            "\t".join(
+                str(trunk.get(key) or "")
+                for key in (
+                    "name",
+                    "networkName",
+                    "bridgeName",
+                    "masterInterface",
+                    "vxlanInterface",
+                    "vni",
+                    "dstPort",
+                )
+            )
+        )
+
+
 def printStateOutputVars(args: argparse.Namespace) -> None:
     """Print generated output paths from multiHostKvmState.yaml."""
     data = loadState(args.state)
@@ -763,7 +934,8 @@ def validate(args: argparse.Namespace) -> None:
     data = loadYaml(args.config)
     hosts = hostList(data)
     nodes = vmPlan(data)
-    print(f"Validated {len(hosts)} hypervisors and {len(nodes)} VMs.")
+    trunks = fabricVlanTrunks(data)
+    print(f"Validated {len(hosts)} hypervisors, {len(nodes)} VMs, and {len(trunks)} fabric trunks.")
 
 
 def main() -> int:
@@ -784,6 +956,10 @@ def main() -> int:
     tunnels.add_argument("--host", required=True)
     tunnels.set_defaults(func=printHostTunnelsTsv)
 
+    fabric_trunks = sub.add_parser("host-fabric-trunks-tsv")
+    fabric_trunks.add_argument("--host", required=True)
+    fabric_trunks.set_defaults(func=printHostFabricTrunksTsv)
+
     vm_key = sub.add_parser("host-vm-ssh-key-tsv")
     vm_key.add_argument("--host", required=True)
     vm_key.set_defaults(func=printHostVmSshKeyTsv)
@@ -792,6 +968,11 @@ def main() -> int:
     network_xml.add_argument("--host", required=True)
     network_xml.add_argument("--output", required=True)
     network_xml.set_defaults(func=writeHostNetworkXml)
+
+    fabric_network_xml = sub.add_parser("write-host-fabric-network-xml")
+    fabric_network_xml.add_argument("--trunk", required=True)
+    fabric_network_xml.add_argument("--output", required=True)
+    fabric_network_xml.set_defaults(func=writeHostFabricNetworkXml)
 
     local_kvm = sub.add_parser("write-host-local-kvm")
     local_kvm.add_argument("--host", required=True)
@@ -819,6 +1000,10 @@ def main() -> int:
     state_tunnels.add_argument("--state", required=True)
     state_tunnels.add_argument("--host", required=True)
     state_tunnels.set_defaults(func=printStateTunnelsTsv)
+
+    state_fabric = sub.add_parser("state-fabric-trunks-tsv")
+    state_fabric.add_argument("--state", required=True)
+    state_fabric.set_defaults(func=printStateFabricTrunksTsv)
 
     state_outputs = sub.add_parser("state-output-vars")
     state_outputs.add_argument("--state", required=True)

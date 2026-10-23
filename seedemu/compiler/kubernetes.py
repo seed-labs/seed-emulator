@@ -8,7 +8,7 @@ import shutil
 from hashlib import md5, sha1
 from os import chdir, mkdir
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import yaml
 
@@ -38,7 +38,7 @@ class KubernetesCompiler(Docker):
 
     Design goals:
     - public compiler name is KubernetesCompiler
-    - kube-ovn is the default secondary CNI, macvlan is the only alternative
+    - macvlan+VLAN is the default secondary CNI; kube-ovn remains available
     - no inventory dependency during compile
     - no nodeSelector / affinity / topology spreading
     - no node-aware preload planning
@@ -48,7 +48,13 @@ class KubernetesCompiler(Docker):
 
     __namespace: str
     __cni_type: str
+    __local_link_cni_type: str | None
     __cni_master_interface: str
+    __cni_mtu: int | None
+    __macvlan_vlan_mode: bool
+    __macvlan_vlan_id_start: int
+    __macvlan_vlan_trunks: List[Dict[str, Any]]
+    __macvlan_vlan_allocations: Dict[str, Tuple[str, str, int]]
     __image_pull_policy: str
     __image_registry_prefix: str
     __manifests: List[Dict[str, Any]]
@@ -60,9 +66,13 @@ class KubernetesCompiler(Docker):
         registry_prefix: str | None = None,
         namespace: str = "seedemu",
         use_multus: bool = True,
-        cni_type: str = "kube-ovn",
+        cni_type: str = "macvlan",
         local_link_cni_type: str | None = None,
         cni_master_interface: str = "ens2",
+        cni_mtu: int | None = None,
+        macvlan_vlan_mode: bool = True,
+        macvlan_vlan_id_start: int = 100,
+        macvlan_vlan_trunks: Optional[List[Dict[str, Any]]] = None,
         image_pull_policy: str = "Always",
         scheduling_strategy: str = SchedulingStrategy.NONE,
         node_labels: Dict[str, Dict[str, str]] | None = None,
@@ -81,8 +91,19 @@ class KubernetesCompiler(Docker):
         self.__namespace = namespace.strip() or "seedemu"
         self.__cni_type = self._normalizeCniType(cni_type)
         if local_link_cni_type is not None and str(local_link_cni_type).strip():
-            self._normalizeCniType(str(local_link_cni_type))
+            self.__local_link_cni_type = self._normalizeCniType(str(local_link_cni_type))
+        else:
+            self.__local_link_cni_type = None
         self.__cni_master_interface = cni_master_interface.strip() or "eth0"
+        self.__cni_mtu = int(cni_mtu) if cni_mtu is not None else None
+        if self.__cni_mtu is not None and not 576 <= self.__cni_mtu <= 65535:
+            raise ValueError("cni_mtu must be in range 576..65535")
+        self.__macvlan_vlan_mode = bool(macvlan_vlan_mode)
+        self.__macvlan_vlan_id_start = int(macvlan_vlan_id_start)
+        if not 1 <= self.__macvlan_vlan_id_start <= 4094:
+            raise ValueError("macvlan_vlan_id_start must be in VLAN range 1..4094")
+        self.__macvlan_vlan_trunks = self._normalizeMacvlanVlanTrunks(macvlan_vlan_trunks)
+        self.__macvlan_vlan_allocations = {}
         self.__image_pull_policy = image_pull_policy.strip() or "Always"
         self.__manifests = []
         self.__image_entries = []
@@ -99,7 +120,7 @@ class KubernetesCompiler(Docker):
     @staticmethod
     def _normalizeCniType(cni_type: str | None) -> str:
         """Normalize and validate the secondary CNI mode."""
-        value = (cni_type or "kube-ovn").strip().lower().replace("_", "-")
+        value = (cni_type or "macvlan").strip().lower().replace("_", "-")
         if value in {"kube-ovn", "ovn"}:
             return "kube-ovn"
         if value == "macvlan":
@@ -145,6 +166,7 @@ class KubernetesCompiler(Docker):
         with open(self.getManifestName(), "w", encoding="utf-8") as handle:
             yaml.safe_dump_all(manifests, handle, sort_keys=False)
 
+        self._writeNetworkingMetadata()
         self._stage_base_image_contexts()
         with open("images.yaml", "w", encoding="utf-8") as handle:
             yaml.safe_dump({"images": self.__image_entries}, handle, sort_keys=False)
@@ -160,15 +182,31 @@ class KubernetesCompiler(Docker):
                 "provider": f"{name}.{self.__namespace}.ovn",
             }
         elif self.__cni_type == "macvlan":
+            master_interface = self.__cni_master_interface
+            vlan_id = None
+            vlan_base_interface = None
+            vlan_trunk = None
+            if self.__macvlan_vlan_mode:
+                vlan_trunk, vlan_base_interface, vlan_id = self._macvlanVlanAllocation(name)
+                master_interface = f"{vlan_base_interface}.{vlan_id}"
             config = {
                 "cniVersion": "0.3.1",
                 "type": "macvlan",
-                "master": self.__cni_master_interface,
+                "master": master_interface,
                 "mode": "bridge",
                 "ipam": {"type": "static"},
             }
+            if self.__cni_mtu is not None:
+                config["mtu"] = self.__cni_mtu
         else:
             raise ValueError(f"unsupported Kubernetes CNI type: {self.__cni_type}")
+
+        annotations = self._getInternetMapNetMeta(net)
+        if self.__cni_type == "macvlan" and vlan_id is not None:
+            annotations[self._metaKey("vlan-id")] = str(vlan_id)
+            annotations[self._metaKey("vlan-base-interface")] = str(vlan_base_interface)
+            annotations[self._metaKey("vlan-master-interface")] = master_interface
+            annotations[self._metaKey("vlan-trunk")] = str(vlan_trunk)
 
         return {
             "apiVersion": "k8s.cni.cncf.io/v1",
@@ -176,10 +214,115 @@ class KubernetesCompiler(Docker):
             "metadata": {
                 "name": name,
                 "namespace": self.__namespace,
-                "annotations": self._getInternetMapNetMeta(net),
+                "annotations": annotations,
             },
             "spec": {"config": json.dumps(config)},
         }
+
+    def _normalizeMacvlanVlanTrunks(
+        self,
+        raw_trunks: Optional[List[Dict[str, Any]]],
+    ) -> List[Dict[str, Any]]:
+        """Normalize and validate VLAN ranges used by macvlan parents."""
+        if not raw_trunks:
+            raw_trunks = [
+                {
+                    "name": "trunk0",
+                    "masterInterface": self.__cni_master_interface,
+                    "vlanStart": self.__macvlan_vlan_id_start,
+                    "vlanEnd": 4094,
+                }
+            ]
+
+        trunks: List[Dict[str, Any]] = []
+        seen_names: Set[str] = set()
+        seen_interfaces: Set[str] = set()
+        for index, item in enumerate(raw_trunks):
+            if not isinstance(item, dict):
+                raise ValueError(f"macvlan_vlan_trunks[{index}] must be a mapping")
+            name = str(item.get("name") or f"trunk{index}").strip()
+            master_interface = str(
+                item.get("masterInterface") or item.get("master_interface") or ""
+            ).strip()
+            if not name:
+                raise ValueError(f"macvlan_vlan_trunks[{index}] requires name")
+            if not master_interface:
+                raise ValueError(f"macvlan_vlan_trunks[{index}] requires masterInterface")
+            if name in seen_names:
+                raise ValueError(f"duplicate macvlan VLAN trunk name: {name}")
+            if master_interface in seen_interfaces:
+                raise ValueError(
+                    f"duplicate macvlan VLAN trunk masterInterface: {master_interface}"
+                )
+            seen_names.add(name)
+            seen_interfaces.add(master_interface)
+            vlan_start = int(
+                item.get("vlanStart")
+                or item.get("vlan_start")
+                or self.__macvlan_vlan_id_start
+            )
+            vlan_end = int(item.get("vlanEnd") or item.get("vlan_end") or 4094)
+            if vlan_start < 1 or vlan_end > 4094 or vlan_start > vlan_end:
+                raise ValueError(
+                    f"invalid VLAN range for VLAN trunk {name}: "
+                    f"{vlan_start}..{vlan_end}; expected 1..4094"
+                )
+            trunks.append(
+                {
+                    "name": name,
+                    "masterInterface": master_interface,
+                    "vlanStart": vlan_start,
+                    "vlanEnd": vlan_end,
+                }
+            )
+        return trunks
+
+    def _macvlanVlanAllocation(self, network_name: str) -> Tuple[str, str, int]:
+        """Return the configured trunk, base interface, and VLAN for a network."""
+        if network_name not in self.__macvlan_vlan_allocations:
+            remaining = len(self.__macvlan_vlan_allocations)
+            total_capacity = 0
+            for trunk in self.__macvlan_vlan_trunks:
+                vlan_start = int(trunk["vlanStart"])
+                vlan_end = int(trunk["vlanEnd"])
+                capacity = vlan_end - vlan_start + 1
+                total_capacity += capacity
+                if remaining < capacity:
+                    self.__macvlan_vlan_allocations[network_name] = (
+                        str(trunk["name"]),
+                        str(trunk["masterInterface"]),
+                        vlan_start + remaining,
+                    )
+                    break
+                remaining -= capacity
+            else:
+                raise ValueError(
+                    "VLAN-backed macvlan mode ran out of VLAN IDs across configured "
+                    f"trunks: capacity={total_capacity}"
+                )
+        return self.__macvlan_vlan_allocations[network_name]
+
+    def _writeNetworkingMetadata(self) -> None:
+        """Write compile-time network settings consumed by deployment wrappers."""
+        with open("networking.yaml", "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                {
+                    "compiler": self.getName(),
+                    "networkBackend": self.__cni_type,
+                    "cniType": self.__cni_type,
+                    "localLinkCniType": self.__local_link_cni_type or "",
+                    "cniMasterInterface": self.__cni_master_interface,
+                    "cniMtu": self.__cni_mtu,
+                    "macvlanVlanMode": self.__macvlan_vlan_mode,
+                    "macvlanVlanIdStart": self.__macvlan_vlan_id_start,
+                    "macvlanVlanTrunks": (
+                        self.__macvlan_vlan_trunks if self.__macvlan_vlan_mode else []
+                    ),
+                    "runtimeManifest": self.getManifestName(),
+                },
+                handle,
+                sort_keys=False,
+            )
 
     def _renderKubeOvnManifests(self, manifests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Convert compiler manifests to Kube-OVN secondary-network resources.

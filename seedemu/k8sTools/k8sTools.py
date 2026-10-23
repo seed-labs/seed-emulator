@@ -28,7 +28,7 @@ class K8sTools:
         """Create infrastructure and write K3s access files.
 
         Args:
-            inputConfig: YAML with kind=kvmOvn, physicalOvn, or multiHostKvmOvn.
+            inputConfig: YAML with kind=kvm, physical, or multiHostKvm.
             configK3s: Output configK3s.yaml path.
             kubeconfig: Output kubeconfig path.
             inventory: Optional output inventory.yaml path.
@@ -84,7 +84,7 @@ class K8sTools:
         self.down(outputDir, kubeconfig, keepTemp=keepTemp)
 
     def destroy(self, configK3s: str | Path, *, keepTemp: bool = False) -> None:
-        """Destroy K3s/OVN and optional KVM infrastructure.
+        """Destroy K3s, its configured fabric, and optional KVM infrastructure.
 
         Args:
             configK3s: configK3s.yaml produced by build().
@@ -101,7 +101,10 @@ class K8sTools:
         parser = argparse.ArgumentParser(prog="k8sTools.py")
         sub = parser.add_subparsers(dest="command", required=True)
 
-        build = sub.add_parser("build", help="create KVM/physical K3s + OVN infrastructure")
+        build = sub.add_parser(
+            "build",
+            help="create KVM/physical K3s infrastructure with the configured fabric",
+        )
         build.add_argument("--input", required=True, help="input YAML with explicit kind")
         build.add_argument("--config-k3s", required=True, help="output configK3s.yaml")
         build.add_argument("--kubeconfig", required=True, help="output kubeconfig.yaml")

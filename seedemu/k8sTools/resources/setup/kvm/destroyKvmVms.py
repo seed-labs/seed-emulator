@@ -107,7 +107,7 @@ validateDestroyTargetBelongsToSetup() {
     local disk_path=""
     disk_path="$(
         virsh domblklist "${vm_name}" --details 2>/dev/null \
-        | awk '$2 == "disk" && $4 != "-" {print $4; exit}'
+        | awk '$2 == "disk" && $4 != "-" && path == "" {path=$4} END {print path}'
     )"
     if [ -z "${disk_path}" ]; then
         echo "Cannot determine disk path for ${vm_name}; refusing destructive cleanup." >&2
