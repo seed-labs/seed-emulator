@@ -2,6 +2,283 @@
 
 Created: October 8, 2026 
 
+## Current implementation: two cooperating classes
+
+`seedemu/containerBundle/ContainerBundle.py` defines two layers of
+responsibility:
+
+- `ContainerBundle` owns a group of services, shared network configuration,
+  port allocation, and the Compose fragments returned to the Docker compiler.
+- `PreparedContainer` owns one service definition, its network attachments,
+  staged files, startup commands, and generated Dockerfile context.
+
+The lifecycle is:
+
+```mermaid
+flowchart TD
+    A[Create emulator] --> B[Render emulator]
+    B --> C[Create ContainerBundle]
+    C --> D[Create PreparedContainer objects]
+    D --> E[Configure network and ports]
+    E --> F[docker.addContainerBundle]
+    F --> G[emu.compile]
+    G --> H[ContainerBundle.configure]
+    H --> I[Configure services and attachments]
+    I --> J[ContainerBundle.install]
+    J --> K[PreparedContainer.install]
+    K --> L[Dockerfiles and Compose YAML]
+```
+
+## `ContainerBundle` design
+
+Subclasses normally create their containers in `__init__`, configure them in
+`configure()`, and rely on the compiler to call `install()`:
+
+```python
+class ExampleBundle(ContainerBundle):
+    def __init__(self, emulator, suffix=".example"):
+        super().__init__(emulator=emulator, suffix=suffix)
+        self._createContainer("backend", suffix)
+
+    def configure(self):
+        self._required_port_number = 1
+        super().configure()
+        backend = self.getContainer("backend")
+        backend.setContentAttribute({
+            "image": "busybox:latest",
+            "command": "sleep infinity",
+        })
+```
+
+`_createContainer(local_name, suffix)` registers a `PreparedContainer`. The
+logical name is used as the Compose service name; its generated hostname is
+`local_name + suffix`. `getContainer()`, `getContainers()`, `getEmulator()`,
+and `getSuffix()` provide inspection access.
+
+### Default network
+
+`setDefaultNetwork()` defines the isolated Docker network shared by bundle
+services:
+
+```python
+bundle.setDefaultNetwork(
+    name="example_network",
+    prefix="172.30.0.0/24",
+    ip_addresses=["172.30.0.10", "172.30.0.11"],
+    default_router="172.30.0.1",
+    type="bridge",
+)
+```
+
+`prefix` is an IPv4 subnet in CIDR notation. The method validates the subnet,
+gateway, address count, subnet membership, duplicate addresses, and gateway
+exclusion. It also creates the Compose IPAM configuration. Addresses are
+assigned in container creation order. `getDefaultNetwork()` returns the
+stored dictionary, including the generated `network_config`.
+
+The resulting structure is consumed by `configure()` and `install()`:
+
+```python
+{
+    "name": "example_network",
+    "prefix": "172.30.0.0/24",
+    "ip_addresses": ["172.30.0.10", "172.30.0.11"],
+    "default_router": "172.30.0.1",
+    "type": "bridge",
+    "network_config": {
+        "driver": "bridge",
+        "ipam": {"config": [{"subnet": "172.30.0.0/24", "gateway": "172.30.0.1"}]},
+    },
+}
+```
+
+`setDefaultNetwork()` does not attach containers immediately. A bundle's
+`configure()` method selects an address for each container and calls
+`joinExternalNetwork()`. Later, `install()` emits the `network_config` as the
+Compose network definition.
+
+```mermaid
+flowchart LR
+    A[setDefaultNetwork] --> B[Validate CIDR, gateway and addresses]
+    B --> C[Store normalized network dictionary]
+    C --> D[configure assigns addresses]
+    D --> E[PreparedContainer.joinExternalNetwork]
+    E --> F[install emits Compose IPAM network]
+```
+
+### Ports and lifecycle
+
+`setPorts()` stores a copy of the host-port pool. A subclass sets
+`_required_port_number` before calling `super().configure()`; the base method
+then validates that enough ports were supplied. The subclass consumes ports
+and fills service attributes during the same `configure()` call.
+
+`install()` calls `PreparedContainer.install()` for every registered service,
+filters emulator-owned networks from the bundle network section, and returns
+the generated service and network YAML fragments.
+
+```mermaid
+sequenceDiagram
+    participant D as Docker compiler
+    participant B as ContainerBundle
+    participant C as PreparedContainer
+    D->>B: configure()
+    B->>B: validate ports and configure services
+    D->>B: install()
+    B->>C: install() for each service
+    C-->>B: Compose service mapping
+    B-->>D: services and networks YAML
+```
+
+`getEmuHostNetworkInfo()` scans rendered emulator hosts and returns the first
+usable network, host address, and default router. It is intended to run after
+`emu.render()`, because it reads the rendered host and network registries. The
+return value is either `None` or the parameter dictionary expected by
+`joinInternalNetwork()`:
+
+```python
+{
+    "network": "net0.as150",
+    "hostname": "router150.net0.seed",
+    "ip_address": "10.150.0.1",
+    "default_route": "10.150.0.254",
+}
+```
+
+The two methods intentionally share the same field names, so the result can
+be passed directly with keyword expansion:
+
+```python
+network_info = bundle.getEmuHostNetworkInfo()
+if network_info is None:
+    raise RuntimeError("No emulator host network is available")
+
+container.joinInternalNetwork(**network_info)
+```
+
+This is also the pattern used by bundles that store the result during
+construction and later attach selected containers during `configure()`.
+
+The method skips networks without a usable host address and converts address
+and router objects to strings. The bundle decides which network to select and
+which containers need it. `getInternalHostnameIpMappings()`
+and `getExternalHostnameIpMappings()` expose the collected hostname/IP data.
+
+## `PreparedContainer` design
+
+`PreparedContainer` is the mutable build description for one container. It
+stores its Compose mapping, internal and external network attachments, staged
+files, and startup commands.
+
+`getName()` returns the logical service name and `getHostname()` returns the
+name with the bundle suffix. `setContentAttribute()` merges Compose service
+attributes:
+
+```python
+container.setContentAttribute({
+    "image": "busybox:latest",
+    "command": "sleep infinity",
+})
+```
+
+`joinExternalNetwork(network, hostname, ip_address)` attaches the container to
+the bundle Docker network with a static address. `joinInternalNetwork()`
+attaches it to an emulator network and records the network, hostname, address,
+and optional gateway. When `default_route` is supplied, the container records
+the gateway and inserts route setup before the application startup commands:
+
+```sh
+DEFAULT_ROUTE="10.150.0.254"
+IFACE=$(ip route get "$DEFAULT_ROUTE" | awk '{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}')
+echo "gateway=$DEFAULT_ROUTE interface=$IFACE"
+ip route del default 2>/dev/null || true
+ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"
+```
+
+The commands are inserted after an existing shebang and `set -eu` prologue
+when those lines are present. If startup commands are available,
+`install()` writes them to the configured start-script path and wraps the
+image entrypoint when the commands do not already form a complete script.
+This is required when a bundle service must reach the emulator network through
+its gateway.
+
+The method is normally called by a bundle during `configure()`:
+
+```python
+network = bundle.getEmuHostNetworkInfo()
+container.joinInternalNetwork(
+    network=network["network"],
+    hostname=network["hostname"],
+    ip_address=network["ip_address"],
+    default_route=network.get("default_route", ""),
+)
+```
+
+The internal attachment and the external bundle attachment are independent.
+A container may therefore have two Compose network entries. The default route
+is optional and should be used only when outbound traffic must leave through
+the emulator gateway. A service using `network_mode: host` should not also be
+attached through this method.
+
+`setFile()` stages a file in the generated image context. `setEtcHosts()`
+stages content that is appended to `/etc/hosts` during installation. The
+`install()` method creates the hostname directory, writes staged files and the
+startup script, generates a Dockerfile when needed, and returns the Compose
+service mapping. It also performs the final startup integration: `/tmp/etc-hosts`
+is appended to `/etc/hosts`, default-route commands are inserted, and a
+wrapper entrypoint is selected when generated commands must run before the
+image's normal process. `_addFile()` hashes destination paths to create
+staging names for Docker `COPY` instructions.
+
+The installation sequence is:
+
+```mermaid
+flowchart TD
+    A[PreparedContainer.install] --> B[Create hostname build directory]
+    B --> C[Stage files and /tmp/etc-hosts]
+    C --> D[Insert hosts and route commands]
+    D --> E{Startup commands present?}
+    E -- no --> F[Keep image entrypoint]
+    E -- yes --> G{Commands have shebang?}
+    G -- yes --> H[Write configured start script]
+    G -- no --> I[Create entrypoint wrapper]
+    I --> H
+    H --> J[Generate Dockerfile and return service mapping]
+    F --> J
+```
+
+### `_getDefaultRouteCommands()`
+
+This helper converts a gateway address into shell commands that can run inside
+the container. It first asks the kernel which interface reaches the gateway,
+then replaces the Docker-provided default route:
+
+```sh
+DEFAULT_ROUTE="10.150.0.254"
+IFACE=$(ip route get "$DEFAULT_ROUTE" | awk '{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}')
+echo "gateway=$DEFAULT_ROUTE interface=$IFACE"
+ip route del default 2>/dev/null || true
+ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"
+```
+
+The helper is only used when `joinInternalNetwork(..., default_route=...)`
+provides a non-empty gateway. The commands are inserted after an existing
+shebang and `set -eu` prologue when present. They are generated at container
+startup because Docker assigns the interface name at runtime.
+
+For images that already have an entrypoint, `setEntrypointWrapper()` can run
+preparation commands and then delegate to the original entrypoint:
+
+```python
+container.setEntrypointWrapper(
+    original_entrypoint="/entrypoint.sh",
+    commands=["cat /tmp/etc-hosts >> /etc/hosts"],
+)
+```
+
+This avoids assuming that a generated `/start.sh` will be executed by an
+image whose `ENTRYPOINT` is fixed.
+
 ### Design Assumptions
 
 - Default network: All the containers in the bundle are attached to the isolated external network created for this bundle. This network is not reachable by the nodes in the emulator.
@@ -80,27 +357,21 @@ emu.render()
 # After the rendering 
 # Customize and configure the containers in the entire group
 bundle = VisualizationSystem(emu, "map.seed")
-bundle.setDefaultNetwork("visualization_network", "172.19.0.0/16", [f"172.18.0.{i}" for i in range(5, 11)])
+bundle.setDefaultNetwork(
+    name="internetMap_network",
+    prefix="172.30.0.0/24",
+    ip_addresses=[
+        "172.30.0.10",
+        "172.30.0.11",
+        "172.30.0.12",
+        "172.30.0.13",
+    ],
+    default_router="172.30.0.1"
+)
 bundle.setPorts(list(range(8090, 8099))
 
 # Docker first invokes bundle.configure() which will configure all the containers;
 # Docker then invokes bundle.install() to create a folder for each container, and add entries to docker-compose.yml
 docker.addContainerBundle(bundle) 
-
-# Dockerfile of each container image
-From baseimage
-
-COPY {etchosts} /tmp/etc-hosts
-RUN cat /tmp/etc-hosts >> /etc/hosts
-
-
-
-# Add extra_hosts 
-services:
-  frontend:
-    image: ubuntu:24.04
-    extra_hosts:
-      backend.visual.seed: "10.150.0.10"
-      database.visual.seed: "10.150.0.11"
 
 ```

@@ -16,7 +16,7 @@ DOCKER_LOGGOING_SET = {
 
 DEFAULT_NETWORK = {
     "name": "ethExplorer_network",
-    "prefix": ".eth",
+    "prefix": "172.20.0.0/24",
     "ip_addresses": [
         "172.20.0.10",
         "172.20.0.11",
@@ -26,19 +26,11 @@ DEFAULT_NETWORK = {
         "172.20.0.15",
         "172.20.0.16",
     ],
-    "network_config": {
-        "driver": "bridge",
-        "ipam": {"config": [{"subnet": "172.20.0.0/24", "gateway": "172.20.0.1"}]},
-    },
+    "default_router": "172.20.0.1"
 }
 
 BACKEND_START_SH = [
     "#!/bin/sh",
-    'DEFAULT_ROUTE="{default_route}"',
-    'IFACE=$(ip route get "$DEFAULT_ROUTE" | awk \'{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}\')',
-    'echo "gateway=$DEFAULT_ROUTE interface=$IFACE"',
-    "ip route del default 2>/dev/null || true",
-    'ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"',
     "stopit() {",
     '  echo "trapped SIGINT"',
     "  exit 0",
@@ -82,11 +74,6 @@ BACKEND_START_SH = [
 ]
 FRONTEND_START_SH = [
     "#!/bin/bash",
-    'DEFAULT_ROUTE="{default_route}"',
-    'IFACE=$(ip route get "$DEFAULT_ROUTE" | awk \'{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}\')',
-    'echo "gateway=$DEFAULT_ROUTE interface=$IFACE"',
-    "ip route del default 2>/dev/null || true",
-    'ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"',
     "stopit() {",
     '  echo "trapped SIGINT"',
     "  exit 0",
@@ -131,7 +118,20 @@ FRONTEND_START_SH = [
 
 
 class EthExplorer(ContainerBundle):
+    """Container bundle for the Ethereum Beacon Chain explorer stack.
+
+    The bundle includes PostgreSQL, ClickHouse, Redis, two Bigtable emulators,
+    an indexing backend, and the Web frontend.
+    """
+
     def __init__(self, emulator, suffix="eth.explorer"):
+        """Create an explorer bundle for an Ethereum-enabled emulator.
+
+        Args:
+            emulator: Emulator containing an ``EthereumService`` and a usable
+                emulated host network.
+            suffix: Suffix appended to generated container hostnames.
+        """
         super().__init__(emulator=emulator, suffix=suffix)
         self._default_network = DEFAULT_NETWORK
         service_names = [
@@ -149,6 +149,7 @@ class EthExplorer(ContainerBundle):
         self._emu_internal_network = self.getEmuHostNetworkInfo()
 
     def configure(self) -> None:
+        """Validate settings and configure explorer services and connections."""
         self._required_port_number = 1
         super().configure()
 
@@ -271,9 +272,6 @@ class EthExplorer(ContainerBundle):
         )
         seedemu_ethexplorer_backend.joinInternalNetwork(**self._emu_internal_network)
         backend_start_commands = BACKEND_START_SH.copy()
-        backend_start_commands[1] = backend_start_commands[1].format(
-            default_route=self._emu_internal_network["default_route"]
-        )
         backend_start_commands = [
             command.format(
                 POSTGRES_HOST=postgres_ip,
@@ -309,9 +307,6 @@ class EthExplorer(ContainerBundle):
         )
         seedemu_ethexplorer_web.joinInternalNetwork(**self._emu_internal_network)
         frontend_start_commands = FRONTEND_START_SH.copy()
-        frontend_start_commands[1] = frontend_start_commands[1].format(
-            default_route=self._emu_internal_network["default_route"]
-        )
         frontend_start_commands = [
             command.format(
                 POSTGRES_HOST=postgres_ip,
@@ -325,13 +320,17 @@ class EthExplorer(ContainerBundle):
         seedemu_ethexplorer_web._start_commands = frontend_start_commands
 
     def getBeaconHost(self) -> str:
+        """Return the consensus-layer Beacon node host selected for the explorer."""
         return self.__beacon_host
 
     def getGethHost(self) -> str:
+        """Return the execution-layer Geth node host selected for the explorer."""
         return self.__geth_host
 
     def setBeaconHost(self, beacon_host) -> None:
+        """Override the Beacon node host used by the backend and frontend."""
         self.__beacon_host = beacon_host
 
     def setGethHost(self, geth_host) -> None:
+        """Override the Geth node host used by the backend and frontend."""
         self.__geth_host = geth_host
