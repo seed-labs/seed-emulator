@@ -7,17 +7,14 @@ SEEDEMU_TRAFFIC_OBSERVER_SERVICE_IMAGE = "handsonsecurity/seedemu-traffic-observ
 
 DEFAULT_NETWORK = {
     "name": "internetMap_network",
-    "prefix": ".map",
+    "prefix": "172.30.0.0/24",
     "ip_addresses": [
         "172.30.0.10",
         "172.30.0.11",
         "172.30.0.12",
         "172.30.0.13",
     ],
-    "network_config": {
-        "driver": "bridge",
-        "ipam": {"config": [{"subnet": "172.30.0.0/24", "gateway": "172.30.0.1"}]},
-    },
+    "default_router": "172.30.0.1",
 }
 
 NGINX_CONF_PATH = "/etc/nginx/conf.d/default.conf"
@@ -38,7 +35,7 @@ START_SH = [
 ]
 START_SCRIPT_NAME = "/entrypoint.sh"
 SEEDEMU_INTERNET_MAP_TOPLOGY_NGINX_CONF = """
-upstream seedemu_emulator_service {{
+upstream seedemu_emulator_service_backend {{
     server {}:{};
 }}
 
@@ -51,7 +48,7 @@ server {{
     client_max_body_size 100m;
 
     location ^~ /api/v1 {{
-        proxy_pass http://seedemu_emulator_service;
+        proxy_pass http://seedemu_emulator_service_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -64,7 +61,7 @@ server {{
     }}
 
     location ^~ /emulator/ {{
-        proxy_pass http://seedemu_emulator_service/;
+        proxy_pass http://seedemu_emulator_service_backend/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -82,11 +79,11 @@ server {{
 }}
 """
 SEEDEMU_INTERNET_MAP_GEOGRAPHIC_NGINX_CONF = """
-upstream seedemu_emulator_service {{
+upstream seedemu_emulator_service_backend {{
     server {}:{};
 }}
 
-upstream seedemu_traffic_observer_service {{
+upstream seedemu_traffic_observer_service_backend {{
     server host.docker.internal:{};
 }}
 
@@ -99,7 +96,7 @@ server {{
     client_max_body_size 100m;
 
     location ^~ /api/v1 {{
-        proxy_pass http://seedemu_emulator_service;
+        proxy_pass http://seedemu_emulator_service_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -112,7 +109,7 @@ server {{
     }}
 
     location ^~ /emulator/ {{
-        proxy_pass http://seedemu_emulator_service/;
+        proxy_pass http://seedemu_emulator_service_backend/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -125,7 +122,7 @@ server {{
     }}
 
     location ^~ /traffic-observer/ {{
-        proxy_pass http://seedemu_traffic_observer_service/;
+        proxy_pass http://seedemu_traffic_observer_service_backend/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -145,25 +142,46 @@ server {{
 
 
 class InternetMap(ContainerBundle):
+    """Container bundle for the topology, geographic map, and traffic views."""
+
     def __init__(self, emulator, suffix="map.seed"):
+        """Create an Internet Map bundle.
+
+        Args:
+            emulator: Emulator whose topology will be visualized.
+            suffix: Suffix appended to generated container hostnames.
+        """
         super().__init__(emulator=emulator, suffix=suffix)
         self._default_network = DEFAULT_NETWORK
         service_names = [
-            "seedemu_emulator_service",
+            "seedemu_emulator_service_backend",
             "seedemu_internet_map_toplogy",
             "seedemu_internet_map_geographic",
-            "seedemu_traffic_observer_service",
+            "seedemu_traffic_observer_service_backend",
         ]
         for service_name in service_names:
             self._createContainer(service_name, suffix)
+        self._emu_internal_network = self.getEmuHostNetworkInfo()
+
+    def enableEmulatorNetwork(self):
+        """
+        Enable access to an emulator internal network.
+        """
+        seedemu_emulator_service_backend = self._containers["seedemu_emulator_service_backend"]
+        seedemu_emulator_service_backend.joinInternalNetwork(**self._emu_internal_network)
+        
+        return self
 
     def configure(self) -> None:
+        """Validate ports and configure the map, API, and observer services."""
         self._required_port_number = 3
         super().configure()
 
-        seedemu_traffic_observer_service = self._containers["seedemu_traffic_observer_service"]
+        seedemu_traffic_observer_service_backend = self._containers[
+            "seedemu_traffic_observer_service_backend"
+        ]
         seedemu_traffic_observer_service_port = self._ports.pop()
-        seedemu_traffic_observer_service.setContentAttribute(
+        seedemu_traffic_observer_service_backend.setContentAttribute(
             {
                 "image": SEEDEMU_TRAFFIC_OBSERVER_SERVICE_IMAGE,
                 "privileged": True,
@@ -183,34 +201,38 @@ class InternetMap(ContainerBundle):
                 ],
             }
         )
-        seedemu_traffic_observer_service._service_ports = [seedemu_traffic_observer_service_port]
+        seedemu_traffic_observer_service_backend._service_ports = [
+            seedemu_traffic_observer_service_port
+        ]
 
         default_network_name = self._default_network["name"]
         ip_addresses = self._default_network["ip_addresses"]
         for index, container in enumerate(self._containers.values()):
-            if container is seedemu_traffic_observer_service:
+            if container is seedemu_traffic_observer_service_backend:
                 continue
             container.joinExternalNetwork(
                 default_network_name, container.getHostname(), ip_addresses[index]
             )
 
-        seedemu_emulator_service = self._containers["seedemu_emulator_service"]
-        seedemu_emulator_service.setContentAttribute(
+        seedemu_emulator_service_backend = self._containers["seedemu_emulator_service_backend"]
+        seedemu_emulator_service_backend.setContentAttribute(
             {
+                "privileged": True,
                 "image": SEEDEMU_EMULATOR_SERVICE_IMAGE,
                 "volumes": ["/var/run/docker.sock:/var/run/docker.sock:ro"],
                 "environment": {"BACKEND_ENV": "production"},
             }
         )
-        seedemu_emulator_service_ip = seedemu_emulator_service.service["networks"][
+        seedemu_emulator_service_ip = seedemu_emulator_service_backend.service["networks"][
             default_network_name
         ]["ipv4_address"]
 
         seedemu_internet_map_toplogy = self._containers["seedemu_internet_map_toplogy"]
         seedemu_internet_map_toplogy.setContentAttribute(
             {
+                "privileged": True,
                 "image": SEEDEMU_INTERNET_MAP_TOPLOGY_IMAGE,
-                "depends_on": [seedemu_emulator_service.getName()],
+                "depends_on": [seedemu_emulator_service_backend.getName()],
                 "ports": [f"{self._ports.pop()}:80"],
                 "build": f"./{seedemu_internet_map_toplogy.getHostname()}",
             }
@@ -218,20 +240,24 @@ class InternetMap(ContainerBundle):
         seedemu_internet_map_toplogy.setFile(
             NGINX_CONF_PATH,
             SEEDEMU_INTERNET_MAP_TOPLOGY_NGINX_CONF.format(
-                seedemu_emulator_service.getHostname(), SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT
+                seedemu_emulator_service_backend.getHostname(),
+                SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT,
             ),
         )
-        seedemu_internet_map_toplogy._start_commands = START_SH
+        # seedemu_internet_map_toplogy._start_commands = START_SH
         seedemu_internet_map_toplogy._start_script_name = START_SCRIPT_NAME
         seedemu_internet_map_toplogy.setEtcHosts(
-            "\n".join([f"{seedemu_emulator_service_ip} {seedemu_emulator_service.getHostname()}"])
+            "\n".join(
+                [f"{seedemu_emulator_service_ip} {seedemu_emulator_service_backend.getHostname()}"]
+            )
         )
 
         seedemu_internet_map_geographic = self._containers["seedemu_internet_map_geographic"]
         seedemu_internet_map_geographic.setContentAttribute(
             {
+                "privileged": True,
                 "image": SEEDEMU_INTERNET_MAP_GEOGRAPHIC_IMAGE,
-                "depends_on": [seedemu_emulator_service.getName()],
+                "depends_on": [seedemu_emulator_service_backend.getName()],
                 "extra_hosts": {"host.docker.internal": "host-gateway"},
                 "ports": [f"{self._ports.pop()}:80"],
                 "build": f"./{seedemu_internet_map_geographic.getHostname()}",
@@ -240,15 +266,17 @@ class InternetMap(ContainerBundle):
         seedemu_internet_map_geographic.setFile(
             NGINX_CONF_PATH,
             SEEDEMU_INTERNET_MAP_GEOGRAPHIC_NGINX_CONF.format(
-                seedemu_emulator_service.getHostname(),
+                seedemu_emulator_service_backend.getHostname(),
                 SEEDEMU_EMULATOR_SERVICE_INTERNAL_PORT,
-                seedemu_traffic_observer_service.service.get("environment", {}).get(
+                seedemu_traffic_observer_service_backend.service.get("environment", {}).get(
                     "TRAFFIC_CONTROL_ADDR"
                 )[1:],
             ),
         )
-        seedemu_internet_map_geographic._start_commands = START_SH
+        # seedemu_internet_map_geographic._start_commands = START_SH
         seedemu_internet_map_geographic._start_script_name = START_SCRIPT_NAME
         seedemu_internet_map_geographic.setEtcHosts(
-            "\n".join([f"{seedemu_emulator_service_ip} {seedemu_emulator_service.getHostname()}"])
+            "\n".join(
+                [f"{seedemu_emulator_service_ip} {seedemu_emulator_service_backend.getHostname()}"]
+            )
         )
