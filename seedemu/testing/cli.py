@@ -25,7 +25,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--artifact-dir", type=Path, help="Optional directory for command logs and summaries.")
     parser.add_argument(
         "--runner",
-        choices=["generic", "internet", "satellite", "blockchain"],
+        choices=["generic", "internet", "satellite"],
         help="Runner type. Defaults to the manifest's runner field, then generic.",
     )
     args = parser.parse_args(argv)
