@@ -2,7 +2,7 @@
 
 This example builds an Ethereum PoS private network and attaches the explorer implemented by [`EthExplorer`](../../../seedemu/containerBundle/EthExplorer.py). The explorer indexes execution-layer and consensus-layer data and provides a Web UI for blocks, transactions, epochs, slots, and validators.
 
-The D10 entry point, [`ethereum_pos.py`](ethereum_pos.py), delegates network construction and bundle registration to [D01](../D01_ethereum_pos/ethereum_pos.py). D01 creates Geth/Beacon node pairs, validator clients, a Beacon setup node, and an Internet topology. It registers both `InternetMap` and `EthExplorer` with the Docker compiler.
+The D10 entry point, [`ethereum_pos.py`](ethereum_pos.py), contains the complete example. It creates the Geth/Beacon node pairs, validator clients, Beacon setup node, Internet topology, and both container bundles. D01 is not required to run this example.
 
 ## Run this example
 
@@ -17,24 +17,31 @@ docker compose up --build
 
 The legacy invocation `python ethereum_pos.py 3 amd` is also supported. `--platform arm` selects ARM64 output; the explorer images must also support the target architecture. `--output` changes the generated directory. `--dumpfile` saves the emulator and returns before rendering or compiling bundles.
 
-With the current D01 port configuration, open the explorer at **http://127.0.0.1:8098**. D01 supplies `list(range(8090, 8099))`, and EthExplorer takes the last port, `8098`. The container listens on port `5000` internally. Startup and initial indexing can take time.
+The example supplies `list(range(8090, 8099))` to `EthExplorer`, which takes the last port, `8098`. Open the explorer at **http://127.0.0.1:8098**. The container listens on port `5000` internally. Startup and initial indexing can take time.
 
 ## Attach EthExplorer to an existing emulator
 
-Import the bundle from `seedemu.containerBundle`. Create it after rendering the emulator, register it with the Docker compiler, and compile:
+The example creates the emulator locally and then configures the bundle:
 
 ```python
-from seedemu import Platform
-from seedemu.compiler import Docker
-from seedemu.containerBundle import EthExplorer
+from seedemu import *
 
-# emu is an existing emulator with a configured EthereumService PoS chain.
-# Render first so host interfaces and Ethereum bootnode IPs are available.
-emu.render()
+emu = build_emulator(total_beacon_nodes=3, vc_per_beacon=3)
+explorer = EthExplorer(emu, ".eth.explorer.seed")
+
+explorer.setDefaultExternalNetwork(
+    name="ethExplorer_network",
+    prefix="172.20.0.0/24",
+    ip_addresses=[
+        "172.20.0.10", "172.20.0.11", "172.20.0.12",
+        "172.20.0.13", "172.20.0.14", "172.20.0.15",
+        "172.20.0.16",
+    ],
+    default_router="172.20.0.1",
+)
+explorer.setPorts([8090])
 
 docker = Docker(platform=Platform.AMD64)
-explorer = EthExplorer(emu, ".eth.explorer.seed")
-explorer.setPorts([8090])
 docker.addContainerBundle(explorer)
 emu.compile(docker, "./output", override=True)
 ```
@@ -43,7 +50,7 @@ Then run `docker compose up --build` inside `output` and open `http://127.0.0.1:
 
 `Docker.addContainerBundle()` registers the bundle. During compilation, the compiler calls `configure()` and then `install()` to produce the Compose services, network definitions, build directories, startup scripts, and configuration files. Application code normally does not call these lifecycle methods directly. Configure and compile a fresh bundle for each build: configuration consumes ports and modifies startup scripts.
 
-The current integration uses `addContainerBundle()`. The older `Docker(etherViewEnabled=True, etherViewPort=...)` examples do not describe this bundle API.
+The current integration uses `addContainerBundle()`. The `--ether-view` and `--no-ether-view` switches remain accepted for compatibility with existing scripts; this example always registers `EthExplorer` in its `run()` function.
 
 ## Constructor and prerequisites
 
@@ -58,18 +65,30 @@ explorer = EthExplorer(emulator=emu, suffix=".eth.explorer.seed")
 
 The emulator must contain an `EthereumService` with at least one blockchain. Automatic node selection requires that blockchain to expose Beacon and Geth bootnode IPs. Geth HTTP RPC and the Beacon API must be enabled and reachable from the explorer containers.
 
-The constructor also finds the first registered host interface with an IP address and records its network and default router. The backend and Web containers later join this emulated network and route through that router to reach the chain nodes. Provide a rendered topology with a usable host interface and gateway; setting RPC host addresses alone does not create network connectivity.
+The constructor records the requirement for two internal addresses; it does
+not scan interfaces or allocate them. `configure()` later selects a rendered
+host network unless a manual internal network is already set. The backend
+and Web containers join that network and use its gateway to reach chain nodes.
+Setting RPC host addresses alone does not create network connectivity.
 
-The suffix changes generated hostnames/build directories. Compose service keys and `container_name` values remain fixed names such as `postgres` and `seedemu-ethexplorer-web`; a different suffix alone does not isolate multiple explorer bundles in one Compose project.
+The suffix applies to Compose service keys, `container_name` values, hostnames,
+and build directories. D10 uses `.eth.explorer.seed`, producing names such as
+`postgres.eth.explorer.seed`. Multiple explorer bundles also need distinct
+external networks, subnets, and host ports.
+
+For the differences between `EthExplorer` and `ContainerBundle`, detailed
+`__init__()` and `configure()` behavior, the four Beacon/Geth host APIs, and
+the backend/Web start-script changes and their reasons, see the
+[EthExplorer design document](../../../docs/designs/eth_explorer.md).
 
 ## Configure the bundle network
 
-EthExplorer already provides a default bridge network, so `setDefaultNetwork()` is optional. The current default is:
+EthExplorer already provides a default bridge network, so `setDefaultExternalNetwork()` is optional. The current default is:
 
 ```python
 network = {
     "name": "ethExplorer_network",
-    "prefix": ".eth",
+    "prefix": "172.20.0.0/24",
     "ip_addresses": [
         "172.20.0.10",
         "172.20.0.11",
@@ -79,28 +98,28 @@ network = {
         "172.20.0.15",
         "172.20.0.16",
     ],
-    "network_config": {
-        "driver": "bridge",
-        "ipam": {
-            "config": [{"subnet": "172.20.0.0/24", "gateway": "172.20.0.1"}]
-        },
-    },
+    "default_router": "172.20.0.1",
 }
 
 # Optional: override the default before compilation.
-explorer.setDefaultNetwork(**network)
+explorer.setDefaultExternalNetwork(**network)
 ```
 
-The dictionary is expanded into keyword arguments. The equivalent call is `explorer.setDefaultNetwork(name=..., prefix=..., ip_addresses=..., network_config=...)`.
+The dictionary is expanded into keyword arguments. The equivalent call is `explorer.setDefaultExternalNetwork(name=..., prefix=..., ip_addresses=..., default_router=...)`.
 
 | Field | Meaning |
 | --- | --- |
 | `name` | Compose network key used by all seven bundle services. |
-| `prefix` | Stored network metadata; the current EthExplorer implementation does not use it to generate hostnames or allocate addresses. It is separate from the constructor's `suffix`. |
+| `prefix` | IPv4 subnet in CIDR notation. It is used as the Docker network subnet. |
 | `ip_addresses` | Static IPv4 addresses assigned in container creation order. |
-| `network_config` | Compose network configuration, including bridge driver, subnet, and gateway. Pass a dictionary; the setter calls `.copy()` on it. |
+| `default_router` | IPv4 gateway address for the Docker network. |
 
-`ip_addresses` must be nonempty and contain at least as many entries as `explorer.getContainers()`. The current bundle contains **seven containers**, so fewer than seven addresses trigger an assertion in `setDefaultNetwork()`. Extra addresses are unused. Supply unique addresses within the configured subnet, exclude the gateway, and avoid overlap with the emulated topology or other Docker networks. The assertions check presence and count; they do not validate subnet membership or uniqueness.
+`ip_addresses` must be nonempty and contain at least as many entries as
+`explorer.getContainers()`. The bundle contains **seven containers**. Invalid
+subnets, gateways, insufficient addresses, duplicate addresses, addresses
+outside the subnet, or addresses equal to the gateway, network, or broadcast
+address raise `ValueError`. Extra addresses are unused. Avoid overlap with
+the emulated topology and other Docker networks.
 
 Default address assignment:
 
@@ -114,7 +133,15 @@ Default address assignment:
 | 6 | `seedemu-ethexplorer-backend` | `172.20.0.15` | Indexing, rewards, and statistics |
 | 7 | `seedemu-ethexplorer-web` | `172.20.0.16` | Explorer UI and frontend update tasks |
 
-All services join the bundle bridge network. The backend and Web service additionally join the selected emulated host network. When serializing Compose, the bundle uses `network_config` for its network and avoids redeclaring emulator-owned networks.
+All services join the bundle bridge network. The backend and Web service additionally join the selected emulated host network. The bundle derives the Compose network configuration from `prefix` and `default_router`.
+
+During `configure()`, the bundle reserves two free internal addresses on one
+rendered host network, starting at network-address offset 10. The backend uses
+`ip_addresses[0]` and the Web service uses `ip_addresses[1]`. Allocation skips
+occupied addresses, the gateway, and reservations shared with other bundles.
+To choose the network manually, call
+`explorer.setDefaultInternalNetwork(name, ip_addresses, default_route)` with
+two free addresses before compilation. This setter does not reserve them.
 
 ## Select Beacon and Geth nodes
 
@@ -154,7 +181,9 @@ Only one port is used by EthExplorer. Additional ports in the list do not publis
 
 ## Configuration templates and startup
 
-`BACKEND_CONFIG_YML` and `FRONTEND_CONFIG_YML` are defined in `EthExplorer.py`. During `configure()`, Python `.format()` replaces these five placeholders with the corresponding service's static IP:
+`BACKEND_START_SH` and `FRONTEND_START_SH` are defined in `EthExplorer.py`.
+During `configure()`, Python `.format()` replaces these five placeholders in
+their `sed` commands with the corresponding service's static IP:
 
 | Placeholder | Service |
 | --- | --- |
@@ -164,11 +193,11 @@ Only one port is used by EthExplorer. Additional ports in the list do not publis
 | `{LBT_HOST}` | `littlebigtable` |
 | `{RBT_HOST}` | `rawbigtable` |
 
-Other placeholders, such as `$EL_HOST`, `$CL_HOST`, `$POSTGRES_DB`, `$GENESIS_TIMESTAMP`, and `$SERVER_PORT`, remain in shell-style form after Python formatting. The formatted templates are written into each container at `/tmp/config.yml`.
+Runtime configuration is generated by the image's provisioning script. Python
+formats only the host-replacement commands; it does not stage configuration
+templates at `/tmp/config.yml`.
 
-The backend uses `/app/local_deployment`; the Web service uses `/app/local-deployment`. Each startup script configures its route and runs `provision-explorer-config-custom.sh`, then copies `/tmp/config.yml` over the runtime `config.yml` in its deployment directory. The backend starts `eth1indexer`, `rewards-exporter`, and `statistics`; the Web container starts `explorer`, `validator-tagger`, and `frontend-data-updater`.
-
-**Current implementation detail:** the copy of `/tmp/config.yml` is a plain `cat`, with no explicit shell substitution at that step. Therefore, the remaining `$...` placeholders are preserved in the copied file. If startup reports invalid configuration values, inspect the generated file and the image's configuration-loading behavior rather than assuming that Python formatting or the copy expanded those variables.
+The backend uses `/app/local_deployment`; the Web service uses `/app/local-deployment`. Each startup script configures its route and runs `provision-explorer-config-custom.sh`, then replaces the database, cache, Bigtable, and ClickHouse host entries in the generated runtime `config.yml` with the static IPs assigned by `EthExplorer`. The backend starts `eth1indexer`, `rewards-exporter`, and `statistics`; the Web container starts `explorer`, `validator-tagger`, and `frontend-data-updater`.
 
 Compose health checks gate startup on ClickHouse, Postgres, and Redis. The Bigtable services must be started. The Web service also waits for the backend health check, which checks for the Postgres `blocks` table; this does not guarantee that chain indexing has caught up.
 
@@ -181,24 +210,24 @@ From the generated output directory:
 ```bash
 docker compose config
 docker compose ps
-docker compose logs -f seedemu-ethexplorer-backend seedemu-ethexplorer-web
+docker compose logs -f seedemu-ethexplorer-backend.eth.explorer.seed seedemu-ethexplorer-web.eth.explorer.seed
 ```
 
 | Symptom | What to check |
 | --- | --- |
-| IP assertion during `setDefaultNetwork()` | Supply a nonempty list with at least seven IP addresses. |
+| Address validation error during `setDefaultExternalNetwork()` | Supply at least seven unique usable addresses in the subnet, excluding the gateway. |
 | Missing port error during compilation | Call `setPorts([host_port])` before compiling. |
 | Missing blockchain or bootnode lookup failure | Render the emulator, configure the Ethereum service and bootnodes, or set explicit node hosts. |
 | Network or route setup failure | Check the selected emulated host interface, its gateway, subnet overlap, and reachability of the chain nodes. |
 | Cannot open the Web UI | Check the last supplied host port, port conflicts, Compose status, and backend health. D10 currently uses `8098`, not `5000`. |
 | UI has no chain data | Wait for chain genesis and indexing, then inspect Geth RPC, Beacon API, database health, and explorer logs. |
-| Invalid YAML values or literal `$...` in configuration | Inspect `/tmp/config.yml` and the copied runtime config; confirm how the image resolves the remaining placeholders. |
+| Invalid YAML values or host connection failures | Inspect the generated runtime configuration and verify the assigned bundle-network IPs. |
 
 To inspect the effective runtime configuration:
 
 ```bash
-docker compose exec seedemu-ethexplorer-backend cat /app/local_deployment/config.yml
-docker compose exec seedemu-ethexplorer-web cat /app/local-deployment/config.yml
+docker compose exec seedemu-ethexplorer-backend.eth.explorer.seed cat /app/local_deployment/config.yml
+docker compose exec seedemu-ethexplorer-web.eth.explorer.seed cat /app/local-deployment/config.yml
 ```
 
 InternetMap complements the explorer by showing network topology and connectivity; EthExplorer shows chain state and indexing results. Register and configure each bundle separately, with nonoverlapping networks and host ports.
