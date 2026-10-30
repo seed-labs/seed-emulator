@@ -21,6 +21,7 @@ from seedemu.compiler import Docker, Platform
 from seedemu.core import Binding, Emulator, Filter
 from seedemu.layers import Base, Ebgp, PeerRelationship
 from seedemu.services import WebService
+from seedemu.containerBundle import InternetMap
 
 
 ANYCAST_ADDRESS = "10.180.0.100"
@@ -98,6 +99,13 @@ def run(
     # selfManagedNetwork is required because AS180 intentionally has two Docker
     # networks with the same IP prefix.
     docker = Docker(selfManagedNetwork=True, platform=platform)
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
     emu.compile(docker, output or str(SCRIPT_DIR / "output"), override=override)
 
 

@@ -18,20 +18,20 @@ echo "{}" >> /etc/hosts
 
 
 class IndentDumper(yaml.SafeDumper):
-    """YAML dumper that keeps nested mappings consistently indented."""
+    """!
+    @brief YAML dumper that keeps nested mappings consistently indented.
+    """
 
     def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
 
 
 def safe_dump_pretty(data) -> str:
-    """Serialize ``data`` as readable YAML without sorting mapping keys.
+    """!
+    @brief Serialize data as readable YAML without sorting keys.
 
-    Args:
-        data: Mapping or sequence to serialize.
-
-    Returns:
-        The generated YAML document.
+    @param data mapping or sequence to serialize.
+    @returns the generated YAML document.
     """
     return yaml.dump(
         data,
@@ -44,11 +44,12 @@ def safe_dump_pretty(data) -> str:
 
 @dataclass(eq=False)
 class ContainerBundle:
-    """Base class for a group of independently built Docker containers.
+    """
+    !
+        @brief Base class for a group of independently built Docker containers.
 
-    Subclasses create containers in ``__init__`` and populate their service
-    definitions in ``configure``. The Docker compiler calls ``configure`` and
-    ``install`` to generate Compose services and network definitions.
+        Subclasses create containers in ``__init__`` and configure their services
+        before the Docker compiler calls ``configure`` and ``install``.
     """
 
     emulator: InitVar[Optional[Emulator]] = None
@@ -56,49 +57,88 @@ class ContainerBundle:
     _emulator: Optional[Emulator] = field(default=None, init=False, repr=False)
     _suffix: str = field(default="", init=False)
     _containers: Dict[str, PreparedContainer] = field(default_factory=dict, init=False)
-    _default_network: Optional[Dict[str, Any]] = field(default=None, init=False)
+    _default_external_network: Optional[Dict[str, Any]] = field(default=None, init=False)
+    _default_internal_network: Optional[Dict[str, Any]] = field(default=None, init=False)
     _ports: List[int] = field(default_factory=list, init=False)
     _internal_hostname_ip_mappings: Dict[str, str] = field(default_factory=dict, init=False)
     _external_hostname_ip_mappings: Dict[str, str] = field(default_factory=dict, init=False)
     _required_port_number: int = field(default=0, init=False)
+    _required_emu_network_address_number: int = field(default=0, init=False)
 
     def __post_init__(self, emulator: Optional[Emulator], suffix: str) -> None:
-        """Store the emulator reference and hostname/build-directory suffix."""
+        """!
+        @brief Store the emulator reference and hostname suffix.
+
+        @param emulator emulator associated with this bundle.
+        @param suffix suffix appended to generated container hostnames.
+        """
         self._emulator = emulator
         self._suffix = suffix
 
     def _createContainer(self, local_name: str, suffix: str) -> PreparedContainer:
-        """Create and register a prepared container.
+        """!
+        @brief Create and register a prepared container.
 
-        Args:
-            local_name: Logical service name used in Compose.
-            suffix: Suffix appended to the generated hostname.
-
-        Returns:
-            The newly registered :class:`PreparedContainer`.
+        @param local_name logical Compose service name.
+        @param suffix suffix appended to the generated hostname.
+        @returns the newly registered ``PreparedContainer``.
         """
         container = PreparedContainer(name=local_name, suffix=suffix)
-        self._containers.update({local_name: container})
+        self._containers.update({local_name + suffix: container})
 
         return container
 
     def getContainer(self, local_name: str) -> PreparedContainer:
-        """Return a registered container by its logical service name."""
+        """!
+        @brief Return a registered container by logical service name.
+
+        @param local_name logical service name.
+        @returns the matching ``PreparedContainer``.
+        """
         return self._containers[local_name]
 
     def getContainers(self) -> Dict[str, PreparedContainer]:
-        """Return a shallow copy of all registered containers."""
+        """!
+        @brief Return a shallow copy of all registered containers.
+
+        @returns mapping from logical service names to prepared containers.
+        """
         return self._containers.copy()
 
     def getEmulator(self) -> Optional[Emulator]:
-        """Return the emulator associated with this bundle, if any."""
+        """!
+        @brief Return the emulator associated with this bundle.
+
+        @returns the associated emulator, or ``None``.
+        """
         return self._emulator
 
     def getSuffix(self) -> str:
-        """Return the suffix used for generated container hostnames."""
+        """!
+        @brief Return the suffix used for generated hostnames.
+
+        @returns the configured hostname and build-directory suffix.
+        """
         return self._suffix
 
-    def setDefaultNetwork(
+    def setDefaultInternalNetwork(self, name, ip_addresses: List, default_route: str):
+        self._default_internal_network = {
+            "network": name,
+            "ip_addresses": ip_addresses,
+            "default_route": default_route,
+        }
+        return self
+
+    def getDefaultInternalNetwork(self):
+        if not self._default_internal_network:
+            self._default_internal_network = self.allocateEmuNetworkAddress()
+
+        return {
+            **self._default_internal_network,
+            "ip_addresses": self._default_internal_network["ip_addresses"][:],
+        }
+
+    def setDefaultExternalNetwork(
         self,
         name: str,
         prefix: str,
@@ -106,21 +146,16 @@ class ContainerBundle:
         default_router: str,
         type: str = "bridge",
     ):
-        """Configure the default Docker network and static container addresses.
+        """!
+        @brief Configure the default Docker network and static addresses.
 
-        Args:
-            name: Docker Compose network name.
-            prefix: IPv4 subnet in CIDR notation, such as ``172.20.0.0/24``.
-            ip_addresses: Static IPv4 addresses assigned in container order.
-            default_router: IPv4 gateway address inside ``prefix``.
-            type: Docker network driver, normally ``"bridge"``.
-
-        Returns:
-            This bundle, allowing fluent configuration.
-
-        Raises:
-            ValueError: If the subnet, gateway, or container addresses are
-                invalid or inconsistent.
+        @param name Docker Compose network name.
+        @param prefix IPv4 subnet in CIDR notation.
+        @param ip_addresses static IPv4 addresses in container order.
+        @param default_router IPv4 gateway inside ``prefix``.
+        @param type Docker network driver, normally ``"bridge"``.
+        @returns this bundle for fluent configuration.
+        @raises ValueError if network or address values are invalid.
         """
         subnet = IPv4Network(prefix, strict=True)
         gateway = IPv4Address(default_router)
@@ -153,7 +188,7 @@ class ContainerBundle:
         if len(set(normalized_addresses)) != len(normalized_addresses):
             raise ValueError("Container IP addresses must be unique.")
 
-        self._default_network = {
+        self._default_external_network = {
             "name": name,
             "prefix": prefix,
             "ip_addresses": normalized_addresses,
@@ -174,30 +209,59 @@ class ContainerBundle:
 
         return self
 
-    def getDefaultNetwork(self) -> Optional[Dict[str, Any]]:
-        """Return the configured default network, or ``None`` if unset."""
-        return self._default_network
+    def getDefaultExternalNetwork(self) -> Optional[Dict[str, Any]]:
+        """!
+        @brief Return the configured default network.
+
+        @returns the network dictionary, or ``None`` when unset.
+        """
+        return {
+            **self._default_external_network,
+            "ip_addresses": self._default_external_network["ip_addresses"][:]
+        }
 
     def setPorts(self, ports: List[int]) -> None:
-        """Set the host-port pool consumed by the bundle during configuration."""
+        """!
+        @brief Set the host-port pool consumed during configuration.
+
+        @param ports host ports available to the bundle.
+        """
         self._ports = ports.copy()
 
     def getPorts(self) -> List[int]:
-        """Return a copy of the currently configured host-port pool."""
+        """!
+        @brief Return a copy of the configured host-port pool.
+
+        @returns available host ports.
+        """
         return self._ports.copy()
 
     def getInternalHostnameIpMappings(self) -> Dict[str, str]:
-        """Return mappings for services attached to emulated networks."""
+        """!
+        @brief Return hostname/IP mappings for emulated networks.
+
+        @returns a copy of internal hostname-to-address mappings.
+        """
+        for _, container in self._containers.items():
+            self._internal_hostname_ip_mappings.update(container.getInternalHostnameIpMappings())
         return self._internal_hostname_ip_mappings.copy()
 
     def getExternalHostnameIpMappings(self) -> Dict[str, str]:
-        """Return mappings for services attached to the bundle network."""
+        """!
+        @brief Return hostname/IP mappings for the bundle network.
+
+        @returns a copy of external hostname-to-address mappings.
+        """
+        for _, container in self._containers.items():
+            self._external_hostname_ip_mappings.update(container.getExternalHostnameIpMappings())
         return self._external_hostname_ip_mappings.copy()
 
     def configure(self) -> None:
-        """Validate bundle-wide settings before service generation.
+        """!
+        @brief Validate bundle-wide settings before service generation.
 
         Subclasses should call this method before configuring their services.
+        @raises ValueError when fewer than the required ports are configured.
         """
         if len(self._ports) < self._required_port_number:
             raise ValueError(
@@ -206,7 +270,11 @@ class ContainerBundle:
             )
 
     def install(self) -> tuple[str, str]:
-        """Install containers and return Compose service and network YAML."""
+        """!
+        @brief Install containers and generate Compose YAML fragments.
+
+        @returns a tuple containing service YAML and network YAML.
+        """
         services = {}
         for name, container in self._containers.items():
             services[name] = container.install()
@@ -231,8 +299,9 @@ class ContainerBundle:
 
         networks = {
             network: (
-                self._default_network["network_config"]
-                if self._default_network is not None and network == self._default_network["name"]
+                self._default_external_network["network_config"]
+                if self._default_external_network is not None
+                and network == self._default_external_network["name"]
                 else {}
             )
             for service in services.values()
@@ -258,40 +327,85 @@ class ContainerBundle:
         )
         return compose_services_txt, compose_networks_txt
 
-    def getEmuHostNetworkInfo(self):
-        """Return the first usable emulated host network and default route.
+    def allocateEmuNetworkAddress(self):
+        """!
+        @brief Reserve addresses starting at host offset 10 on one host network.
 
-        Returns:
-            A dictionary containing ``network``, ``hostname``, ``ip_address``
-            and ``default_route``, or ``None`` when no suitable host exists.
+        @returns a network dictionary whose ``ip_address`` is a list of
+            ``_required_emu_network_address_number`` IPv4 strings, or ``None``
+            when no host network has enough capacity. Select one address
+            before passing the dictionary to ``joinInternalNetwork``.
+        Call after rendering. Reservations are shared across bundles and
+        committed only when the full requested count is available.
         """
-        for (_, node_type, _), node in self._emulator.getRegistry().getAll().items():
-            if node_type != "hnode":
-                continue
+        count = self._required_emu_network_address_number
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise ValueError(
+                "Required emulator network address count must be a non-negative integer."
+            )
+        if self._emulator is None:
+            return None
 
+        occupied = set()
+        candidates = {}
+        for (_, node_type, _), node in self._emulator.getRegistry().getAll().items():
+            if node_type not in ("hnode", "rnode", "brdnode"):
+                continue
             for interface in node.getInterfaces():
                 address = interface.getAddress()
                 if address is None:
                     continue
+                occupied.add(IPv4Address(address))
+                if node_type == "hnode":
+                    network = interface.getNet()
+                    candidates.setdefault(id(network), (network, node.getName()))
 
-                network = interface.getNet()
-                router = network.getDefaultRouter()
-                scope, _, _ = network.getRegistryInfo()
-                network_name = network.getName()
-                if network.getType() != NetworkType.Bridge:
-                    network_name = f"net_{scope}_{network_name}"
+        # All node addresses must be known before selecting a free address.
+        # Preserve host order, but inspect each candidate network only once.
+        for network, hostname in candidates.values():
+            router = network.getDefaultRouter()
+            reserved = set(network.getAttribute("container_bundle_reserved_addresses", set()))
+            gateway = IPv4Address(router) if router is not None else None
+            prefix = network.getPrefix()
+            first_address = int(prefix.network_address) + 10
+            addresses = []
+            if count:
+                for ip in prefix.hosts():
+                    if (
+                        int(ip) < first_address
+                        or ip in occupied
+                        or ip in reserved
+                        or ip == gateway
+                        or ip == prefix.network_address
+                        or ip == prefix.broadcast_address
+                    ):
+                        continue
+                    addresses.append(str(ip))
+                    if len(addresses) == count:
+                        break
+            if len(addresses) < count:
+                continue
+            reserved.update(IPv4Address(address) for address in addresses)
+            network.setAttribute("container_bundle_reserved_addresses", reserved)
+            scope, _, _ = network.getRegistryInfo()
+            network_name = network.getName()
+            if network.getType() != NetworkType.Bridge:
+                network_name = f"net_{scope}_{network_name}"
 
-                return {
-                    "network": network_name,
-                    "hostname": node.getName(),
-                    "ip_address": str(address),
-                    "default_route": str(router) if router is not None else None,
-                }
+            self._default_internal_network = {
+                "network": network_name,
+                "emu_hostname": hostname,
+                "ip_addresses": addresses,
+                "default_route": str(router) if router is not None else None,
+            }
+            return self
 
 
 @dataclass(eq=False)
 class PreparedContainer:
-    """Mutable description of one container before Compose generation."""
+    """!
+    @brief Mutable description of one container before Compose generation.
+    """
 
     name: InitVar[str] = ""
     suffix: InitVar[str] = ""
@@ -309,21 +423,38 @@ class PreparedContainer:
     _default_route: str = field(default="", init=False)
 
     def __post_init__(self, name: str, suffix: str) -> None:
-        """Initialize the logical service name and Compose service metadata."""
+        """!
+        @brief Initialize service identity and Compose metadata.
+
+        @param name logical Compose service name.
+        @param suffix suffix appended to the generated hostname.
+        """
         self._name = name
         self._suffix = suffix
-        self.service["container_name"] = name
+        self.service["container_name"] = name + suffix
 
     def getName(self) -> str:
-        """Return the logical Compose service name."""
+        """!
+        @brief Return the logical Compose service name.
+
+        @returns the service name.
+        """
         return self._name
 
     def getHostname(self) -> str:
-        """Return the generated hostname including the configured suffix."""
+        """!
+        @brief Return the generated hostname.
+
+        @returns the logical name followed by the configured suffix.
+        """
         return self._name + self._suffix
 
     def getInternalHostnameIpMappings(self) -> Dict[str, str]:
-        """Return the first emulated-network hostname-to-IP mapping."""
+        """!
+        @brief Return the first emulated-network hostname mapping.
+
+        @returns a hostname-to-IP mapping, or an empty dictionary.
+        """
         if not self._internal_networks:
             return {}
 
@@ -331,7 +462,11 @@ class PreparedContainer:
         return {internal_networks[1]: internal_networks[2]}
 
     def getExternalHostnameIpMappings(self) -> Dict[str, str]:
-        """Return external-network hostname-to-IP mappings."""
+        """!
+        @brief Return external-network hostname/IP mappings.
+
+        @returns all configured external hostname-to-address mappings.
+        """
         return {
             external_network[1]: external_network[2]
             for external_network in (self._external_network or [])
@@ -342,12 +477,11 @@ class PreparedContainer:
         original_entrypoint: str,
         commands: List[str],
     ) -> None:
-        """
-        Run preparation commands before delegating to the original entrypoint.
+        """!
+        @brief Run preparation commands before the original entrypoint.
 
-        Args:
-            original_entrypoint: Entrypoint script from the base image.
-            commands: Shell commands to run before the original entrypoint.
+        @param original_entrypoint entrypoint script from the base image.
+        @param commands shell commands to execute before that entrypoint.
         """
         wrapper_commands = [
             "#!/bin/sh",
@@ -361,11 +495,15 @@ class PreparedContainer:
 
         self.service["entrypoint"] = [
             "sh",
-            "/new-entrypoint.sh",
+            self._start_script_name,
         ]
 
     def install(self) -> Dict[str, Any]:
-        """Write build context files and return the Compose service mapping."""
+        """!
+        @brief Write build-context files and return the Compose service.
+
+        @returns the generated Compose service mapping.
+        """
         hostname = self.getHostname()
         mkdir(hostname)
         chdir(hostname)
@@ -407,7 +545,11 @@ class PreparedContainer:
         return self.service
 
     def _getDefaultRouteCommands(self) -> List[str]:
-        """Return shell commands for switching the container default route."""
+        """!
+        @brief Generate commands that replace the container default route.
+
+        @returns shell commands that route traffic through ``_default_route``.
+        """
         return [
             f'DEFAULT_ROUTE="{self._default_route}"',
             'IFACE=$(ip route get "$DEFAULT_ROUTE" | '
@@ -424,27 +566,33 @@ class PreparedContainer:
         ip_address: str = "",
         default_route: Optional[str] = "",
     ) -> None:
-        """Attach the container to an emulated network.
+        """!
+        @brief Attach the container to an emulated network.
 
-        Args:
-            network: Compose network name.
-            hostname: Hostname or node name on that network.
-            ip_address: Address assigned by the emulator.
-            default_route: Optional gateway used by startup scripts.
+        @param network Compose network name.
+        @param hostname hostname or node name on that network.
+        @param ip_address address assigned by the emulator.
+        @param default_route optional gateway used by startup scripts.
         """
         internal_network = (network, hostname, ip_address, default_route)
         if internal_network not in self._internal_networks:
             self._internal_networks.append(internal_network)
 
-        networks = self.service.setdefault("networks", [])
+        networks = self.service.setdefault("networks", {})
         if network not in networks:
-            networks.update({network: {}})
+            networks.update({network: {"ipv4_address": ip_address}})
 
         if default_route and not self._default_route:
             self._default_route = default_route
 
     def joinExternalNetwork(self, network: str, hostname: str, ip_address: str) -> None:
-        """Attach the container to a bundle-managed network with a static IP."""
+        """!
+        @brief Attach the container to a bundle network with a static IP.
+
+        @param network Compose network name.
+        @param hostname hostname represented by the static address.
+        @param ip_address static IPv4 address.
+        """
         external_network = (network, hostname, ip_address)
         if external_network not in self._external_network:
             self._external_network.append(external_network)
@@ -454,34 +602,56 @@ class PreparedContainer:
             networks.update({network: {"ipv4_address": ip_address}})
 
     def setContentAttribute(self, content: dict) -> None:
-        """Merge Docker Compose service attributes into this container."""
+        """!
+        @brief Merge attributes into the Compose service definition.
+
+        @param content service attributes such as image, ports, or environment.
+        """
         self.service.update(content)
 
     def setEtcHosts(self, content: str) -> None:
-        """Stage content that will be appended to the container's ``/etc/hosts``."""
+        """!
+        @brief Stage content to append to the container ``/etc/hosts``.
+
+        @param content newline-separated host entries.
+        """
         self._files["__etchosts_file"] = content
 
     def setFile(self, filename: str, content: str) -> None:
-        """Stage a file to be copied into the generated image."""
+        """!
+        @brief Stage a file for the generated image.
+
+        @param filename destination path inside the image.
+        @param content file contents.
+        """
         self._files.update({filename: content})
 
     def _computeDockerfile(self) -> str:
         if not self._files:
             return ""
-
+        
+        self.service.update({"privileged": True})
         dockerfile_lines = [
             "FROM {}".format(self.service.pop("image", "")),
             "ARG DEBIAN_FRONTEND=noninteractive",
-            "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 && rm -rf /var/lib/apt/lists/*",
+            "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping && rm -rf /var/lib/apt/lists/*",
         ]
 
         for filename, content in self._files.items():
             dockerfile_lines.append(self._addFile(filename, content))
 
         dockerfile = "\n".join(dockerfile_lines) + "\n"
+        
         return dockerfile
 
     def _addFile(self, path: str, content: str) -> str:
+        """!
+        @brief Write a staged file and return its Docker COPY command.
+
+        @param path destination path inside the image.
+        @param content file contents.
+        @returns a Dockerfile ``COPY`` instruction.
+        """
         staged_path = md5(path.encode("utf-8")).hexdigest()
         print(content, file=open(staged_path, "w"))
         if path.endswith(".sh"):
