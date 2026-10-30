@@ -38,4 +38,3 @@ emu.load('./base_component.bin')
 
 emu.render()
 emu.compile(Docker(platform=platform), './output', override=True)
-
