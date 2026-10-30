@@ -1,0 +1,50 @@
+id: basic-a13-exabgp
+name: ExaBGP Service
+description: A router-facing ExaBGP service speaker installed with Service and Binding APIs.
+runner: internet
+script: exabgp.py
+platform: amd
+features:
+  - ipv4-default
+  - exabgp-service
+  - binding
+  - ebgp-private-peering
+  - bird
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: A13 ExaBGP topology is running
+      type: compose-ps
+      services:
+        - brdnode_2_router0
+        - hnode_180_exabgp
+      retries: 30
+      interval: 2
+
+probes:
+  - name: ExaBGP speaker reaches AS2 router on IX100
+    type: ping
+    service: hnode_180_exabgp
+    target: 10.100.0.2
+    count: 3
+    retries: 20
+    interval: 3
+
+test_programs:
+  - name: A13 ExaBGP runtime validation
+    script: test_runtime.py
+    timeout: 240

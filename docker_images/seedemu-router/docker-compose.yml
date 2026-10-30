@@ -4,6 +4,6 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        image: handsonsecurity/seedemu-router
+        image: handsonsecurity/seedemu-router:2.0
 
 

@@ -1,83 +1,128 @@
-# IP Anycast 
+# IP Anycast
 
-The purpose of this example is to demonstrate the IP anycast feature.
-We will use the emulator from example-B00 as the base. 
-The IP anycast technology allows multiple computers on the Internet to have 
-the same IP address. When another machine sends a packet to this IP address,
-one of the computers will get the packet. Exactly which one will 
-get the packet depends on BGP routing. IP anycast is naturally supported by BGP.
+This example demonstrates IP anycast using the `B00_mini_internet` topology as
+the base Internet. IP anycast lets multiple sites use the same IP address. BGP
+then decides which site receives traffic for that address.
 
-One of the well-known applications of IP anycast is the DNS root servers. 
-Some of the DNS root servers, such as the F server, 
-have multiple machines geographically located in many different places around the world, 
-but they have the same IP address.
-For example, all the F servers have the same IP address `192.5.5.241`. 
-When a DNS client sends a request to this 
-IP address, one of the F servers will get the request. 
+One well-known use case is DNS root service. For example, one logical DNS root
+server can be deployed at many physical locations, while clients still send
+queries to one stable IP address. The network routes each client to one of the
+available sites.
 
+## Topology
 
-## Create Two Hosts with Same IP Address
+The example adds `AS180` to the B00 mini Internet. `AS180` has two disconnected
+sites:
 
-We will first create an autonomous system (`AS-180`). We create two networks
-inside this AS, but we give them the same network prefix. We also create 
-a host on each network, and assign the same IP address to them. 
+```text
+IX100 side:
+  host-0: 10.180.0.100
+  router0: connected to IX100
 
-```
-as180 = base.createAutonomousSystem(180)
-as180.createNetwork('net0', '10.180.0.0/24')
-as180.createNetwork('net1', '10.180.0.0/24')
-
-as180.createHost('host-0').joinNetwork('net0', address = '10.180.0.100')
-as180.createHost('host-1').joinNetwork('net1', address = '10.180.0.100')
-```
-It should be noted that this AS has two disjoint parts: one has `net0`, and the 
-other has `net1`. These two networks are not connected by any router.
-We then connect one part of the AS to `ix100`, and connect the other part
-of the AS to `ix105`, and peer the AS with other ASes at these two locations.
-
-```
-as180.createRouter('router0').joinNetwork('net0').joinNetwork('ix100')
-ebgp.addPrivatePeerings(100, [3, 4],  [180], PeerRelationship.Provider)
-
-as180.createRouter('router1').joinNetwork('net1').joinNetwork('ix105')
-ebgp.addPrivatePeerings(105, [2, 3],  [180], PeerRelationship.Provider)
+IX105 side:
+  host-1: 10.180.0.100
+  router1: connected to IX105
 ```
 
-When compiling the emulation to generate the docker files, we need 
-to set the `selfManagedNetwork` option to True. Without this option,
-the network will be entirely managed by Docker, which will not 
-allow us to have two networks with the same IP prefix. Using
-this option will solve this problem.
+Both hosts use the same address, `10.180.0.100`, but they are on different
+internal networks:
 
+```python
+as180.createNetwork("net0", "10.180.0.0/24")
+as180.createNetwork("net1", "10.180.0.0/24")
+
+as180.createHost("host-0").joinNetwork("net0", address="10.180.0.100")
+as180.createHost("host-1").joinNetwork("net1", address="10.180.0.100")
 ```
-emu.compile(Docker(selfManagedNetwork=True), './output')
+
+The two sites connect to the Internet at different IXes:
+
+```python
+as180.createRouter("router0").joinNetwork("net0").joinNetwork("ix100")
+ebgp.addPrivatePeerings(100, [3, 4], [180], PeerRelationship.Provider)
+
+as180.createRouter("router1").joinNetwork("net1").joinNetwork("ix105")
+ebgp.addPrivatePeerings(105, [2, 3], [180], PeerRelationship.Provider)
 ```
 
+Each anycast host runs a small web server with different content. This makes
+the selected anycast site visible during testing:
 
-Now, we have deployed two hosts using the IP anycast technology. 
-When other machines send a packet to `10.180.0.100`, one of these two
-hosts will get the packet. 
-
-
-## ICMP Testing
-
-We can ping `10.180.0.100` from one of the hosts in the emulator,
-we set the filter to `icmp`. We should be able to see the 
-traffic going to one of the `10.180.0.100` hosts. If we disable 
-this location's BGP session, we will see that the traffic 
-immediately switches to the other `10.180.0.100` host. 
-We should also be able to find two hosts inside the emulator,
-such that they talk to a different `10.180.0.100` host. 
-
-
-## UDP Testing
-
-We can run a UDP server on each of the `10.180.0.100` host using `nc -luk 9090`. 
-Then from another machine, we send a UDP message to `10.180.0.100`. 
-One of the hosts will receive the message, depending on where the client 
-is located. If we disable the BGP session at one of the locations,
-we can see that the UDP message will go to the other server. 
-
+```text
+host-0 response contains: ix100-west
+host-1 response contains: ix105-east
 ```
-# echo hello | nc -u 10.180.0.100 9090
+
+## Self-Managed Docker Networks
+
+The Docker compiler must use `selfManagedNetwork=True` for this example.
+Without this option, Docker manages the networks and does not allow two
+different Docker networks to use the same IP prefix. The example entrypoint
+sets this option automatically:
+
+```python
+Docker(selfManagedNetwork=True, platform=platform)
 ```
+
+## Standard Arguments
+
+The entrypoint supports the standard example arguments used by
+`seedemu/testing/cli.py`:
+
+```sh
+python examples/internet/B24_ip_anycast/ip_anycast.py --platform amd --output examples/internet/B24_ip_anycast/output
+```
+
+The legacy platform argument is also accepted:
+
+```sh
+python examples/internet/B24_ip_anycast/ip_anycast.py amd
+```
+
+Useful options:
+
+```text
+--platform amd|arm
+--output PATH
+--dumpfile PATH
+--hosts-per-as N
+--skip-render
+--no-override
+```
+
+## Test Runner
+
+Use the standardized runner from the repository root:
+
+```sh
+python seedemu/testing/cli.py clean examples/internet/B24_ip_anycast/example.yaml
+python seedemu/testing/cli.py compile examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+python seedemu/testing/cli.py build examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+python seedemu/testing/cli.py up examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+python seedemu/testing/cli.py probe examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+python seedemu/testing/cli.py test examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+python seedemu/testing/cli.py down examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+```
+
+The full lifecycle can also be run with:
+
+```sh
+python seedemu/testing/cli.py all examples/internet/B24_ip_anycast/example.yaml --artifact-dir ci-artifacts/b24
+```
+
+## Runtime Checks
+
+The declarative probes check the externally visible anycast behavior:
+
+- a host in `AS150` reaches `10.180.0.100` and receives the IX100-side web
+  response;
+- a host in `AS170` reaches `10.180.0.100` and receives the IX105-side web
+  response.
+
+The custom `test_runtime.py` adds more specific validation:
+
+- both AS180 hosts exist and have the same anycast address;
+- both local web servers are running and expose their site markers;
+- both AS180 routers have the anycast prefix in BIRD;
+- representative clients from different parts of the mini Internet reach
+  different anycast sites.

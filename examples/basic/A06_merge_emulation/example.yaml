@@ -1,0 +1,31 @@
+id: basic-a06-merge-emulation
+name: Merging Two Emulations
+description: Builds two small emulations separately, merges them, and verifies the merged IX100 topology.
+runner: internet
+script: merge_emulation.py
+platform: amd
+features:
+  - emulation-merge
+  - ebgp-route-server
+  - ipv4-default
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+
+test_programs:
+  - name: A06 merged emulation runtime validation
+    script: test_runtime.py
+    timeout: 180

@@ -45,8 +45,8 @@ as151.createHost('web2').joinNetwork('net0').addHostName('bank32.com')
 This approach is much more complicated, as it needs to set up a
 DNS infrastructure, consisting of multiple nameservers,
 including the root servers, TLD name servers, and specific domain name servers. 
-The example `pki-with-dns.py` uses this approach. Part of the
-DNS set up is in `basenetwithDNS.py`. For detailed instructions on 
+The example `pki_with_dns.py` uses this approach. Part of the
+DNS set up is in `base_internet_with_dns.py`. For detailed instructions on 
 how to create a DNS, please see `examples/B01-dns-component`.
 
 In this example, we create three physical nodes, and then
@@ -210,4 +210,64 @@ Certificate:
          ...
          55:83:bd:ab:26:0f:66:1f:38:5f:24:67:17:d3:e0:32
 ```
+
+## Standard Arguments
+
+The main testable variant for this example is `pki.py`, which uses the
+`EtcHosts` layer for name resolution.
+
+```sh
+python examples/internet/B25_pki/pki.py amd
+python examples/internet/B25_pki/pki.py --platform amd --output examples/internet/B25_pki/output
+python examples/internet/B25_pki/pki.py --dumpfile examples/internet/B25_pki/pki.bin
+```
+
+Supported arguments:
+
+- `amd|arm`: optional legacy platform argument.
+- `--platform amd|arm`: named platform argument.
+- `--output PATH`: output folder for Docker compiler results.
+- `--dumpfile PATH`: save a serialized emulator instead of compiling Docker output.
+- `--override` / `--no-override`: control whether existing output is replaced.
+- `--skip-render`: compile without calling `emu.render()` first.
+
+## Standardized TestRunner Lifecycle
+
+Run the full lifecycle from the repository root:
+
+```sh
+python seedemu/testing/cli.py all examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+```
+
+The lifecycle can also be run step by step:
+
+```sh
+python seedemu/testing/cli.py clean examples/internet/B25_pki/example.yaml
+python seedemu/testing/cli.py compile examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+python seedemu/testing/cli.py build examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+python seedemu/testing/cli.py up examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+python seedemu/testing/cli.py probe examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+python seedemu/testing/cli.py test examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+python seedemu/testing/cli.py down examples/internet/B25_pki/example.yaml --artifact-dir ci-artifacts/b25-pki
+```
+
+The tests focus on PKI behavior introduced by this example. They do not repeat
+the base Internet routing tests.
+
+The declarative probes check:
+
+- `example32.com` and `bank32.com` resolve through `/etc/hosts`.
+- Both web servers serve HTTPS content.
+- The HTTPS connections are trusted by a representative client.
+
+The custom `test_runtime.py` program checks:
+
+- CA server containers are generated and `step-ca` is running.
+- CA ACME directory endpoints are reachable.
+- Internal root CA certificates are installed.
+- Web server containers are generated with the expected fixed addresses.
+- Web servers obtain ACME certificates under `/etc/letsencrypt/live/...`.
+- A representative client can resolve CA and web names.
+- A representative client can fetch both HTTPS sites without certificate errors.
+- The issued certificates contain the expected DNS subject alternative names.
 

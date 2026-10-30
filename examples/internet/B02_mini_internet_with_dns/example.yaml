@@ -1,0 +1,100 @@
+id: internet-b02-mini-internet-with-dns
+name: Mini Internet With DNS
+description: A B00 mini-Internet deployment that loads the B01 DNS component and adds local DNS cache servers.
+runner: internet
+script: mini_internet_with_dns.py
+platform: amd
+features:
+  - ipv4-default
+  - mini-internet
+  - dns-component
+  - dns-cache
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+    - dns_component.bin
+  expected:
+    - output/docker-compose.yml
+    - base_internet.bin
+    - dns_component.bin
+  timeout: 900
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B02 DNS services and representative clients are running
+      type: compose-ps
+      services:
+        - hnode_152_local-dns-1
+        - hnode_153_local-dns-2
+        - hnode_150_host_0
+        - hnode_160_host_0
+        - hnode_170_host_0
+      retries: 40
+      interval: 3
+
+    - name: AS152 local DNS cache is ready
+      type: exec
+      service: hnode_152_local-dns-1
+      command: "pgrep named >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+    - name: AS153 local DNS cache is ready
+      type: exec
+      service: hnode_153_local-dns-2
+      command: "pgrep named >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+probes:
+  - name: AS160 resolves twitter.com through assigned local DNS
+    type: dns
+    service: hnode_160_host_0
+    query: twitter.com
+    record_type: A
+    expect_answer: 1.1.1.1
+    retries: 30
+    interval: 5
+
+  - name: AS170 resolves google.com through assigned local DNS
+    type: dns
+    service: hnode_170_host_0
+    query: google.com
+    record_type: A
+    expect_answer: 2.2.2.2
+    retries: 30
+    interval: 5
+
+  - name: AS150 resolves example.net through default local DNS
+    type: dns
+    service: hnode_150_host_0
+    query: example.net
+    record_type: A
+    expect_answer: 3.3.3.3
+    retries: 30
+    interval: 5
+
+  - name: AS164 resolves syr.edu through default local DNS
+    type: dns
+    service: hnode_164_host_0
+    query: syr.edu
+    record_type: A
+    expect_answer: 128.230.18.63
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: B02 DNS runtime validation
+    script: test_runtime.py
+    timeout: 240

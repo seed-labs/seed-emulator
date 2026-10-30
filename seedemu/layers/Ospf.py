@@ -1,28 +1,22 @@
 from __future__ import annotations
 from seedemu.core import Node, Emulator, Layer
-from seedemu.core.enums import NetworkType
-from typing import Set, Dict, List, Tuple
+from seedemu.core.enums import NetworkType, NodeRole
+from typing import Set, Dict, List, Tuple, Optional
+from .Base import Base
+from ._bgp_metadata import (
+    DEFAULT_OSPF_DEAD,
+    DEFAULT_OSPF_HELLO,
+    DEFAULT_OSPF_TICK,
+    classify_ospf_interfaces,
+    normalize_ospf_timers,
+    set_ospf_interface_intents,
+)
 
 OspfFileTemplates: Dict[str, str] = {}
 
-OspfFileTemplates['ospf_body'] = """
-    ipv4 {{
-        table t_ospf;
-        import all;
-        export all;
-    }};
-    area 0 {{
-{interfaces}
-    }};
-"""
-
-OspfFileTemplates['ospf_interface'] = """\
-        interface "{interfaceName}" {{ hello 1; dead count 2; }};
-"""
-
-OspfFileTemplates['ospf_stub_interface'] = """\
-        interface "{interfaceName}" {{ stub; }};
-"""
+OSPF_MODE_LEGACY = "legacy"
+OSPF_MODE_ROUTER_TRANSIT_ONLY = "router-transit-only"
+OSPF_MODES = {OSPF_MODE_LEGACY, OSPF_MODE_ROUTER_TRANSIT_ONLY}
 
 class Ospf(Layer):
     """!
@@ -39,6 +33,9 @@ class Ospf(Layer):
     __stubs: Set[Tuple[int, str]]
     __masked: Set[Tuple[int, str]]
     __masked_asn: Set[int]
+    __tick: int
+    __hello: int
+    __dead: int
 
     def __init__(self):
         """!
@@ -48,11 +45,51 @@ class Ospf(Layer):
         self.__stubs = set()
         self.__masked = set()
         self.__masked_asn = set()
+        self.__tick = DEFAULT_OSPF_TICK
+        self.__hello = DEFAULT_OSPF_HELLO
+        self.__dead = DEFAULT_OSPF_DEAD
 
         self.addDependency('Routing', False, False)
 
     def getName(self) -> str:
         return 'Ospf'
+
+    def setTimers(
+        self,
+        tick: Optional[int] = None,
+        hello: Optional[int] = None,
+        dead: Optional[int] = None,
+    ) -> Ospf:
+        """!
+        @brief Set default OSPF timers for generated OSPF sessions.
+
+        @param tick BIRD OSPF scheduler tick interval, in seconds.
+        @param hello OSPF hello interval, in seconds.
+        @param dead OSPF dead interval, in seconds.
+
+        @returns self, for chaining API calls.
+        """
+        timers = normalize_ospf_timers(
+            self.__tick if tick is None else tick,
+            self.__hello if hello is None else hello,
+            self.__dead if dead is None else dead,
+        )
+        self.__tick = timers["tick"]
+        self.__hello = timers["hello"]
+        self.__dead = timers["dead"]
+        return self
+
+    def getTimers(self) -> Dict[str, int]:
+        """!
+        @brief Get OSPF timer defaults used by this layer.
+
+        @returns dict with tick, hello, and dead timer values.
+        """
+        return {
+            "tick": self.__tick,
+            "hello": self.__hello,
+            "dead": self.__dead,
+        }
 
     def markAsStub(self, asn: int, netname: str) -> Ospf:
         """!
@@ -142,43 +179,81 @@ class Ospf(Layer):
         """
         return (asn, netname) in self.__masked
 
-    def render(self, emulator: Emulator):
+    def __is_router_transit_network(self, node: Node, netname: str) -> bool:
+        for iface in node.getInterfaces():
+            net = iface.getNet()
+            if str(net.getName()) != str(netname):
+                continue
+            if net.getType() != NetworkType.Local:
+                return False
+            router_count = 0
+            for candidate in net.getAssociations():
+                role = candidate.getRole()
+                if role in {NodeRole.Router, NodeRole.BorderRouter, NodeRole.OpenVpnRouter}:
+                    router_count += 1
+            return router_count >= 2
+        return False
+
+    def __classify_router_transit_interfaces(
+        self,
+        router: Node,
+        stubs: List[str],
+        masked: List[str]
+    ) -> Tuple[List[str], List[str]]:
+        stub_names = {str(name) for name in stubs}
+        masked_names = {str(name) for name in masked}
+        active: List[str] = []
+        passive: List[str] = ["dummy0"]
+        for iface in router.getInterfaces():
+            net = iface.getNet()
+            name = str(net.getName())
+            if name in masked_names:
+                continue
+            if name in stub_names:
+                passive.append(name)
+                continue
+            if self.__is_router_transit_network(router, name):
+                active.append(name)
+            else:
+                passive.append(name)
+        return active, passive
+
+    def configure(self, emulator: Emulator):
         reg = emulator.getRegistry()
+        base: Base = reg.get('seedemu', 'layer', 'Base')
 
         for ((scope, type, name), obj) in reg.getAll().items():
             if type != 'rnode': continue
             router: Node = obj
             if router.getAsn() in self.__masked_asn: continue
 
-            stubs: List[str] = ['dummy0']
-            active: List[str] = []
-
             self._log('setting up OSPF for router as{}/{}...'.format(scope, name))
-            for iface in router.getInterfaces():
-                net = iface.getNet()
-
-                if (int(scope), net.getName()) in self.__masked: continue
-
-                if (int(scope), net.getName()) in self.__stubs or net.getType() != NetworkType.Local:
-                    stubs.append(net.getName())
-                    continue
-
-                active.append(net.getName())
-            
-            ospf_interfaces = ''
-            for name in stubs: ospf_interfaces += OspfFileTemplates['ospf_stub_interface'].format(
-                interfaceName = name
+            asobj = base.getAutonomousSystem(int(scope))
+            stub_networks = [net for (asn, net) in self.__stubs if asn == int(scope)]
+            masked_networks = [net for (asn, net) in self.__masked if asn == int(scope)]
+            if asobj.getOspfMode() == OSPF_MODE_ROUTER_TRANSIT_ONLY:
+                active, stubs = self.__classify_router_transit_interfaces(
+                    router,
+                    stubs=stub_networks,
+                    masked=masked_networks,
+                )
+            else:
+                active, stubs = classify_ospf_interfaces(
+                    router,
+                    stubs=stub_networks,
+                    masked=masked_networks,
+                )
+            set_ospf_interface_intents(
+                router,
+                active,
+                stubs,
+                tick=self.__tick,
+                hello=self.__hello,
+                dead=self.__dead,
             )
-            for name in active: ospf_interfaces += OspfFileTemplates['ospf_interface'].format(
-                interfaceName = name
-            )
 
-            if ospf_interfaces != '':
-                router.addTable('t_ospf')
-                router.addProtocol('ospf', 'ospf1', OspfFileTemplates['ospf_body'].format(
-                    interfaces = ospf_interfaces
-                ))
-                router.addTablePipe('t_ospf')
+    def render(self, emulator: Emulator):
+        pass
 
     def print(self, indent: int) -> str:
         out = ' ' * indent
@@ -210,4 +285,3 @@ class Ospf(Layer):
             out += 'as{}\n'.format(asn)
 
         return out
-

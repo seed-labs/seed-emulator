@@ -1,0 +1,94 @@
+id: internet-b20-dhcp
+name: DHCP
+description: A B00 mini-Internet deployment that adds DHCP servers and DHCP clients in AS151 and AS161.
+runner: internet
+script: dhcp.py
+platform: amd
+features:
+  - ipv4-default
+  - mini-internet
+  - dhcp
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - base_internet.bin
+  timeout: 900
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B20 DHCP services and clients are running
+      type: compose-ps
+      services:
+        - hnode_151_dhcp-server-01
+        - hnode_161_dhcp-server-02
+        - hnode_151_dhcp-client-01
+        - hnode_151_dhcp-client-02
+        - hnode_161_dhcp-client-03
+        - hnode_161_dhcp-client-04
+      retries: 40
+      interval: 3
+
+    - name: AS151 DHCP server is ready
+      type: exec
+      service: hnode_151_dhcp-server-01
+      command: "pgrep dhcpd >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+    - name: AS161 DHCP server is ready
+      type: exec
+      service: hnode_161_dhcp-server-02
+      command: "pgrep dhcpd >/dev/null"
+      expect_exit: 0
+      retries: 30
+      interval: 3
+
+probes:
+  - name: AS151 DHCP client receives an address from custom range
+    type: exec
+    service: hnode_151_dhcp-client-01
+    command: "ip -4 addr show net0 | grep -Eq '10\\.151\\.0\\.(12[5-9]|13[0-9]|140)/'"
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS161 DHCP client receives an address from default range
+    type: exec
+    service: hnode_161_dhcp-client-03
+    command: "ip -4 addr show net0 | grep -Eq '10\\.161\\.0\\.(10[1-9]|11[0-9]|120)/'"
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS151 DHCP client can reach its default router
+    type: ping
+    service: hnode_151_dhcp-client-01
+    target: 10.151.0.254
+    count: 3
+    retries: 20
+    interval: 5
+
+  - name: AS161 DHCP client can reach its default router
+    type: ping
+    service: hnode_161_dhcp-client-03
+    target: 10.161.0.254
+    count: 3
+    retries: 20
+    interval: 5
+
+test_programs:
+  - name: B20 DHCP runtime validation
+    script: test_runtime.py
+    timeout: 240

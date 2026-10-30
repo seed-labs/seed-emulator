@@ -1,0 +1,68 @@
+id: internet-b21-etc-hosts
+name: EtcHosts
+description: A B00 mini-Internet deployment that adds an AS152 database host and resolves it through the EtcHosts layer.
+runner: internet
+script: etc_hosts.py
+platform: amd
+features:
+  - ipv4-default
+  - mini-internet
+  - etc-hosts
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - base_internet.bin
+  timeout: 900
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B21 EtcHosts services are running
+      type: compose-ps
+      services:
+        - hnode_152_database
+        - hnode_150_host_0
+        - hnode_152_host_0
+        - hnode_160_host_0
+      retries: 40
+      interval: 3
+
+probes:
+  - name: AS150 resolves database.com through /etc/hosts
+    type: exec
+    service: hnode_150_host_0
+    command: "getent hosts database.com | grep -q '10.152.0.4'"
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: AS160 resolves database.com through /etc/hosts
+    type: exec
+    service: hnode_160_host_0
+    command: "getent hosts database.com | grep -q '10.152.0.4'"
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: Database host resolves its custom hostname locally
+    type: exec
+    service: hnode_152_database
+    command: "getent hosts database.com | grep -q '10.152.0.4'"
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+test_programs:
+  - name: B21 EtcHosts runtime validation
+    script: test_runtime.py
+    timeout: 180

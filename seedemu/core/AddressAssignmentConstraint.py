@@ -167,7 +167,7 @@ class AddressAssignmentConstraint(Printable):
 
         if NodeRole.Host == type or NodeRole.ControlService == type:
             return Assigner(self.__hostStart, self.__hostEnd, self.__hostStep)
-        if NodeRole.Router == type or type == NodeRole.BorderRouter:
+        if NodeRole.Router == type or type == NodeRole.BorderRouter or NodeRole.OpenVpnRouter == type:
             return Assigner(self.__routerStart, self.__routerEnd, self.__routerStep)
 
         raise ValueError("IX IP assignment must done with mapIxAddress().")

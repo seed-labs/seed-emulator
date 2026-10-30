@@ -17,8 +17,13 @@ from typing import List, Dict, Set, Tuple, Optional
 from string import ascii_letters
 from random import choice
 from .BaseSystem import BaseSystem
+from .SystemProfile import SystemProfile
 
-DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat']
+DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat-openbsd']
+
+ROUTER_BGP_ROLE_EDGE = "edge"
+ROUTER_BGP_ROLE_CORE = "core"
+ROUTER_BGP_ROLES = {ROUTER_BGP_ROLE_EDGE, ROUTER_BGP_ROLE_CORE}
 
 class File(Printable):
     """!
@@ -210,7 +215,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
     """
 
     __name: str
-    __base_system: BaseSystem
+    __base_system: SystemProfile
     __asn: int
     __scope: str
     __role: NodeRole
@@ -488,7 +493,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__privileged
 
-    def setBaseSystem(self, base_system: BaseSystem) -> Node:
+    def setBaseSystem(self, base_system: SystemProfile) -> Node:
         """!
         @brief Set a base_system of a node.
 
@@ -496,9 +501,12 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
 
         @returns self, for chaining API calls.
         """
+        if not isinstance(base_system, SystemProfile):
+            raise TypeError("base_system must be a SystemProfile")
         self.__base_system = base_system
+        return self
 
-    def getBaseSystem(self) -> BaseSystem:
+    def getBaseSystem(self) -> SystemProfile:
         """!
         @brief Get configured base system on this node.
 
@@ -1134,14 +1142,118 @@ class Router(Node):
 
     __loopback_address: str
     __is_border_router: bool
-
+    __is_bgp_rr: bool
+    __bgp_cluster_id: Optional[str]
+    __routing_backend: str
+    __bgp_role: Optional[str]
+    __disabled_control_planes: Set[str]
     __extensions: Dict[str, RouterExtension]
 
-    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None):
+    def __init__(self, name: str, role: NodeRole, asn: int, scope: str = None, routingBackend: str = "bird"):
         self.__is_border_router = False
         self.__loopback_address = None
+        self.__is_bgp_rr = False
+        self.__bgp_cluster_id = None
+        self.__routing_backend = "bird"
+        self.__bgp_role = None
+        self.__disabled_control_planes = set()
         self.__extensions = {}
         super().__init__( name,role,asn,scope)
+        self.setRoutingBackend(routingBackend)
+
+    def setBgpRole(self, role: str) -> Router:
+        """!
+        @brief Set this router's BGP participation role.
+
+        This does not change the structural NodeRole. It is an AS-level routing
+        hint used by iBGP designs such as edge-only BGP with a BGP-free core.
+
+        @param role edge or core.
+
+        @returns self, for chaining API calls.
+        """
+        value = str(role or "").strip().lower()
+        assert value in ROUTER_BGP_ROLES, "unsupported BGP role: {}. valid values: {}".format(
+            role, sorted(ROUTER_BGP_ROLES)
+        )
+        self.__bgp_role = value
+        self.setLabel("seedemu_bgp_role", value)
+        return self
+
+    def getBgpRole(self) -> Optional[str]:
+        """!
+        @brief Get this router's optional BGP participation role.
+
+        @returns role name, or None if no role was set.
+        """
+        return self.__bgp_role
+
+    def disableControlPlane(self, protocol: str) -> Router:
+        """!
+        @brief Disable a protocol-layer participation hint on this router.
+
+        The first supported flag is ibgp. It lets new opt-in iBGP modes exclude
+        a specific router without changing AS-wide legacy defaults.
+
+        @param protocol protocol participation flag to disable.
+
+        @returns self, for chaining API calls.
+        """
+        value = str(protocol or "").strip().lower()
+        assert value in {"ibgp"}, "unsupported router control-plane disable flag: {}".format(protocol)
+        self.__disabled_control_planes.add(value)
+        self.setLabel("seedemu_control_plane_disabled_{}".format(value), "true")
+        return self
+
+    def isControlPlaneDisabled(self, protocol: str) -> bool:
+        """!
+        @brief Check whether a protocol-layer participation hint is disabled.
+        """
+        return str(protocol or "").strip().lower() in self.__disabled_control_planes
+
+    def getDisabledControlPlanes(self) -> Set[str]:
+        """!
+        @brief Get disabled protocol-layer participation hints.
+        """
+        return set(self.__disabled_control_planes)
+
+    def makeRouteReflector(self, is_rr: bool = True) -> Router:
+        """!
+        @brief Mark this router as an iBGP Route Reflector.
+
+        @param is_rr whether this router should act as a Route Reflector.
+
+        @returns self, for chaining API calls.
+        """
+        self.__is_bgp_rr = is_rr
+        return self
+
+    def joinBgpCluster(self, cluster_id: str) -> Router:
+        """!
+        @brief Assign this router to an iBGP Route Reflector cluster.
+
+        @param cluster_id cluster ID previously registered on the AS.
+
+        @returns self, for chaining API calls.
+        """
+        self.__bgp_cluster_id = cluster_id
+        return self
+
+    def getBgpClusterId(self) -> Optional[str]:
+        """!
+        @brief Get the configured Route Reflector cluster ID.
+
+        @returns cluster ID, or None if the router uses the default cluster.
+        """
+        return self.__bgp_cluster_id
+
+    def isRouteReflector(self) -> bool:
+        """!
+        @brief Check whether this router is configured as a Route Reflector.
+
+        @returns True if the router acts as an iBGP Route Reflector.
+        """
+        return self.__is_bgp_rr
 
     def hasExtension(self, name: str) -> bool:
         return name in self.__extensions
@@ -1169,6 +1281,30 @@ class Router(Node):
 
     def isBorderRouter(self):
         return self.__is_border_router
+
+    def setRoutingBackend(self, backend: str) -> Router:
+        """!
+        @brief Set the full routing daemon backend for this router.
+
+        @param backend routing backend. Supported values are bird and frr.
+        ExaBGP is installed as a service speaker, not as a router backend.
+
+        @returns self, for chaining API calls.
+        """
+        value = str(backend or "bird").strip().lower() or "bird"
+        assert value in {"bird", "frr"}, "unsupported routing backend: {}".format(backend)
+        self.__routing_backend = value
+        self.setLabel("seedemu_routing_backend", value)
+        self.setLabel("seedemu_bgp_backend", value)
+        return self
+
+    def getRoutingBackend(self) -> str:
+        """!
+        @brief Get the full routing daemon backend for this router.
+
+        @returns backend name.
+        """
+        return self.__routing_backend
 
     def setLoopbackAddress(self, address: str):
         """!
@@ -1472,4 +1608,3 @@ def promote_to_scion_router(node: Node):
         extn.initScionRouter()
         node.installExtension(extn)
     return node
-

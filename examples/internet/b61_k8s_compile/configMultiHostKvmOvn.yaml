@@ -1,0 +1,59 @@
+kind: multiHostKvmOvn
+clusterName: seedemu-k3s
+
+hypervisors:
+  - name: amd
+    ip: 10.202.236.88
+    connection: local
+    ssh:
+      user: lxl
+      key: ~/.ssh/id_ed25519
+    routedSubnet:
+      cidr: 10.80.1.0/24
+      gateway: 10.80.1.1
+      networkName: seedemu-amd
+      bridgeName: virbr-seed1
+      vmIpStart: 10
+    vmCount: 3
+
+  - name: idc
+    ip: 10.202.191.39
+    ssh:
+      user: seed
+      key: ~/.ssh/id_ed25519
+    routedSubnet:
+      cidr: 10.80.2.0/24
+      gateway: 10.80.2.1
+      networkName: seedemu-idc
+      bridgeName: virbr-seed2
+      vmIpStart: 10
+    vmCount: 3
+
+vmSsh:
+  user: ubuntu
+  key: ~/.ssh/id_ed25519
+
+multiHostKvm:
+  routingTunnel:
+    type: vxlan
+    namePrefix: vxkvm
+    cidr: 10.255.80.0/24
+    vniBase: 4280
+    dstPort: 4790
+
+master:
+  placement: amd
+  vcpus: 16
+  memoryMb: 32768
+  diskGb: 120
+
+workers:
+  vcpus: 4
+  memoryMb: 16384
+  diskGb: 80
+
+fabric:
+  type: ovn
+
+registry:
+  port: 5000

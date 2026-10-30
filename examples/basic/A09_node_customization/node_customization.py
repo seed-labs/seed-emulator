@@ -1,70 +1,75 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+from argparse import ArgumentParser
+from pathlib import Path
+
 from seedemu import *
 from examples.basic.A01_transit_as import transit_as
-import sys, os
 
-###############################################################################
-# Set the platform information
-script_name = os.path.basename(__file__)
 
-if len(sys.argv) == 1:
-    platform = Platform.AMD64
-elif len(sys.argv) == 2:
-    if sys.argv[1].lower() == 'amd':
-        platform = Platform.AMD64
-    elif sys.argv[1].lower() == 'arm':
-        platform = Platform.ARM64
-    else:
-        print(f"Usage:  {script_name} amd|arm")
-        sys.exit(1)
-else:
-    print(f"Usage:  {script_name} amd|arm")
-    sys.exit(1)
+def parse_args():
+    parser = ArgumentParser(description="Customize a SeedEmu node.")
+    parser.add_argument("--platform", choices=("amd", "arm"), default="amd")
+    parser.add_argument("--output", default="output")
+    return parser.parse_args()
 
-###############################################################################
-# Load the pre-built component from example A01_transit_as
-transit_as.run(dumpfile='./base_component.bin')
 
-emu = Emulator()
-emu.load('./base_component.bin')
+def main() -> None:
+    args = parse_args()
+    platform = Platform.AMD64 if args.platform == "amd" else Platform.ARM64
+    output = Path(args.output)
 
-###############################################################################
-# Demonstrating how to customize a node
+    # Load the pre-built component from example A01_transit_as.
+    transit_as.run(dumpfile="./base_component.bin")
 
-base  = emu.getLayer('Base')
+    emu = Emulator()
+    emu.load("./base_component.bin")
 
-# Get the instances of the AS and node objects
-as152 = base.getAutonomousSystem(152)
-node  = as152.getHost('host0')
+    base = emu.getLayer("Base")
+    as152 = base.getAutonomousSystem(152)
+    node = as152.getHost("host0")
 
-# Dockerfile: RUN apt-get update && apt-get install -y 
-#                     --no-install-recommends python3
-node.addSoftware("python3")
+    # Select a runtime profile; the compiler decides how to realize it.
+    node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
+    assert node.getBaseSystem() == BaseSystem.SEEDEMU_ROUTER
 
-# Dockerfile: RUN curl http://example.com
-node.addBuildCommand("curl http://example.com")
+    assert BaseSystem.SEEDEMU_ROUTER.contains(BaseSystem.SEEDEMU_BASE)
+    assert BaseSystem.SEEDEMU_BASE.contains(BaseSystem.UBUNTU_20_04)
 
-# Create a file on the node; file content come from hostpath.
-# We need to use an absolute path for the hostpath parameter. 
-# Dockerfile: COPY 0a1fa965b6af40555d9b54e6693b2af1 /myprog.py
-node.importFile(hostpath=os.getcwd() + "/myprog.py",
-                containerpath="/myprog.py")
+    # Dockerfile: RUN apt-get update && apt-get install -y
+    #                     --no-install-recommends python3
+    node.addSoftware("python3")
 
-# Create a file on the node; file content is the provided string
-# Dockerfile: COPY 0ca69acb643ae682dd700b7c190b2564 /file.txt
-node.setFile(path="/file.txt", content="hello world")
+    # Dockerfile: RUN curl http://example.com
+    node.addBuildCommand("curl http://example.com")
 
-# Add "ping 1.2.3.4" to start.sh
-node.insertStartCommand(0, "ping 1.2.3.4")
+    # Dockerfile: COPY <generated-name> /myprog.py
+    node.importFile(
+        hostpath=str(Path.cwd() / "myprog.py"),
+        containerpath="/myprog.py",
+    )
 
-# Add "python3 /myprog.py &" to start.sh
-node.appendStartCommand("python3 /myprog.py", fork=True)
+    # Dockerfile: COPY <generated-name> /file.txt
+    node.setFile(path="/file.txt", content="hello world")
 
-###############################################################################
-# Render and compile
+    # Add a finite ping check to start.sh.
+    node.insertStartCommand(0, "ping -c 1 1.2.3.4 >/dev/null || true")
 
-emu.render()
-emu.compile(Docker(platform=platform), './output', override=True)
+    # Add "python3 /myprog.py &" to start.sh.
+    node.appendStartCommand("python3 /myprog.py", fork=True)
 
+    emu.render()
+    docker = Docker(platform=platform)
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
+    emu.compile(docker, str(output), override=True)
+
+
+if __name__ == "__main__":
+    main()

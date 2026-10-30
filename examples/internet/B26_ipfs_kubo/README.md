@@ -69,7 +69,7 @@ of a node to a physical node in the Emulator. One way to do all of this is as fo
     emu.compile(docker, OUTPUDIR, override = True)
     ```
     Here, we additionally enable the *Internet Map*, an emulator functionality that displays a
-    visualization of the emulation in your browser at http://localhost:8080/map.html. We also enable override for our compiler, so that it will overwrite previous compiles each time we
+    visualization of the emulation in your browser at http://localhost:8080/pro/map. We also enable override for our compiler, so that it will overwrite previous compiles each time we
     run this script.
 
 7. Finally, go ahead and run the emulation script, in this case, `kubo.py`. This will compile
@@ -85,7 +85,7 @@ the emulation.
 ```
 
 - Now that the emulation is running, you can view the network topology and access each host
-via the Internet Map at http://localhost:8080/map.html. Alternatively, you can use the `docker
+via the Internet Map at http://localhost:8080/pro/map. Alternatively, you can use the `docker
 exec` command to attach a CLI session to a given Docker container.
 - The best way to interact with IPFS here, is to use the Kubo CLI on any host that has Kubo
 installed.

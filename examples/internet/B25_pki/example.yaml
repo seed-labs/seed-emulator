@@ -1,0 +1,111 @@
+id: internet-b25-pki
+name: PKI With ACME
+description: A small Internet deployment with two internal CAs issuing trusted HTTPS certificates to two web servers.
+runner: internet
+script: pki.py
+platform: amd
+features:
+  - ipv4-default
+  - pki
+  - acme
+  - https
+  - etc-hosts
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - base_internet.bin
+  timeout: 900
+
+build:
+  enabled: true
+  timeout: 2400
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B25 PKI services are running
+      type: compose-ps
+      services:
+        - hnode_150_ca1
+        - hnode_150_ca2
+        - hnode_151_web1
+        - hnode_151_web2
+        - hnode_150_host_0
+      retries: 40
+      interval: 3
+
+    - name: CA1 ACME endpoint is ready
+      type: exec
+      service: hnode_150_ca1
+      command: "curl -kfsS https://seedCA.net/acme/acme/directory >/dev/null"
+      expect_exit: 0
+      retries: 60
+      interval: 5
+
+    - name: CA2 ACME endpoint is ready
+      type: exec
+      service: hnode_150_ca2
+      command: "curl -kfsS https://seedCA.com/acme/acme/directory >/dev/null"
+      expect_exit: 0
+      retries: 60
+      interval: 5
+
+    - name: example32.com HTTPS endpoint is ready
+      type: exec
+      service: hnode_150_host_0
+      command: "curl -fsS https://example32.com >/dev/null"
+      expect_exit: 0
+      retries: 60
+      interval: 5
+
+    - name: bank32.com HTTPS endpoint is ready
+      type: exec
+      service: hnode_150_host_0
+      command: "curl -fsS https://bank32.com >/dev/null"
+      expect_exit: 0
+      retries: 60
+      interval: 5
+
+probes:
+  - name: example32.com resolves through EtcHosts
+    type: exec
+    service: hnode_150_host_0
+    command: "getent hosts example32.com | grep -q '10.151.0.7'"
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: bank32.com resolves through EtcHosts
+    type: exec
+    service: hnode_150_host_0
+    command: "getent hosts bank32.com | grep -q '10.151.0.8'"
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: example32.com serves trusted HTTPS content
+    type: exec
+    service: hnode_150_host_0
+    command: "curl -fsS https://example32.com | grep -q 'Web server at example32.com'"
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: bank32.com serves trusted HTTPS content
+    type: exec
+    service: hnode_150_host_0
+    command: "curl -fsS https://bank32.com | grep -q 'Web server at bank32.com'"
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: B25 PKI runtime validation
+    script: test_runtime.py
+    timeout: 600

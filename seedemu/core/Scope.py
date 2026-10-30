@@ -61,6 +61,8 @@ class ScopeType(IntEnum):
                 return ScopeType.CSNODE
             case NodeRole.RouteServer:
                 return ScopeType.RSNODE
+            case NodeRole.OpenVpnRouter:
+                return ScopeType.RNODE
 
 
 

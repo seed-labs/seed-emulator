@@ -11,7 +11,7 @@ We show how to conduct this step for Firefox.
 Other browsers have similar steps. 
 Go to Firefox's menu, click the `"Add-ons and themes"`
 item. Search for `metamask`, and you will find
-an extension developed by `danfinlay`.
+an extension developed by `MetaMask`.
 Follow the instruction to install it. 
 
 
@@ -26,26 +26,23 @@ address you get from your emulator may be different from
 those listed in the following).
 
 ```
-$ dockps | grep Eth
-e372096bb926  as150h-Ethereum-POA-00-Signer-BootNode-10.150.0.71
-f0ef91ef9e22  as150h-Ethereum-POA-01-10.150.0.72
-3b8c1d191058  as151h-Ethereum-POA-02-Signer-10.151.0.71
-...
-aea1106d932d  as164h-Ethereum-POA-18-Signer-BootNode-10.164.0.71
-7cd6fa6888b2  as164h-Ethereum-POA-19-10.164.0.72
+$ dockps | grep Geth
+2ebb64a85bbc  as150h-Ethereum-POS-Geth-1-10.150.0.71
+9b8623f3cb7a  as150h-Ethereum-POS-Geth-2-10.150.0.72
+14093c1f7c6f  as151h-Ethereum-POS-Geth-3-10.151.0.71
 ```
 
 Pick one of the nodes, and then configure MetaMask to connect to
-this node. Go to the `Settings` menu inside MetaMask
+this node. Go to the menu inside MetaMask (usually in the upper right corner)
 and follow the instructions below. Replace
 the `<IP Address>` with the actual IP address of the
 node that you have selected. 
 
 ```
-Settings > Networks > Add a network > Add a network manually
+Manage > Networks > Add a custom network
 
 Network name:    pick any name (e.g., SEED emulator)
-New RPC URL:     http://<IP Address>:8545
+Default RPC URL:     http://<IP Address>:8545
 Chain ID:        1337
 Currency symbol: ETH
 ```
@@ -103,3 +100,6 @@ networks are worthless. To enable that, turn on the following switch.
 
   Select this to show fiat conversion on test networks
   ```
+
+- Problem: MetaMask can connect to our blockchain and the account can be created, but MetaMask gets stuck when sending transactions.
+If you are in Mainland China, the possible reason is that your browser does not have a system proxy. You can configure the proxy in the browser settings or directly configure the system proxy for your machine.

@@ -1,0 +1,94 @@
+id: basic-a63-control-plane-regression
+name: Control-Plane Regression
+description: A compact regression topology for route-server, mixed BIRD/FRR, FRR route-reflector, ExaBGP service, and MPLS readiness coverage.
+runner: internet
+script: control_plane_regression.py
+platform: amd
+features:
+  - ipv4-default
+  - ebgp-route-server
+  - ebgp-private-peering
+  - routing-backend
+  - bird
+  - frr
+  - ibgp
+  - ibgp-route-reflector
+  - ospf
+  - exabgp-service
+  - mpls-readiness
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: A63 control-plane services are running
+      type: compose-ps
+      services:
+        - rs_ix_ix100
+        - brdnode_150_router0
+        - brdnode_151_router0
+        - brdnode_2_r1
+        - brdnode_2_r2
+        - brdnode_152_router0
+        - brdnode_153_router0
+        - brdnode_3_rr
+        - rnode_3_client
+        - brdnode_154_router0
+        - brdnode_4_router0
+        - hnode_180_exabgp
+        - brdnode_20_r1
+        - rnode_20_r2
+        - rnode_20_r3
+        - brdnode_20_r4
+      retries: 45
+      interval: 3
+
+probes:
+  - name: AS151 learns AS150 prefix through the BIRD route server
+    type: exec
+    service: brdnode_151_router0
+    command: birdc show route | grep -q '10.150.0.0/24'
+    expect_exit: 0
+    retries: 40
+    interval: 5
+
+  - name: AS152 FRR router learns AS153 route through mixed-backend iBGP
+    type: exec
+    service: brdnode_152_router0
+    command: vtysh -c "show ip bgp" | grep -q '10.153.0.0/24'
+    expect_exit: 0
+    retries: 40
+    interval: 5
+
+  - name: AS3 FRR route-reflector client learns AS154 route
+    type: exec
+    service: rnode_3_client
+    command: vtysh -c "show ip bgp" | grep -q '10.154.0.0/24'
+    expect_exit: 0
+    retries: 40
+    interval: 5
+
+  - name: AS4 FRR router learns ExaBGP static route
+    type: exec
+    service: brdnode_4_router0
+    command: vtysh -c "show ip bgp 198.51.100.0/24" | grep -q '198.51.100.0/24'
+    expect_exit: 0
+    retries: 40
+    interval: 5
+
+test_programs:
+  - name: A63 control-plane regression runtime validation
+    script: test_runtime.py
+    timeout: 1200

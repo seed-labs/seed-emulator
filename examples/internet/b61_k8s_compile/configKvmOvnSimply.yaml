@@ -1,0 +1,17 @@
+kind: kvmOvn
+clusterName: seedemu-k3s
+
+master:
+  vcpus: 12
+  memoryMb: 10240
+  diskGb: 80
+
+workers:
+  count: 2
+  vcpus: 6
+  memoryMb: 10240
+  diskGb: 80
+
+ssh:
+  user: ubuntu
+  key: ~/.ssh/id_ed25519

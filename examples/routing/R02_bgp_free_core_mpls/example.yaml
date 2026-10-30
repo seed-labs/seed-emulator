@@ -1,0 +1,70 @@
+id: routing-r02-bgp-free-core-mpls
+name: BGP-Free Core MPLS Regression
+description: Exercises edge-only iBGP with MPLS forwarding for full-mesh and route-reflector designs.
+runner: internet
+script: bgp_free_core_mpls.py
+platform: amd
+features:
+  - routing-regression
+  - bgp-free-core
+  - mpls
+  - ldp
+  - frr
+  - ibgp-full-mesh
+  - ibgp-route-reflector
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: BGP-free core MPLS services are running
+      type: compose-ps
+      services:
+        - brdnode_8_edge0
+        - rnode_8_core0
+        - rnode_8_core1
+        - brdnode_8_edge1
+        - brdnode_9_edge0
+        - rnode_9_core0
+        - rnode_9_core1
+        - brdnode_9_edge1
+        - hnode_162_host_0
+        - hnode_163_host_0
+        - hnode_164_host_0
+        - hnode_165_host_0
+      retries: 40
+      interval: 3
+
+probes:
+  - name: AS162 reaches AS163 through AS8 MPLS BGP-free core
+    type: ping
+    service: hnode_162_host_0
+    target: 10.163.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+  - name: AS164 reaches AS165 through AS9 MPLS route-reflector core
+    type: ping
+    service: hnode_164_host_0
+    target: 10.165.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: BGP-free core MPLS runtime validation
+    script: test_runtime.py
+    timeout: 420

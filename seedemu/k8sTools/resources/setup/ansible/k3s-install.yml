@@ -1,0 +1,663 @@
+---
+# K3s Installation Playbook for SEED Emulator
+# Installs K3s with Multus + Macvlan CNI for L2 connectivity
+
+- name: Install K3s Master
+  hosts: master
+  become: yes
+  tasks:
+    - name: Optionally uninstall existing K3s server
+      shell: |
+        if [ -x /usr/local/bin/k3s-uninstall.sh ]; then
+          /usr/local/bin/k3s-uninstall.sh
+        fi
+      args:
+        executable: /bin/bash
+      when: seed_k3s_force_reinstall | bool
+
+    - name: Check if K3s server already installed
+      stat:
+        path: /etc/rancher/k3s/k3s.yaml
+      register: k3s_server_yaml
+
+    - name: Ensure k3s config directory exists
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Render K3s server config
+      copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          write-kubeconfig-mode: "644"
+          flannel-backend: "{{ seed_k3s_flannel_backend }}"
+          disable:
+            - traefik
+          cluster-cidr: "{{ seed_k3s_cluster_cidr }}"
+          service-cidr: "{{ seed_k3s_service_cidr }}"
+          node-name: "{{ inventory_hostname }}"
+          kubelet-arg:
+            - "max-pods={{ seed_k3s_max_pods }}"
+          kube-controller-manager-arg:
+            - "node-cidr-mask-size-ipv4={{ seed_k3s_node_cidr_mask_size_ipv4 }}"
+      register: k3s_server_config
+
+    - name: Configure registry mirror (insecure HTTP)
+      copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        mode: "0644"
+        content: |
+          mirrors:
+            "{{ seed_registry_host }}:{{ seed_registry_port }}":
+              endpoint:
+                - "http://{{ seed_registry_host }}:{{ seed_registry_port }}"
+            "docker.io":
+              endpoint:
+                - "{{ seed_docker_io_mirror_endpoint }}"
+            "registry-1.docker.io":
+              endpoint:
+                - "{{ seed_docker_io_mirror_endpoint }}"
+      register: k3s_registries
+
+    - name: Restart K3s server if registry config changed
+      service:
+        name: k3s
+        state: restarted
+      when: k3s_server_yaml.stat.exists and k3s_registries.changed
+
+    - name: Restart K3s server if server config changed
+      service:
+        name: k3s
+        state: restarted
+      when: k3s_server_yaml.stat.exists and k3s_server_config.changed
+
+    - name: Check Docker command on master
+      shell: command -v docker
+      register: docker_command
+      failed_when: false
+      changed_when: false
+
+    - name: Install Docker (used to host local registry container)
+      shell: |
+        set -euo pipefail
+        waitAptLocks() {
+          for _ in $(seq 1 180); do
+            if ! fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock /var/lib/apt/lists/lock >/dev/null 2>&1; then
+              return 0
+            fi
+            sleep 2
+          done
+          echo "apt/dpkg locks did not clear before Docker install" >&2
+          return 1
+        }
+        waitAptLocks
+        apt-get update -o Acquire::Retries=3
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          -o DPkg::Lock::Timeout=300 \
+          -o Dpkg::Options::=--force-confdef \
+          -o Dpkg::Options::=--force-confold \
+          --no-install-recommends docker.io
+      args:
+        executable: /bin/bash
+      when: docker_command.rc != 0
+
+    - name: Configure Docker daemon for local insecure registry
+      copy:
+        dest: /etc/docker/daemon.json
+        mode: "0644"
+        content: |
+          {
+            "insecure-registries": ["{{ seed_registry_host }}:{{ seed_registry_port }}"]
+          }
+      register: docker_daemon_config
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Restart Docker if daemon config changed
+      service:
+        name: docker
+        state: restarted
+      when: docker_daemon_config.changed
+
+    - name: Install K3s server
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_install_version }} \
+          INSTALL_K3S_ARTIFACT_URL={{ seed_k3s_artifact_url }} \
+          sh -
+      args:
+        creates: /etc/rancher/k3s/k3s.yaml
+
+    - name: Wait for K3s to be ready
+      shell: k3s kubectl get nodes
+      register: nodes
+      until: nodes.rc == 0
+      retries: 30
+      delay: 5
+
+    - name: Fetch K3s binary for offline worker installs
+      fetch:
+        src: /usr/local/bin/k3s
+        dest: "/tmp/seedemu-k3s-binary-{{ k3s_install_version }}/k3s"
+        flat: yes
+
+    - name: Install CNI plugins required by Multus (macvlan/ipvlan/static)
+      shell: |
+        set -euo pipefail
+        wait_apt_locks() {
+          for _ in $(seq 1 150); do
+            if ! fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock /var/lib/apt/lists/lock >/dev/null 2>&1; then
+              return 0
+            fi
+            sleep 2
+          done
+          echo "apt/dpkg locks did not clear in time" >&2
+          return 1
+        }
+        if dpkg -s containernetworking-plugins >/dev/null 2>&1; then
+          exit 0
+        fi
+        wait_apt_locks
+        apt-get update -o Acquire::Retries=3 || true
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends containernetworking-plugins
+      args:
+        executable: /bin/bash
+
+    - name: Ensure /opt/cni/bin exists
+      file:
+        path: /opt/cni/bin
+        state: directory
+        mode: "0755"
+
+    - name: Link required CNI plugin binaries into /opt/cni/bin
+      file:
+        src: "/usr/lib/cni/{{ item }}"
+        dest: "/opt/cni/bin/{{ item }}"
+        state: link
+        force: yes
+      loop:
+        - macvlan
+        - ipvlan
+        - static
+
+    - name: Ensure Multus kubeconfig compatibility path exists on K3s master
+      shell: |
+        set -euo pipefail
+        sudo -n mkdir -p /etc/cni/net.d
+        sudo -n rm -rf /etc/cni/net.d/multus.d
+        sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d
+      args:
+        executable: /bin/bash
+
+    - name: Get K3s token
+      shell: cat /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+
+    - name: Store token
+      set_fact:
+        k3s_server_token: "{{ k3s_token.stdout }}"
+
+    - name: Write bundled Multus CNI manifest
+      copy:
+        dest: /tmp/seedemu-multus-daemonset.yml
+        mode: "0644"
+        content: |
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: network-attachment-definitions.k8s.cni.cncf.io
+          spec:
+            group: k8s.cni.cncf.io
+            scope: Namespaced
+            names:
+              plural: network-attachment-definitions
+              singular: network-attachment-definition
+              kind: NetworkAttachmentDefinition
+              shortNames:
+                - nad
+                - net-attach-def
+            versions:
+              - name: v1
+                served: true
+                storage: true
+                schema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                      metadata:
+                        type: object
+                      spec:
+                        type: object
+                        properties:
+                          config:
+                            type: string
+          ---
+          kind: ClusterRole
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: multus
+          rules:
+            - apiGroups:
+                - k8s.cni.cncf.io
+              resources:
+                - '*'
+              verbs:
+                - '*'
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+                - pods/status
+              verbs:
+                - get
+                - update
+            - apiGroups:
+                - ""
+                - events.k8s.io
+              resources:
+                - events
+              verbs:
+                - create
+                - patch
+                - update
+          ---
+          kind: ClusterRoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: multus
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: multus
+          subjects:
+            - kind: ServiceAccount
+              name: multus
+              namespace: kube-system
+          ---
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: multus
+            namespace: kube-system
+          ---
+          kind: ConfigMap
+          apiVersion: v1
+          metadata:
+            name: multus-cni-config
+            namespace: kube-system
+            labels:
+              tier: node
+              app: multus
+          data:
+            cni-conf.json: |
+              {
+                "name": "multus-cni-network",
+                "type": "multus",
+                "capabilities": {
+                  "portMappings": true
+                },
+                "delegates": [
+                  {
+                    "cniVersion": "0.3.1",
+                    "name": "default-cni-network",
+                    "plugins": [
+                      {
+                        "type": "flannel",
+                        "name": "flannel.1",
+                        "delegate": {
+                          "isDefaultGateway": true,
+                          "hairpinMode": true
+                        }
+                      },
+                      {
+                        "type": "portmap",
+                        "capabilities": {
+                          "portMappings": true
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"
+              }
+          ---
+          apiVersion: apps/v1
+          kind: DaemonSet
+          metadata:
+            name: kube-multus-ds
+            namespace: kube-system
+            labels:
+              tier: node
+              app: multus
+              name: multus
+          spec:
+            selector:
+              matchLabels:
+                name: multus
+            updateStrategy:
+              type: RollingUpdate
+            template:
+              metadata:
+                labels:
+                  tier: node
+                  app: multus
+                  name: multus
+              spec:
+                hostNetwork: true
+                tolerations:
+                  - operator: Exists
+                    effect: NoSchedule
+                  - operator: Exists
+                    effect: NoExecute
+                serviceAccountName: multus
+                containers:
+                  - name: kube-multus
+                    image: ghcr.io/k8snetworkplumbingwg/multus-cni:snapshot
+                    command:
+                      - /thin_entrypoint
+                    args:
+                      - --multus-conf-file=/tmp/multus-conf/00-multus.conf
+                      - --multus-autoconfig-dir=/host/etc/cni/net.d
+                      - --cni-conf-dir=/host/etc/cni/net.d
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 50Mi
+                      limits:
+                        cpu: 100m
+                        memory: 50Mi
+                    securityContext:
+                      privileged: true
+                    terminationMessagePolicy: FallbackToLogsOnError
+                    volumeMounts:
+                      - name: cni
+                        mountPath: /host/etc/cni/net.d
+                      - name: cnibin
+                        mountPath: /host/opt/cni/bin
+                      - name: multus-cfg
+                        mountPath: /tmp/multus-conf
+                initContainers:
+                  - name: install-multus-binary
+                    image: ghcr.io/k8snetworkplumbingwg/multus-cni:snapshot
+                    command:
+                      - /install_multus
+                    args:
+                      - --type
+                      - thin
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 15Mi
+                    securityContext:
+                      privileged: true
+                    terminationMessagePolicy: FallbackToLogsOnError
+                    volumeMounts:
+                      - name: cnibin
+                        mountPath: /host/opt/cni/bin
+                        mountPropagation: Bidirectional
+                terminationGracePeriodSeconds: 10
+                volumes:
+                  - name: cni
+                    hostPath:
+                      path: /etc/cni/net.d
+                  - name: cnibin
+                    hostPath:
+                      path: /opt/cni/bin
+                  - name: multus-cfg
+                    configMap:
+                      name: multus-cni-config
+                      items:
+                        - key: cni-conf.json
+                          path: 00-multus.conf
+
+    - name: Install Multus CNI
+      shell: k3s kubectl apply -f /tmp/seedemu-multus-daemonset.yml
+
+    - name: Patch Multus ClusterRole for pod list/watch (required by k3s Multus pod-wait logic)
+      shell: |
+        cat <<EOF | k3s kubectl apply -f -
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: multus
+        rules:
+        - apiGroups:
+          - k8s.cni.cncf.io
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - pods/status
+          verbs:
+          - get
+          - list
+          - watch
+          - update
+        - apiGroups:
+          - ""
+          - events.k8s.io
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+          - update
+        EOF
+      args:
+        executable: /bin/bash
+
+    - name: Patch Multus hostPaths for K3s containerd CNI dirs
+      shell: |
+        set -euo pipefail
+        for i in $(seq 1 30); do
+          if k3s kubectl -n kube-system get ds kube-multus-ds >/dev/null 2>&1; then
+            break
+          fi
+          sleep 2
+        done
+        conf_dir="/var/lib/rancher/k3s/agent/etc/cni/net.d"
+        if [ ! -d "${conf_dir}" ]; then
+          conf_dir="$(awk -F'"' '/conf_dir[[:space:]]*=/{print $2; exit}' /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null || true)"
+        fi
+        bin_dir="$(awk -F'"' '/bin_dir[[:space:]]*=/{print $2; exit}' /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null || true)"
+        if [ -z "${bin_dir}" ]; then
+          if [ -d /var/lib/rancher/k3s/data/cni ]; then
+            bin_dir="/var/lib/rancher/k3s/data/cni"
+          elif [ -d /var/lib/rancher/k3s/data/current/bin ]; then
+            bin_dir="/var/lib/rancher/k3s/data/current/bin"
+          fi
+        fi
+        if [ -z "${conf_dir}" ] || [ -z "${bin_dir}" ]; then
+          echo "Failed to detect k3s conf_dir/bin_dir" >&2
+          exit 1
+        fi
+        k3s kubectl -n kube-system patch ds kube-multus-ds --type='strategic' -p "{\"spec\":{\"template\":{\"spec\":{\"volumes\":[{\"name\":\"cni\",\"hostPath\":{\"path\":\"${conf_dir}\"}},{\"name\":\"cnibin\",\"hostPath\":{\"path\":\"${bin_dir}\"}}]}}}}"
+      args:
+        executable: /bin/bash
+      
+    - name: Label master node
+      shell: k3s kubectl label node {{ inventory_hostname }} seedemu.io/as-group={{ seedemu_as_group }} --overwrite
+
+- name: Install K3s Workers
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Optionally uninstall existing K3s agent
+      shell: |
+        if [ -x /usr/local/bin/k3s-agent-uninstall.sh ]; then
+          /usr/local/bin/k3s-agent-uninstall.sh
+        fi
+      args:
+        executable: /bin/bash
+      when: seed_k3s_force_reinstall | bool
+
+    - name: Check if K3s agent already installed
+      stat:
+        path: /var/lib/rancher/k3s/agent
+      register: k3s_agent_dir
+
+    - name: Ensure k3s config directory exists
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Render K3s agent config
+      copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          node-name: "{{ inventory_hostname }}"
+          kubelet-arg:
+            - "max-pods={{ seed_k3s_max_pods }}"
+      register: k3s_agent_config
+
+    - name: Configure registry mirror (insecure HTTP)
+      copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        mode: "0644"
+        content: |
+          mirrors:
+            "{{ seed_registry_host }}:{{ seed_registry_port }}":
+              endpoint:
+                - "http://{{ seed_registry_host }}:{{ seed_registry_port }}"
+            "docker.io":
+              endpoint:
+                - "{{ seed_docker_io_mirror_endpoint }}"
+            "registry-1.docker.io":
+              endpoint:
+                - "{{ seed_docker_io_mirror_endpoint }}"
+      register: k3s_registries
+
+    - name: Restart K3s agent if registry config changed
+      service:
+        name: k3s-agent
+        state: restarted
+      when: k3s_agent_dir.stat.exists and k3s_registries.changed
+
+    - name: Restart K3s agent if agent config changed
+      service:
+        name: k3s-agent
+        state: restarted
+      when: k3s_agent_dir.stat.exists and k3s_agent_config.changed
+
+    - name: Copy K3s binary prepared on master to worker
+      copy:
+        src: "/tmp/seedemu-k3s-binary-{{ k3s_install_version }}/k3s"
+        dest: /usr/local/bin/k3s
+        mode: "0755"
+      when: not k3s_agent_dir.stat.exists or seed_k3s_force_reinstall | bool
+
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true \
+          INSTALL_K3S_VERSION={{ k3s_install_version }} \
+          INSTALL_K3S_ARTIFACT_URL={{ seed_k3s_artifact_url }} \
+          K3S_URL=https://{{ hostvars[groups['master'][0]]['ansible_host'] }}:6443 \
+          K3S_TOKEN={{ hostvars[groups['master'][0]]['k3s_server_token'] }} \
+          sh -
+      args:
+        creates: /var/lib/rancher/k3s/agent
+
+    - name: Install CNI plugins required by Multus (macvlan/ipvlan/static)
+      shell: |
+        set -euo pipefail
+        wait_apt_locks() {
+          for _ in $(seq 1 150); do
+            if ! fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock /var/lib/apt/lists/lock >/dev/null 2>&1; then
+              return 0
+            fi
+            sleep 2
+          done
+          echo "apt/dpkg locks did not clear in time" >&2
+          return 1
+        }
+        if dpkg -s containernetworking-plugins >/dev/null 2>&1; then
+          exit 0
+        fi
+        wait_apt_locks
+        apt-get update -o Acquire::Retries=3 || true
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends containernetworking-plugins
+      args:
+        executable: /bin/bash
+
+    - name: Ensure /opt/cni/bin exists
+      file:
+        path: /opt/cni/bin
+        state: directory
+        mode: "0755"
+
+    - name: Link required CNI plugin binaries into /opt/cni/bin
+      file:
+        src: "/usr/lib/cni/{{ item }}"
+        dest: "/opt/cni/bin/{{ item }}"
+        state: link
+        force: yes
+      loop:
+        - macvlan
+        - ipvlan
+        - static
+
+    - name: Ensure Multus kubeconfig compatibility path exists on K3s workers
+      shell: |
+        set -euo pipefail
+        sudo -n mkdir -p /etc/cni/net.d
+        sudo -n rm -rf /etc/cni/net.d/multus.d
+        sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d
+      args:
+        executable: /bin/bash
+
+- name: Configure Worker Labels
+  hosts: master
+  become: yes
+  tasks:
+    - name: Wait for workers to join
+      shell: k3s kubectl get nodes | grep -c Ready
+      register: ready_nodes
+      until: ready_nodes.stdout | int >= seed_k3s_expected_ready_nodes
+      retries: 30
+      delay: 10
+
+    - name: Label worker nodes
+      shell: k3s kubectl label node {{ item }} seedemu.io/as-group={{ hostvars[item]['seedemu_as_group'] }} --overwrite
+      loop: "{{ groups['workers'] }}"
+
+- name: Setup Macvlan CNI
+  hosts: master
+  become: yes
+  tasks:
+    - name: Create Macvlan NetworkAttachmentDefinition
+      shell: |
+        cat <<EOF | k3s kubectl apply -f -
+        apiVersion: "k8s.cni.cncf.io/v1"
+        kind: NetworkAttachmentDefinition
+        metadata:
+          name: macvlan-conf
+          namespace: default
+        spec:
+          config: '{
+            "cniVersion": "0.3.1",
+            "type": "macvlan",
+            "master": "{{ seed_cni_master_interface }}",
+            "mode": "bridge",
+            "ipam": {
+              "type": "host-local",
+              "ranges": [
+                [{"subnet": "10.0.0.0/8"}]
+              ]
+            }
+          }'
+        EOF

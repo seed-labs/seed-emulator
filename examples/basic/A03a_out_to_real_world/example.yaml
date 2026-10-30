@@ -1,0 +1,66 @@
+id: basic-a03a-out-to-real-world
+name: Out To The Real World
+description: Demonstrates outbound real-world routing through Akamai AS20940.
+runner: internet
+script: out_to_real_world.py
+platform: amd
+features:
+  - ipv4-default
+  - real-world-router
+  - web-service
+  - ebgp-private-peering
+  - ibgp
+  - ospf
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: A03a representative services are running
+      type: compose-ps
+      services:
+        - brdnode_2_r1
+        - rnode_2_r2
+        - rnode_2_r3
+        - brdnode_2_r4
+        - brdnode_151_router0
+        - brdnode_152_router0
+        - hnode_151_web
+        - hnode_152_web
+        - brdnode_20940_rw
+      retries: 30
+      interval: 3
+
+probes:
+  - name: AS151 reaches AS152 through AS2
+    type: exec
+    service: hnode_151_web
+    command: curl -fsS http://10.152.0.71 >/dev/null
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS152 reaches AS151 through AS2
+    type: exec
+    service: hnode_152_web
+    command: curl -fsS http://10.151.0.71 >/dev/null
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: A03a real-world structural validation
+    script: test_runtime.py
+    timeout: 180

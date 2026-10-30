@@ -1,0 +1,110 @@
+id: basic-a02b-manual-mpls
+name: Transit AS Manual MPLS
+description: A transit AS with MPLS provider-edge routers and a triangle core configured manually instead of using LDP.
+runner: internet
+script: manual_mpls.py
+platform: amd
+features:
+  - ipv4-default
+  - transit-as
+  - manual-mpls
+  - ebgp-private-peering
+  - ibgp
+  - ospf
+  - web-service
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: manual MPLS triangle services are running
+      type: compose-ps
+      services:
+        - brdnode_2_e1
+        - brdnode_2_e2
+        - brdnode_2_e3
+        - rnode_2_r1
+        - rnode_2_r2
+        - rnode_2_r3
+        - brdnode_151_router0
+        - brdnode_152_router0
+        - brdnode_153_router0
+        - hnode_151_web
+        - hnode_152_web
+        - hnode_153_web
+      retries: 30
+      interval: 2
+
+    - name: AS151 local web service is ready
+      type: exec
+      service: hnode_151_web
+      command: curl -fsS http://127.0.0.1 >/dev/null
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: AS152 local web service is ready
+      type: exec
+      service: hnode_152_web
+      command: curl -fsS http://127.0.0.1 >/dev/null
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: AS153 local web service is ready
+      type: exec
+      service: hnode_153_web
+      command: curl -fsS http://127.0.0.1 >/dev/null
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+probes:
+  - name: AS151 reaches AS152 through manual MPLS
+    type: exec
+    service: hnode_151_web
+    command: curl -fsS http://10.152.0.71 >/dev/null
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS151 reaches AS153 through manual MPLS
+    type: exec
+    service: hnode_151_web
+    command: curl -fsS http://10.153.0.71 >/dev/null
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS152 reaches AS151 through manual MPLS
+    type: ping
+    service: hnode_152_web
+    target: 10.151.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+  - name: AS153 reaches AS151 through manual MPLS
+    type: ping
+    service: hnode_153_web
+    target: 10.151.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: A02b manual MPLS runtime validation
+    script: test_runtime.py
+    timeout: 180

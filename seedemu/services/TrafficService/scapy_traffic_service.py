@@ -11,7 +11,7 @@ class ScapyGenerator(TrafficGenerator):
         @param filename the file name
         @return the content of the file
         """
-        with open(filename, "r") as file:
+        with open(filename, "r", encoding="utf-8") as file:
             return file.read()
 
     def install_softwares(self, node: Node):
@@ -20,7 +20,7 @@ class ScapyGenerator(TrafficGenerator):
         """
         node.addSoftware("python3")
         node.addSoftware("python3-pip")
-        node.addBuildCommand("pip3 install scapy==2.5.0")
+        node.addBuildCommand("pip3 install --break-system-packages scapy==2.5.0")
         scapy_generator_file = (
             os.path.dirname(os.path.realpath(__file__)) + "/scapy_script.py"
         )

@@ -1,0 +1,6 @@
+# K8sTools uses importlib.resources to copy these templates into temporary
+# setup/running directories after users install the seedemu package.
+# Only portable source templates are matched here, so runtime caches such as
+# __pycache__, *.pyc, and image-cache/*.tar are left out of source packages.
+include seedemu/k8sTools/README.md
+recursive-include seedemu/k8sTools/resources *.py *.sh *.yml *.yaml README.md

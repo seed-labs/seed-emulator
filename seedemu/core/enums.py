@@ -37,3 +37,6 @@ class NodeRole(Enum):
 
     ## Route served node.
     RouteServer = "Route Server"
+
+    ## OpenVpn router node.
+    OpenVpnRouter = "OpenVpnRouter"

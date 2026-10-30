@@ -1,0 +1,3 @@
+demo_output/
+*.bin
+__pycache__/

@@ -4,6 +4,24 @@ In Example `A01-transit-as`, we have saved the emulator in
 a file as a component. In this example, we demonstrate how 
 we can load it into another emulation. 
 
+## Standard Arguments
+
+```sh
+python examples/basic/A05_components/components.py amd
+python examples/basic/A05_components/components.py --platform amd --output examples/basic/A05_components/output
+python examples/basic/A05_components/components.py --dumpfile examples/basic/A05_components/components.bin
+```
+
+Supported arguments:
+
+- `amd|arm`: optional legacy platform argument.
+- `--platform amd|arm`: named platform argument.
+- `--output PATH`: output folder for Docker compiler results.
+- `--dumpfile PATH`: save a serialized emulator instead of compiling Docker output.
+- `--component-file PATH`: location for the temporary component loaded from A01.
+- `--override` / `--no-override`: control whether existing output is replaced.
+- `--skip-render`: compile without calling `emu.render()` first.
+
 
 ## Loading a Pre-Built Component
 
@@ -63,5 +81,15 @@ and place it inside this IX, if the AS wants to peer with others in this IX.
 ```
 base.createInternetExchange(102)
 ```
+
+## TestRunner Lifecycle
+
+```sh
+python seedemu/testing/cli.py all examples/basic/A05_components/example.yaml --artifact-dir ci-artifacts/a05
+```
+
+The runtime test dynamically inspects the generated Compose labels instead of
+hard-coding service names. It verifies that the added AS151 web host, AS154, and
+IX102 are generated, and that the new web services can reach each other.
 
 

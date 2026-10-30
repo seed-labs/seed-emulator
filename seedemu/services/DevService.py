@@ -255,7 +255,7 @@ class ContainerDevelopmentService(Service):
             pnode = emulator.getBindingFor(vnode) # or resolvVnode(vnode) ?!
 
             # a router with DevService installed on it -> (is its own gateway to service net / real world)
-            if pnode.getRole() == NodeRole.Router or pnode.getRole() == NodeRole.BorderRouter:
+            if pnode.getRole() == NodeRole.Router or pnode.getRole() == NodeRole.BorderRouter or pnode.getRole() == NodeRole.OpenVpnRouter:
                 pnode = promote_to_real_world_router(pnode, False)
                 # continue
 

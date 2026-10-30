@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  roundcube-db:
+    image: mariadb:10.11
+    container_name: roundcube-db-b29
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=roundcube_root_pass
+      - MYSQL_DATABASE=roundcubemail
+      - MYSQL_USER=roundcube
+      - MYSQL_PASSWORD=roundcube_pass
+    volumes:
+      - roundcube-db-data:/var/lib/mysql
+    networks:
+      - roundcube-internal
+
+  roundcube:
+    image: roundcube/roundcubemail:latest
+    container_name: roundcube-webmail-b29
+    restart: unless-stopped
+    depends_on:
+      - roundcube-db
+    environment:
+      - ROUNDCUBEMAIL_DB_TYPE=mysql
+      - ROUNDCUBEMAIL_DB_HOST=roundcube-db
+      - ROUNDCUBEMAIL_DB_NAME=roundcubemail
+      - ROUNDCUBEMAIL_DB_USER=roundcube
+      - ROUNDCUBEMAIL_DB_PASSWORD=roundcube_pass
+      # 默认IMAP服务器（QQ邮箱）
+      - ROUNDCUBEMAIL_DEFAULT_HOST=mail-qq-tencent
+      - ROUNDCUBEMAIL_DEFAULT_PORT=143
+      # 默认SMTP服务器
+      - ROUNDCUBEMAIL_SMTP_SERVER=mail-qq-tencent
+      - ROUNDCUBEMAIL_SMTP_PORT=25
+      # 上传限制
+      - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=5M
+      # 皮肤主题
+      - ROUNDCUBEMAIL_SKIN=elastic
+      # 启用插件
+      - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
+    ports:
+      - "8082:80"
+    volumes:
+      - ./roundcube-config:/var/roundcube/config:ro
+      - roundcube-www-data:/var/www/html
+    networks:
+      - roundcube-internal
+      - output_net_200_net0  # QQ邮箱
+      - output_net_201_net0  # 163邮箱
+      - output_net_202_net0  # Gmail
+      - output_net_203_net0  # Outlook
+      - output_net_204_net0  # 企业邮箱
+      - output_net_205_net0  # 自建邮箱
+
+networks:
+  roundcube-internal:
+    driver: bridge
+  # 引用已存在的SEED网络（6个邮件服务商）
+  output_net_200_net0:
+    external: true
+  output_net_201_net0:
+    external: true
+  output_net_202_net0:
+    external: true
+  output_net_203_net0:
+    external: true
+  output_net_204_net0:
+    external: true
+  output_net_205_net0:
+    external: true
+
+volumes:
+  roundcube-db-data:
+  roundcube-www-data:
+
+

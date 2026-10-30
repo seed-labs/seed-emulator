@@ -63,6 +63,7 @@ class Network(Printable, Registrable, Vertex):
         arouter = self.__aac.getOffsetAssigner(NodeRole.Router)
         self.__assigners[ NodeRole.BorderRouter ] = arouter
         self.__assigners[ NodeRole.Router ] = arouter
+        self.__assigners[ NodeRole.OpenVpnRouter ] = arouter
         self.__assigners[ NodeRole.Host ] = ahost
         self.__assigners[ NodeRole.ControlService ] = ahost
 
@@ -224,6 +225,7 @@ class Network(Printable, Registrable, Vertex):
 
         self.__aac.setRouterIpRange(routerStart, routerEnd, routerStep)
         self.__assigners[NodeRole.Router] = self.__aac.getOffsetAssigner(NodeRole.Router)
+        self.__assigners[NodeRole.OpenVpnRouter] = self.__aac.getOffsetAssigner(NodeRole.OpenVpnRouter)
         return self
 
     def getDhcpIpRange(self) -> list:
@@ -307,6 +309,39 @@ class Network(Printable, Registrable, Vertex):
 
     def getExternalConnectivityProvider(self) -> ExternalConnectivityProvider:
         return self.__ecp
+
+    def getDefaultRouter(self) -> IPv4Address:
+        """!
+        @brief Get default router for this network.
+
+        @returns default router.
+        """
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.BorderRouter:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        return __interface.getAddress()
+
+        for __node in self.getAssociations():
+            if __node.getRole() == NodeRole.Router:
+                for __interface in __node.getInterfaces():
+                    if __interface.getNet() == self:
+                        return __interface.getAddress()
+
+        return None
+
+    def hasDHCPService(self) -> bool:
+        """!
+        @brief Check if this network has DHCP service.
+
+        @returns true if has DHCP service, false otherwise.
+        """
+        for __node in self.getAssociations():
+            __services = __node.getClasses()
+            if "DHCPService" in __services:
+                return True
+        return False
+
 
     def print(self, indent: int) -> str:
         out = ' ' * indent

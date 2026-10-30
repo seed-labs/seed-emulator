@@ -1,0 +1,34 @@
+id: basic-a05-components
+name: Using a Pre-built Component
+description: Loads the A01 transit-AS component, extends AS151, adds AS154, and adds IX102 peering.
+runner: internet
+script: components.py
+platform: amd
+features:
+  - component-reuse
+  - ebgp-private-peering
+  - web-service
+  - internet-exchange
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_component.bin
+  expected:
+    - output/docker-compose.yml
+    - base_component.bin
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+
+test_programs:
+  - name: A05 component extension runtime validation
+    script: test_runtime.py
+    timeout: 180

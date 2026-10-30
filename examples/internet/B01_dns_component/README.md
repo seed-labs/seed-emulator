@@ -3,19 +3,24 @@
 This example demonstrates how we can build a DNS infrastructure as a component. 
 We generate a mini DNS infrastructure and save it into a file as 
 a DNS component. This component can be loaded into other emulators, which
-means deploying the DNS infrastructure in those emulators. 
+means deploying the DNS infrastructure in those emulators.
+
+This example is not a standalone emulator. It does not create a complete
+network topology, compile Docker files, or run containers. Its only output is
+the serialized DNS component file, `dns_component.bin`. Runtime testing should
+be done by an emulator that loads and deploys this component, such as a later
+example built for that purpose.
+
 In this mini DNS, we created the following nameservers:
 
 - Root servers: `a-root-server` and `b-root-server`
 - COM servers: `a-com-server` and `b-com-server`
 - NET server: `a-net-server`
 - EDU server: `a-edu-server`
-- Two ccTLD servers: `a-cn-server` and `b-cn-server`
 - `twitter.com` nameserver: `ns-twitter-com`
 - `google.com` nameserver: `ns-google-com`
 - `example.net` nameserver: `ns-example-net`
 - `syr.edu` nameserver: `ns-syr-edu`
-- `weibo.cn` nameserver: `ns-weibo-cn`
 
 
 ## Creating Virtual Nameserver 
@@ -70,5 +75,21 @@ infrastructure in their emulation by loading this component.
 
 ```
 emu.addLayer(dns)
-emu.dump('dns-component.bin')
+emu.dump('dns_component.bin')
 ```
+
+## Testing this component
+
+This example only verifies the component-building workflow. A good runtime test
+should be written in an emulator that consumes this component. Such a test can
+load `dns_component.bin`, bind the virtual DNS nodes to physical nodes, start
+the emulator, and then run DNS queries for records such as:
+
+- `twitter.com. A 1.1.1.1`
+- `google.com. A 2.2.2.2`
+- `example.net. A 3.3.3.3`
+- `syr.edu. A 128.230.18.63`
+
+Keeping the runtime test in a consuming example is intentional, because it tests
+the real purpose of this component: whether it can be reused by another
+emulator.

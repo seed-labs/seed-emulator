@@ -4,6 +4,6 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        image: handsonsecurity/seedemu-base
+        image: handsonsecurity/seedemu-base:2.0
 
 

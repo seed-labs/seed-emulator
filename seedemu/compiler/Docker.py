@@ -1,10 +1,11 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.containerBundle import ContainerBundle
+from seedemu.core import Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
-from typing import Dict, Generator, List, Set, Tuple
+from typing import Any, Dict, Generator, List, Mapping, Set, Tuple
 from hashlib import md5
 from functools import cmp_to_key
 from os import mkdir, chdir
@@ -12,10 +13,9 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
-from yaml import dump
+from yaml import dump, safe_dump
 
-SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-multiarch-map:buildx-latest'
-SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
+SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-internetmap:2.0'
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -98,7 +98,6 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 '''
 
 DockerCompilerFileTemplates['compose'] = """\
-version: "3.4"
 services:
 {dummies}
 {services}
@@ -211,16 +210,6 @@ DockerCompilerFileTemplates['custom_compose_label_meta'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['seedemu_ether_view'] = """\
-    seedemu-ether-client:
-        image: {clientImage}
-        container_name: seedemu_ether_view
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        ports:
-            - {clientPort}:5000/tcp
-"""
-
 DockerCompilerFileTemplates['zshrc_pre'] = """\
 export NOPRECMD=1
 alias st=set_title
@@ -327,10 +316,6 @@ class Docker(Compiler):
     __internet_map_enabled: bool
     __internet_map_port: int
 
-
-    __ether_view_enabled: bool
-    __ether_view_port: int
-
     __client_hide_svcnet: bool
 
     __images: Dict[str, Tuple[DockerImage, int]]
@@ -342,6 +327,8 @@ class Docker(Compiler):
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
+    __containerBundles: List[ContainerBundle] = []
+
     def __init__(
         self,
         platform:Platform = Platform.AMD64,
@@ -351,8 +338,6 @@ class Docker(Compiler):
         dummyNetworksMask: int = 24,
         internetMapEnabled: bool = True,
         internetMapPort: int = 8080,
-        etherViewEnabled: bool = False,
-        etherViewPort: int = 5000,
         clientHideServiceNet: bool = True,
         option_handling: OptionHandling = OptionHandling.CREATE_SEPARATE_ENV_FILE
     ):
@@ -383,9 +368,6 @@ class Docker(Compiler):
         access to all nodes, which can potentially allow root access to the
         emulator host. Only enable seedemu in a trusted network.
         @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
-        @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
-        Default to False.
-        @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -399,9 +381,6 @@ class Docker(Compiler):
 
         self.__internet_map_enabled = internetMapEnabled
         self.__internet_map_port = internetMapPort
-
-        self.__ether_view_enabled = etherViewEnabled
-        self.__ether_view_port = etherViewPort
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -420,13 +399,25 @@ class Docker(Compiler):
 
         self.__platform = platform
 
-        self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
+        self.__basesystem_dockerimage_mapping = self._getSystemImageCatalog(self.__platform)
 
-        for name, image in self.__basesystem_dockerimage_mapping.items():
+        registered_images = {}
+        for profile, image in self.__basesystem_dockerimage_mapping.items():
+            image_name = image.getName()
+            if image_name in registered_images:
+                self.__basesystem_dockerimage_mapping[profile] = registered_images[image_name]
+                continue
+            registered_images[image_name] = image
             priority = 0
-            if name == BaseSystem.DEFAULT:
+            if profile == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
+
+    def _getSystemImageCatalog(
+        self, platform: Platform
+    ) -> Dict[SystemProfile, DockerImage]:
+        """Return the system-profile image catalog for a target platform."""
+        return dict(BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[platform])
 
     def _addVolume(self, vol: BaseVolume):
         """! @brief add a docker volume/bind mount/or tmpfs
@@ -626,8 +617,15 @@ class Docker(Compiler):
 
             return (image, nodeSoft - image.getSoftware())
 
-        #Maintain a table : Virtual Image Name - Actual Image Name
-        image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
+        # Maintain a table: system profile - Docker image.
+        profile = node.getBaseSystem()
+        if profile not in self.__basesystem_dockerimage_mapping:
+            raise KeyError(
+                "{} does not support system profile {} on platform {}".format(
+                    self.getName(), profile, self.__platform.value
+                )
+            )
+        image = self.__basesystem_dockerimage_mapping[profile]
 
         return (image, nodeSoft - image.getSoftware())
 
@@ -815,6 +813,7 @@ class Docker(Compiler):
         """
         if role == NodeRole.Host: return 'h'
         if role == NodeRole.Router: return 'r'
+        if role == NodeRole.OpenVpnRouter: return 'r'
         if role == NodeRole.ControlService: return 'cs'
         if role == NodeRole.RouteServer: return 'rs'
         if role == NodeRole.BorderRouter: return 'brd'
@@ -858,7 +857,6 @@ class Docker(Compiler):
         staged_path = md5(path.encode('utf-8')).hexdigest()
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
-
 
     def _getComposeNodeName(self, node: Node) -> str:
         """!
@@ -1314,7 +1312,6 @@ class Docker(Compiler):
         self._groupSoftware(emulator)
 
         for ((scope, type, name), obj) in registry.getAll().items():
-
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
                 self.__networks += self._compileNet(obj)
@@ -1340,6 +1337,11 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+        for containerBundle in self.__containerBundles:
+            bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
+            self.__services += bundle_services
+            self.__networks += bundle_networks
+            
         # Add the Internet Map contaienr to the emulator
         if self.__internet_map_enabled:
             self._log('enabling seedemu-internet-map...')
@@ -1347,24 +1349,11 @@ class Docker(Compiler):
             # Attach the Map container to the default network
             self.attachInternetMap(port_forwarding="{}:8080/tcp".format(self.__internet_map_port))
 
-
-        # Add the Ether View contaienr to docker's default network
-        if self.__ether_view_enabled:
-            self._log('enabling seedemu-ether-view...')
-
-            self.__services += DockerCompilerFileTemplates['seedemu_ether_view'].format(
-                clientImage = SEEDEMU_ETHER_VIEW_IMAGE,
-                clientPort = self.__ether_view_port
-            )
-            self.__services += '\n'
-
-
         # Add custom entries (typically added through Docker::attachCustomContainer APIs)
         self.__services += self.__custom_services
-
+        self.__services += self._renderAdditionalComposeServices(emulator)
 
         local_images = ''
-
         for (image, _) in self.__images.values():
             if image.getName() not in self._used_images or not image.isLocal(): continue
             local_images += DockerCompilerFileTemplates['local_image'].format(
@@ -1376,13 +1365,46 @@ class Docker(Compiler):
 
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
-            services = self.__services,
-            networks = self.__networks,
-            volumes = toplevelvolumes,
-            dummies = local_images + self._makeDummies()
+            services=self.__services,
+            networks=self.__networks,
+            volumes=toplevelvolumes,
+            dummies=local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
 
         self.generateEnvFile(Scope(ScopeTier.Global),'')
+
+    def _getAdditionalComposeServices(
+        self, emulator: Emulator
+    ) -> Mapping[str, Mapping[str, Any]]:
+        """Return auxiliary Compose services supplied by a compiler subclass."""
+        return {}
+
+    def _renderAdditionalComposeServices(self, emulator: Emulator) -> str:
+        services = self._getAdditionalComposeServices(emulator)
+        if not isinstance(services, Mapping):
+            raise TypeError("additional Compose services must be a mapping")
+        if not services:
+            return ""
+
+        for name, service in services.items():
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or name != name.strip()
+            ):
+                raise ValueError(
+                    "Compose service names must be non-empty strings "
+                    "without surrounding whitespace"
+                )
+            if not isinstance(service, Mapping):
+                raise TypeError("Compose service definitions must be mappings")
+
+        rendered = safe_dump(
+            dict(services),
+            sort_keys=False,
+            default_flow_style=False,
+        ).rstrip()
+        return "".join("    {}\n".format(line) for line in rendered.splitlines())
 
     def _computeComposeTopLvlVolumes(self) -> str:
         """!@brief render the 'volumes:' section of the docker-compose.yml file
@@ -1515,6 +1537,15 @@ class Docker(Compiler):
             self.__custom_services += '\n'
 
         return self
+
+    def addContainerBundle(self, containerBundle: ContainerBundle):
+        self.__containerBundles.append(containerBundle)
+
+    def _compileContainerBundle(self, containerBundle: ContainerBundle ) -> tuple[str, str]:
+        containerBundle.configure()
+        compose_services_txt, compose_networks_txt = containerBundle.install()
+
+        return compose_services_txt, compose_networks_txt
 
     def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ) -> str:
         """!

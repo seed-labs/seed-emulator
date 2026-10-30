@@ -10,34 +10,52 @@ file. The network field of this entry can be dynamically constructed through the
 `ip_address` arguements. The API also allow users to provide port-forwarding and 
 environment-variables arguements. 
 
-
 ```
 DOCKER_COMPOSE_ENTRY = """\
-    seedemu-busybox:
+    {name}:
         image: busybox:latest
-        container_name: seedemu_busybox
+        container_name: {name}
         privileged: true
-        command: bash -c "
+        command: /bin/sh -c "
                    ip route del default  &&
-                   ip route add default via 10.150.0.254 &&
+                   ip route add default via {default_route} &&
                    tail -f /dev/null
                  "
 """
 
-docker = Docker(platform=platform)
-docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY,
-                 asn=150, net='net0', ip_address='10.150.0.80',
-                 port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+# Attach an existing container to the emulator
+docker.attachCustomContainer(
+                compose_entry = DOCKER_COMPOSE_ENTRY.format(name="busybox", 
+                                 default_route=emu.getDefaultRouterByAsnAndNetwork(150, 'net0')),
+                asn=150, net='net0', ip_address='10.150.0.80',
+                port_forwarding="9090:80/tcp", env=['a=1', 'b=2'])
+
 
 emu.compile(docker, './output', override=True)
 ```
 
-If the asn field is not provided, the container will be attached to 
+If the `asn` field is not provided, the container will be attached to 
 the default network provided by the docker. This network is not reachable from inside 
 the emultor. If the `ip_address` is not provided, the actual IP address will either 
 be provided by docker, or by the DHCP server (if such as server is present and the 
 container is configured to use DHCP). 
 
+When a new container is attached to a network, we need to set up its routing information. 
+In the example above, the container is attached to AS-150's `net0`, so we need to use 
+the router on this network. The following API helps us get the default router
+of a specified network.    
+
+```
+emu.getDefaultRouterByAsnAndNetwork(150, 'net0'))
+```
+
+We use the result from the API above to set the default router of the container. 
+These two commands are already included in the docker compose entry. 
+
+```
+ip rou del default 2> /dev/null
+ip route add default via 10.150.0.254 dev eth0
+```
 
 It should be noted that running the `ip route add` command requires privileges. 
 We need to add the following options to the docker compose entry:
@@ -62,36 +80,25 @@ docker.attachInternetMap(asn=150, net='net0', ip_address='10.150.0.90',
 
 
 
-## Adding default route to new containers
 
-After adding a new container to a network, we need to manually
-set up its routing information. We can add the following
-commands to the docker compose entry when building the container (the 
-assumption is that we already know the IP address of the router); 
-we can also run these commands after the container is up and the IP address 
-of the router is known. 
-
-```
-ip rou del default 2> /dev/null
-ip route add default via 10.150.0.254 dev eth0
-```
 
 
 ## Adding an existing container and show it on the map
 
-In contrast to `Adding an existing container`, only the node_name and show_on_map parameters are added to the attachCustomContainer api
+If we want the added container to show up on the InternetMap visualization tool, we just need to provide the `node_name` and `show_on_map` parameters.
 
 ```python
+docker.attachCustomContainer(
+                compose_entry = DOCKER_COMPOSE_ENTRY.format(name="busybox2", 
+                            default_route=emu.getDefaultRouterByAsnAndNetwork(150, 'net0')),
+                asn=150, net='net0', ip_address='10.150.0.81',
+                port_forwarding="9091:80/tcp",
+                node_name='busybox2', show_on_map=True)
 
-docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY, 
-                       asn=150, net='net0', ip_address='10.150.0.80',
-                       port_forwarding="9090:80/tcp", node_name='seedemu-busybox', show_on_map=True)
 ```
 
 ## Notes
 
-In this example, the custom container can be displayed on the map,
-but it cannot be operated on like other containers.
-We will resolve this issue in the future. 
+In this example, the custom container can be displayed on the map, but it cannot be operated on like other containers. We will resolve this issue in the future. 
 
 

@@ -1,0 +1,89 @@
+id: basic-a02a-transit-as-mpls
+name: Transit AS MPLS With LDP
+description: A transit-AS example where AS2 carries traffic between AS151 and AS152 over MPLS with LDP.
+runner: internet
+script: transit_as_mpls.py
+platform: amd
+features:
+  - ipv4-default
+  - transit-as
+  - mpls
+  - ebgp-private-peering
+  - web-service
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_component.bin
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: MPLS transit AS services are running
+      type: compose-ps
+      services:
+        - brdnode_2_r1
+        - rnode_2_r2
+        - rnode_2_r3
+        - brdnode_2_r4
+        - brdnode_151_router0
+        - brdnode_152_router0
+        - hnode_151_web
+        - hnode_152_web
+      retries: 30
+      interval: 2
+
+    - name: AS151 local web service is ready
+      type: exec
+      service: hnode_151_web
+      command: curl -fsS http://127.0.0.1 >/dev/null
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+    - name: AS152 local web service is ready
+      type: exec
+      service: hnode_152_web
+      command: curl -fsS http://127.0.0.1 >/dev/null
+      expect_exit: 0
+      retries: 30
+      interval: 2
+
+probes:
+  - name: AS151 reaches AS152 web service through MPLS transit AS2
+    type: exec
+    service: hnode_151_web
+    command: curl -fsS http://10.152.0.71 >/dev/null
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS152 reaches AS151 web service through MPLS transit AS2
+    type: exec
+    service: hnode_152_web
+    command: curl -fsS http://10.151.0.71 >/dev/null
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS151 can ping AS152 through MPLS transit AS2
+    type: ping
+    service: hnode_151_web
+    target: 10.152.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: MPLS runtime validation
+    script: test_runtime.py
+    timeout: 180

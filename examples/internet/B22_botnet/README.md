@@ -1,68 +1,110 @@
 # Botnet
 
-In this example, we show how to deploy a botnet inside the 
-SEED Emulator. We first create a bot controller and 6 bots.
-We then deploy the controller on `10.150.0.66`, and 
-deploy the bots in randomly selected autonomous systems.
-See the comments in the code for detailed explanation.
+This example demonstrates how to deploy a botnet inside the SEED Emulator. It
+uses the `B00_mini_internet` topology as the base Internet, then adds one BYOB
+controller and six bot clients.
 
-We have also recorded a 
-[video](https://www.youtube.com/watch?v=5FYWB-b21bg&list=PLwCoMLt7WGjan54CuqeYGnJuMqA-RzQwD)
-to explain the details of this example. 
-We have modified the code (`botnet-base.py`) since the video was recorded,
-so the code used in the video is slightly different from the code here. 
+The controller is deployed at `10.150.0.66`. The bot clients are placed across
+several ASes selected from the B00 stub ASes. By default, placement is
+reproducible because the script uses a fixed random seed; this keeps CI and
+agent-driven testing stable while still demonstrating distributed bot placement.
 
+## Files
 
-## Start the Controller
+- `botnet_basic.py`: topology entrypoint. Supports the standard example
+  arguments used by `seedemu/testing/cli.py`.
+- `ddos.py`: helper script copied to the controller as `/tmp/ddos.py` for the
+  manual denial-of-service demonstration.
+- `example.yaml`: test manifest for compile, build, runtime readiness, probes,
+  and the custom runtime test.
+- `test_runtime.py`: custom runtime validation using `ComposeRuntimeTest`.
+- `not_ready/botnet-with-dga.py`: unfinished DGA-based variant; it is not part
+  of this example's automated lifecycle.
 
-We will find the Bot controller container, and get a shell on it. 
-We have customized the display names of the controller and all the bot nodes 
-with a prefix `Bot-`, so they are quite easy to find. 
-Once we are inside the controller, we can start the `byob` 
-server. 
+## Standard Arguments
 
-```
-# cd /tmp/byob/byob
-# python3 server.py --port 445
-```
+From the repository root:
 
-We will then wait for the bot nodes to connect to the server. We have deployed
-6 bot nodes in the emulator, so we should see 6 clients. We can type the 
-`sessions` command to see their information.
-
-```
-[byob @ /tmp/byob/byob]>sessions
-0
-  public_ip          10.151.0.73
-  local_ip           10.151.0.73
-  platform           linux
-  mac_address        24:20:A9:70:04:9
-  architecture       64
-  username           user
-  administrator      True
-  device             721736c3959c
-  owner              None
-  latitude           0
-  longitude          0
-  uid                b4a453a1fd66f9108e23c96716455f3b
-  joined             2021-08-08 14:20:01.213183
-  online             True
-  sessions           True
-  last_online        2021-08-08 14:20:01.213259
-
-1
-  ...
+```sh
+python examples/internet/B22_botnet/botnet_basic.py --platform amd --output examples/internet/B22_botnet/output
 ```
 
-## Launch Attacks
+The legacy platform argument is also accepted:
 
-You can find the online manuals regarding how to use `byob`. Here, we will
-just do a simple testing. We broadcast a command to all the bots, asking them
-to ping `10.161.0.71` 10 times, with each ICMP packet carrying a large payload.
-From the visualization map, we should clear see the attack traffic.
-This demonstrates a denial-of-service attack. 
-
-```
-[byob @ /tmp/byob/byob]>broadcast ping -c 10 -s 5000 10.161.0.71
+```sh
+python examples/internet/B22_botnet/botnet_basic.py amd
 ```
 
+Useful options:
+
+```text
+--platform amd|arm
+--output PATH
+--dumpfile PATH
+--hosts-per-as N
+--bot-count N
+--seed N
+--skip-render
+--no-override
+```
+
+## Test Runner
+
+Use the standardized runner from the repository root:
+
+```sh
+python seedemu/testing/cli.py clean examples/internet/B22_botnet/example.yaml
+python seedemu/testing/cli.py compile examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+python seedemu/testing/cli.py build examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+python seedemu/testing/cli.py up examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+python seedemu/testing/cli.py probe examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+python seedemu/testing/cli.py test examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+python seedemu/testing/cli.py down examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+```
+
+The full lifecycle can also be run with:
+
+```sh
+python seedemu/testing/cli.py all examples/internet/B22_botnet/example.yaml --artifact-dir ci-artifacts/b22
+```
+
+## Automated Testing Strategy
+
+The BYOB shell is interactive, so the CI test does not try to type commands
+into it. Instead, the test verifies the non-interactive parts that must work
+before a manual BYOB session can be useful:
+
+- the controller container exists and uses `10.150.0.66`;
+- BYOB is installed on the controller;
+- `/bin/start-byob-shell` exists for manual use;
+- `/tmp/ddos.py` is copied to the controller;
+- the controller exposes the generated BYOB dropper endpoint on port `446`;
+- six bot client containers are generated;
+- each bot has the BYOB client startup runner;
+- each bot can reach the controller by ICMP and can fetch the dropper endpoint.
+
+The automated test intentionally does not launch the DDoS command. That behavior
+is better suited for a manual classroom demonstration, where students can watch
+the traffic in the emulator visualization.
+
+## Manual Demonstration
+
+Find the bot controller container and enter a shell. The controller has display
+name `Bot-Controller`, and the bots have display names such as `Bot-000`.
+
+Start the BYOB shell:
+
+```sh
+start-byob-shell
+```
+
+After the bots connect, use the BYOB `sessions` command to list them. For a
+simple traffic demonstration, broadcast a ping command to all bots:
+
+```text
+broadcast ping -c 10 -s 5000 10.161.0.71
+```
+
+The visualization should show traffic from multiple bot ASes toward the victim
+host. This demonstrates the command-and-control structure and the effect of a
+distributed denial-of-service attack inside the emulator.

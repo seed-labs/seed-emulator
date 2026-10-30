@@ -150,7 +150,7 @@ class Evpn(Layer):
         for iface in node.getInterfaces():
             net = iface.getNet()
             if net.getType() == NetworkType.InternetExchange: continue
-            if not (True in (node.getRole() == NodeRole.Router for node in net.getAssociations())): continue
+            if not (True in (node.getRole() == NodeRole.Router or node.getRole() == NodeRole.OpenVpnRouter for node in net.getAssociations())): continue
 
             ospf_ifaces += EvpnFileTemplates['ospf_interface'].format(
                 interface = net.getName()

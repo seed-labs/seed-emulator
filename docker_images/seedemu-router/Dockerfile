@@ -1,7 +1,7 @@
-FROM handsonsecurity/seedemu-base
+FROM handsonsecurity/seedemu-base:2.0
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN mkdir -p /usr/share/doc/bird2/examples/
-RUN touch /usr/share/doc/bird2/examples/bird.conf
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common gpg-agent
+RUN add-apt-repository ppa:cz.nic-labs/bird
 RUN apt-get update && apt-get install -y --no-install-recommends bird2

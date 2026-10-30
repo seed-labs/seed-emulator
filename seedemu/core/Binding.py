@@ -62,29 +62,34 @@ class Binding(Printable):
         ## physical node filter.
         self.filter = filter
 
-    def __filterBaseSystemConflict(self, vnode:str, node:Node, emulator:Emulator) -> bool:
-        """!
-        @brief filter a base_system conflict between vnode and node when binding. 
+    def __filterBaseSystemConflict(self, vnode: str, node: Node, emulator: Emulator) -> bool:
+        """Return whether a server and candidate node have compatible profiles."""
+        node_profile = node.getBaseSystem()
+        server_profile = emulator.getServerByVirtualNodeName(vnode).getBaseSystem()
 
-        @param vnode virtual node name.
-        @param node candidate physical name to bind with vnode.
-        @param emulator emulator instance to get server object by vnode name.
+        return (
+            node_profile == server_profile
+            or node_profile == BaseSystem.DEFAULT
+            or server_profile == BaseSystem.DEFAULT
+            or node_profile.contains(server_profile)
+            or server_profile.contains(node_profile)
+        )
 
-        @returns True if it does not have any conflict.
-        """
-        nodeBaseSystem = node.getBaseSystem()
+    def __applyBaseSystem(self, vnode: str, node: Node, emulator: Emulator) -> None:
+        """Resolve the selected node and server to one concrete profile."""
         server = emulator.getServerByVirtualNodeName(vnode)
-        vnodeBaseSystem = server.getBaseSystem()
-        if nodeBaseSystem == vnodeBaseSystem:
-            return True
-        if BaseSystem.doesAContainB(A=vnodeBaseSystem, B=nodeBaseSystem):
-            return True
-        if BaseSystem.doesAContainB(A=nodeBaseSystem, B=vnodeBaseSystem):
-            server.setBaseSystem(nodeBaseSystem)
-            return True
-        
-        return False
-    
+        node_profile = node.getBaseSystem()
+        server_profile = server.getBaseSystem()
+
+        if node_profile == BaseSystem.DEFAULT and server_profile != BaseSystem.DEFAULT:
+            node.setBaseSystem(server_profile)
+        elif server_profile == BaseSystem.DEFAULT and node_profile != BaseSystem.DEFAULT:
+            server.setBaseSystem(node_profile)
+        elif server_profile.contains(node_profile):
+            node.setBaseSystem(server_profile)
+        elif node_profile.contains(server_profile):
+            server.setBaseSystem(node_profile)
+
     def __create(self, emulator: Emulator) -> Node:
         """!
         @brief create a node matching given condition.
@@ -228,6 +233,7 @@ class Binding(Printable):
             if peek: return None
 
             node = self.__create(emulator)
+            self.__applyBaseSystem(vnode, node, emulator)
             node.setAttribute('bound', True)
 
             return node
@@ -289,7 +295,9 @@ class Binding(Printable):
 
             if self.action == Action.FIRST:
                 self.__log('{} as{}/{}.'.format('peek: picked' if peek else 'bound to', node.getAsn(), node.getName()))
-                if not peek: node.setAttribute('bound', True)
+                if not peek:
+                    self.__applyBaseSystem(vnode, node, emulator)
+                    node.setAttribute('bound', True)
                 return node
         
             candidates.append(node)
@@ -304,7 +312,9 @@ class Binding(Printable):
 
         if node != None: 
             self.__log('{} as{}/{}.'.format('peek: picked' if peek else 'bound to', node.getAsn(), node.getName()))
-            if not peek: node.setAttribute('bound', True)
+            if not peek:
+                self.__applyBaseSystem(vnode, node, emulator)
+                node.setAttribute('bound', True)
 
         return node
 

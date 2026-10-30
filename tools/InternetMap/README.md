@@ -34,7 +34,7 @@ The Internet Map runs inside an independent container. We can use the `docker-co
 
 1. Start the emulation as you normally would. (e.g., `docker-compose up`)
 2. Run `docker-compose build && docker-compose up` in this folder to build and start the Internet Map container.
-3. Once the container is up, access the tool using the the following pages:
+3. Once the container is up, access the tool using the following pages:
    1. Home page: [http://localhost:8080/](http://localhost:8080/) or [http://localhost:8080/index.html](http://localhost:8080/index.html) 
    2. The Map page: [http://localhost:8080/map.html](http://localhost:8080/map.html)
    3. Dashboard: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)

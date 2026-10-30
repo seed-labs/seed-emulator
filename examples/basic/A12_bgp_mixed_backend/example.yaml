@@ -1,0 +1,80 @@
+id: basic-a12-bgp-mixed-backend
+name: BGP Mixed BIRD and FRR Backends
+description: A transit-AS topology that runs BIRD and FRR routers from the same BGP/OSPF intent model.
+runner: internet
+script: bgp_mixed_backend.py
+platform: amd
+features:
+  - ipv4-default
+  - routing-backend
+  - bird
+  - frr
+  - ebgp-private-peering
+  - ibgp
+  - ospf
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: A12 mixed backend services are running
+      type: compose-ps
+      services:
+        - brdnode_2_r1
+        - brdnode_2_r2
+        - brdnode_151_router0
+        - brdnode_152_router0
+        - hnode_151_web
+        - hnode_152_web
+      retries: 30
+      interval: 2
+
+probes:
+  - name: AS2 BIRD router establishes iBGP to AS2 FRR router
+    type: exec
+    service: brdnode_2_r1
+    command: birdc show protocols | grep -q 'ibgp1.*Established'
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS2 FRR router learns AS151 route from AS2 BIRD router
+    type: exec
+    service: brdnode_2_r2
+    command: vtysh -c "show ip bgp" | grep -q '10.151.0.0/24'
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS151 FRR router learns AS152 route
+    type: exec
+    service: brdnode_151_router0
+    command: vtysh -c "show ip bgp" | grep -q '10.152.0.0/24'
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+  - name: AS152 BIRD router learns AS151 route
+    type: exec
+    service: brdnode_152_router0
+    command: birdc show route | grep -q '10.151.0.0/24'
+    expect_exit: 0
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: A12 mixed backend runtime validation
+    script: test_runtime.py
+    timeout: 240

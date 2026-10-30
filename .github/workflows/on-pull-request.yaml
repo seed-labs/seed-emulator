@@ -4,196 +4,383 @@ on:
   pull_request:
     branches:
       - master
+      - development
+      - development-ipv6
   workflow_dispatch:
     inputs:
-      run-quick-tests:
-        description: "Run quick tests | ignores other options for testing (they still apply for compile/build)"
+      selected-example:
+        description: "Run one selected example code, or all"
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - A00
+          - A01
+          - A02a
+          - A03a
+          - A03b
+          - A05
+          - A06
+          - A09
+          - A63
+          - A62
+          - B00
+          - B02
+          - B31
+      run-basic-examples:
+        description: "Run selected basic examples"
         type: boolean
         required: false
-        default: "false"
-      run-basic-tests:
-        description: "Run basic tests | Compile and builds all the basic examples - Runs basic tests"
+        default: true
+      run-internet-examples:
+        description: "Run selected internet examples"
         type: boolean
         required: false
-        default: "true"
-      run-internet-tests:
-        description: "Run internet tests | Compile and builds all the internet examples - Runs internet tests"
+        default: true
+      run-full-lifecycle:
+        description: "Run Docker build/up/probe/test/down lifecycle"
         type: boolean
         required: false
-        default: "true"
-      run-blockchain-tests:
-        description: "Run blockchain tests | Compile and builds all the blockchain examples - Runs blockchain tests"
-        type: boolean
-        required: false
-        default: "false"
-      run-scion-tests:
-        description: "Run SCION tests | Compile and builds all the SCION examples - Runs SCION tests"
-        type: boolean
-        required: false
-        default: "false"
+        default: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  SELECTED_EXAMPLE: ${{ github.event.inputs['selected-example'] || 'all' }}
+  RUN_BASIC_EXAMPLES: ${{ github.event.inputs['run-basic-examples'] || 'true' }}
+  RUN_INTERNET_EXAMPLES: ${{ github.event.inputs['run-internet-examples'] || 'true' }}
+  RUN_FULL_LIFECYCLE: ${{ github.event.inputs['run-full-lifecycle'] || 'true' }}
 
 jobs:
-  compile-examples:
-    name: Compile Examples
+  static-checks:
+    name: Static Checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
-      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
-      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
-      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
     steps:
       - name: Check out the source repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: 'pip'
-          cache-dependency-path: "**/*requirements.txt"
-      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
-      - name: Get scion-pki
-        if: ${{ env.SCION_TESTS == 'true' }}
-        run: |
-          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
-          mkdir bin
-          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
-      - name: Compile Examples
-        run: |
-          source development.env
-          export PATH=$PATH:$PWD/bin
-          CMD="tests/compile-and-build-test/compile-test.py"
-          if [ "$BASIC_TESTS" == "true" ]; then
-            CMD+=" --basic"
-          fi
-          if [ "$INTERNET_TESTS" == "true" ]; then
-            CMD+=" --internet"
-          fi
-          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
-            CMD+=" --blockchain"
-          fi
-          if [ "$SCION_TESTS" == "true" ]; then
-            CMD+=" --scion"
-          fi
-          python $CMD
+        uses: actions/checkout@v5
 
-  run-tests:
-    name: Run Tests
-    needs: compile-examples # Only run heavy tests if quick compile test succeeds
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
-      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
-      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
-      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
-    steps:
-      - name: Check out the source repository
-        uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.10"
-          cache: 'pip'
+          cache: pip
           cache-dependency-path: "**/*requirements.txt"
-      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
-      - name: Get scion-pki
-        if: ${{ env.SCION_TESTS == 'true' }}
-        run: |
-          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
-          mkdir bin
-          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
-      - name: Run tests
-        run: |
-          source development.env
-          export PATH=$PATH:$PWD/bin
-          CMD="tests/run-tests.py"
-          if [ "$QUICK_TESTS" == "true" ]; then
-            CMD+=" --ci"
-          fi
-          if [ "$BASIC_TESTS" == "true" ]; then
-            CMD+=" --basic"
-          fi
-          if [ "$INTERNET_TESTS" == "true" ]; then
-            CMD+=" --internet"
-          fi
-          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
-            CMD+=" --blockchain"
-          fi
-          if [ "$SCION_TESTS" == "true" ]; then
-            CMD+=" --scion"
-          fi
-          python $CMD
-      - name: Archive test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test_result
-          path: |
-            tests/test_result.txt
-            tests/**/test_log
-      - name: Check for errors
-        shell: bash
-        run: set +e; grep -E "^score" tests/test_result.txt | grep -Eq '[1-9][0-9]* errors|[1-9][0-9]* failures'; test $? -eq 1
 
-  build-examples:
-    name: Build Examples
-    needs: compile-examples # Only run heavy tests if quick compile test succeeds
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+
+      - name: Compile testing framework and selected example tests
+        run: |
+          python -m py_compile \
+            seedemu/testing/base.py \
+            seedemu/testing/internet.py \
+            seedemu/testing/satellite.py \
+            seedemu/testing/registry.py \
+            seedemu/testing/runtime.py \
+            seedemu/testing/cli.py \
+            examples/basic/A00_simple_as/simple_as.py \
+            examples/basic/A00_simple_as/test_runtime.py \
+            examples/basic/A01_transit_as/transit_as.py \
+            examples/basic/A01_transit_as/test_runtime.py \
+            examples/basic/A02a_transit_as_mpls/transit_as_mpls.py \
+            examples/basic/A02a_transit_as_mpls/test_runtime.py \
+            examples/basic/A03a_out_to_real_world/out_to_real_world.py \
+            examples/basic/A03a_out_to_real_world/test_runtime.py \
+            examples/basic/A03b_from_real_world/from_real_world.py \
+            examples/basic/A03b_from_real_world/test_runtime.py \
+            examples/basic/A05_components/components.py \
+            examples/basic/A05_components/test_runtime.py \
+            examples/basic/A06_merge_emulation/merge_emulation.py \
+            examples/basic/A06_merge_emulation/test_runtime.py \
+            examples/basic/A09_node_customization/node_customization.py \
+            examples/basic/A09_node_customization/test_runtime.py \
+            examples/basic/A63_control_plane_regression/control_plane_regression.py \
+            examples/basic/A63_control_plane_regression/test_runtime.py \
+            examples/basic/A62_route_reflector/route_reflector.py \
+            examples/basic/A62_route_reflector/test_runtime.py \
+            examples/internet/B00_mini_internet/mini_internet.py \
+            examples/internet/B00_mini_internet/test_runtime.py \
+            examples/internet/B02_mini_internet_with_dns/mini_internet_with_dns.py \
+            examples/internet/B02_mini_internet_with_dns/test_runtime.py \
+            examples/internet/B31_mini_internet_mpls/mini_internet_mpls.py \
+            examples/internet/B31_mini_internet_mpls/test_runtime.py
+
+      - name: Validate selected example manifests
+        run: |
+          python seedemu/testing/cli.py clean examples/basic/A00_simple_as/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A01_transit_as/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A02a_transit_as_mpls/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A03a_out_to_real_world/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A03b_from_real_world/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A05_components/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A06_merge_emulation/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A09_node_customization/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A63_control_plane_regression/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A62_route_reflector/example.yaml
+          python seedemu/testing/cli.py clean examples/internet/B00_mini_internet/example.yaml
+          python seedemu/testing/cli.py clean examples/internet/B02_mini_internet_with_dns/example.yaml
+          python seedemu/testing/cli.py clean examples/internet/B31_mini_internet_mpls/example.yaml
+
+  compile-selected-examples:
+    name: Compile ${{ matrix.example.code }}
+    needs: static-checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      SCION_TESTS: ${{ github.event.inputs.run-scion-tests || 'false' }}
-      BASIC_TESTS: ${{ github.event.inputs.run-basic-tests || 'true' }}
-      INTERNET_TESTS: ${{ github.event.inputs.run-internet-tests || 'true' }}
-      BLOCKCHAIN_TESTS: ${{ github.event.inputs.run-blockchain-tests || 'false' }}
-      QUICK_TESTS: ${{ github.event.inputs.run-quick-tests || 'false' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - code: A00
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A00_simple_as/example.yaml
+          - code: A01
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A01_transit_as/example.yaml
+          - code: A02a
+            category: basic
+            requires_mpls: true
+            manifest: examples/basic/A02a_transit_as_mpls/example.yaml
+          - code: A03a
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A03a_out_to_real_world/example.yaml
+          - code: A03b
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A03b_from_real_world/example.yaml
+          - code: A05
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A05_components/example.yaml
+          - code: A06
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A06_merge_emulation/example.yaml
+          - code: A09
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A09_node_customization/example.yaml
+          - code: A63
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A63_control_plane_regression/example.yaml
+          - code: A62
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A62_route_reflector/example.yaml
+          - code: B00
+            category: internet
+            requires_mpls: false
+            manifest: examples/internet/B00_mini_internet/example.yaml
+          - code: B02
+            category: internet
+            requires_mpls: false
+            manifest: examples/internet/B02_mini_internet_with_dns/example.yaml
+          - code: B31
+            category: internet
+            requires_mpls: true
+            manifest: examples/internet/B31_mini_internet_mpls/example.yaml
     steps:
       - name: Check out the source repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.10"
-          cache: 'pip'
+          cache: pip
           cache-dependency-path: "**/*requirements.txt"
-      - run: pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
-      - name: Get scion-pki
-        if: ${{ github.event.inputs.run-scion-tests == 'true' }}
+
+      - name: Install dependencies
         run: |
-          curl -fsSL -O https://github.com/scionproto/scion/releases/download/v0.12.0/scion_0.12.0_amd64_linux.tar.gz
-          mkdir bin
-          tar -C bin -xzf scion_0.12.0_amd64_linux.tar.gz scion-pki
-      - name: Build Examples
+          pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+
+      - name: Compile selected example
+        if: >-
+          ${{
+            (env.SELECTED_EXAMPLE == 'all' || env.SELECTED_EXAMPLE == matrix.example.code) &&
+            (
+              (matrix.example.category == 'basic' && env.RUN_BASIC_EXAMPLES == 'true') ||
+              (matrix.example.category == 'internet' && env.RUN_INTERNET_EXAMPLES == 'true')
+            )
+          }}
         run: |
           source development.env
-          export PATH=$PATH:$PWD/bin
-          cd tests/compile-and-build-test
-          CMD="compile-and-build-test.py"
-          if [ "$BASIC_TESTS" == "true" ]; then
-            CMD+=" --basic"
-          fi
-          if [ "$INTERNET_TESTS" == "true" ]; then
-            CMD+=" --internet"
-          fi
-          if [ "$BLOCKCHAIN_TESTS" == "true" ]; then
-            CMD+=" --blockchain"
-          fi
-          if [ "$SCION_TESTS" == "true" ]; then
-            CMD+=" --scion"
-          fi
-          python $CMD
-      - name: Archive test results
-        uses: actions/upload-artifact@v4
+          python seedemu/testing/cli.py compile \
+            ${{ matrix.example.manifest }} \
+            --artifact-dir ci-artifacts/${{ matrix.example.code }}-compile
+
+      - name: Upload compile artifacts
+        if: >-
+          ${{
+            always() &&
+            (env.SELECTED_EXAMPLE == 'all' || env.SELECTED_EXAMPLE == matrix.example.code) &&
+            (
+              (matrix.example.category == 'basic' && env.RUN_BASIC_EXAMPLES == 'true') ||
+              (matrix.example.category == 'internet' && env.RUN_INTERNET_EXAMPLES == 'true')
+            )
+          }}
+        uses: actions/upload-artifact@v6
         with:
-          name: test_log
-          path: |
-            tests/compile-and-build-test/test_log/build_log.txt
-            tests/compile-and-build-test/test_log/log.txt
-      - name: Check for errors
-        shell: bash
-        run: set +e; grep -E "^score" tests/compile-and-build-test/test_log/log.txt | grep -Eq '[1-9][0-9]* errors|[1-9][0-9]* failures'; test $? -eq 1
+          name: example-${{ matrix.example.code }}-compile-artifacts
+          path: ci-artifacts/${{ matrix.example.code }}-compile
+
+  run-selected-examples:
+    name: Run ${{ matrix.example.code }}
+    needs: compile-selected-examples
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - code: A00
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A00_simple_as/example.yaml
+          - code: A01
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A01_transit_as/example.yaml
+          - code: A02a
+            category: basic
+            requires_mpls: true
+            manifest: examples/basic/A02a_transit_as_mpls/example.yaml
+          - code: A03a
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A03a_out_to_real_world/example.yaml
+          - code: A03b
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A03b_from_real_world/example.yaml
+          - code: A05
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A05_components/example.yaml
+          - code: A06
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A06_merge_emulation/example.yaml
+          - code: A09
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A09_node_customization/example.yaml
+          - code: A63
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A63_control_plane_regression/example.yaml
+          - code: A62
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A62_route_reflector/example.yaml
+          - code: B00
+            category: internet
+            requires_mpls: false
+            manifest: examples/internet/B00_mini_internet/example.yaml
+          - code: B02
+            category: internet
+            requires_mpls: false
+            manifest: examples/internet/B02_mini_internet_with_dns/example.yaml
+          - code: B31
+            category: internet
+            requires_mpls: true
+            manifest: examples/internet/B31_mini_internet_mpls/example.yaml
+    steps:
+      - name: Check out the source repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: "**/*requirements.txt"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r dev-requirements.txt -r tests/requirements.txt
+
+      - name: Load MPLS kernel modules
+        id: mpls
+        if: >-
+          ${{
+            matrix.example.requires_mpls &&
+            env.RUN_FULL_LIFECYCLE == 'true' &&
+            (env.SELECTED_EXAMPLE == 'all' || env.SELECTED_EXAMPLE == matrix.example.code) &&
+            (
+              (matrix.example.category == 'basic' && env.RUN_BASIC_EXAMPLES == 'true') ||
+              (matrix.example.category == 'internet' && env.RUN_INTERNET_EXAMPLES == 'true')
+            )
+          }}
+        run: |
+          set +e
+          sudo modprobe mpls_router
+          sudo modprobe mpls_iptunnel
+          sudo modprobe mpls_gso
+          if test -d /proc/sys/net/mpls && lsmod | grep -q '^mpls_router'; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            lsmod | grep '^mpls_'
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::MPLS kernel modules are not available on this runner. Skipping the MPLS runtime lifecycle for ${{ matrix.example.code }}. Use a self-hosted runner with mpls_router, mpls_iptunnel, and mpls_gso for full MPLS runtime testing."
+          fi
+
+      - name: Report skipped MPLS lifecycle
+        if: >-
+          ${{
+            matrix.example.requires_mpls &&
+            steps.mpls.outputs.available == 'false' &&
+            env.RUN_FULL_LIFECYCLE == 'true' &&
+            (env.SELECTED_EXAMPLE == 'all' || env.SELECTED_EXAMPLE == matrix.example.code) &&
+            (
+              (matrix.example.category == 'basic' && env.RUN_BASIC_EXAMPLES == 'true') ||
+              (matrix.example.category == 'internet' && env.RUN_INTERNET_EXAMPLES == 'true')
+            )
+          }}
+        run: |
+          echo "Skipping ${{ matrix.example.code }} full lifecycle because this GitHub runner does not provide MPLS kernel modules."
+
+      - name: Run selected example lifecycle
+        if: >-
+          ${{
+            env.RUN_FULL_LIFECYCLE == 'true' &&
+            (env.SELECTED_EXAMPLE == 'all' || env.SELECTED_EXAMPLE == matrix.example.code) &&
+            (!matrix.example.requires_mpls || steps.mpls.outputs.available == 'true') &&
+            (
+              (matrix.example.category == 'basic' && env.RUN_BASIC_EXAMPLES == 'true') ||
+              (matrix.example.category == 'internet' && env.RUN_INTERNET_EXAMPLES == 'true')
+            )
+          }}
+        run: |
+          source development.env
+          python seedemu/testing/cli.py all \
+            ${{ matrix.example.manifest }} \
+            --artifact-dir ci-artifacts/${{ matrix.example.code }}
+
+      - name: Upload lifecycle artifacts
+        if: >-
+          ${{
+            always() &&
+            env.RUN_FULL_LIFECYCLE == 'true' &&
+            (env.SELECTED_EXAMPLE == 'all' || env.SELECTED_EXAMPLE == matrix.example.code) &&
+            (!matrix.example.requires_mpls || steps.mpls.outputs.available == 'true') &&
+            (
+              (matrix.example.category == 'basic' && env.RUN_BASIC_EXAMPLES == 'true') ||
+              (matrix.example.category == 'internet' && env.RUN_INTERNET_EXAMPLES == 'true')
+            )
+          }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: example-${{ matrix.example.code }}-lifecycle-artifacts
+          path: ci-artifacts/${{ matrix.example.code }}

@@ -1,166 +1,135 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+#
+# Purpose: build the B03 hybrid Internet example. Inputs are standard
+# TestRunner CLI arguments. Outputs are Docker compiler files under --output.
 
-from seedemu import *
-import os, sys
+from __future__ import annotations
 
-def run(dumpfile = None, hosts_per_as=2):
-    ###############################################################################
-    # Set the platform information
-    if dumpfile is None:
-        script_name = os.path.basename(__file__)
-
-        if len(sys.argv) == 1:
-            platform = Platform.AMD64
-        elif len(sys.argv) == 2:
-            if sys.argv[1].lower() == 'amd':
-                platform = Platform.AMD64
-            elif sys.argv[1].lower() == 'arm':
-                platform = Platform.ARM64
-            else:
-                print(f"Usage:  {script_name} amd|arm")
-                sys.exit(1)
-        else:
-            print(f"Usage:  {script_name} amd|arm")
-            sys.exit(1)
+import argparse
+from pathlib import Path
+import sys
 
 
-    ###############################################################################
-    emu     = Emulator()
-    base    = Base()
-    routing = Routing()
-    ebgp    = Ebgp()
-    ibgp    = Ibgp()
-    ospf    = Ospf()
-    web     = WebService()
-    ovpn    = OpenVpnRemoteAccessProvider()
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from examples.internet.B00_mini_internet import mini_internet
+from seedemu.compiler import Docker, Platform
+from seedemu.core import Emulator
+from seedemu.layers import Base, Ebgp, PeerRelationship
+from seedemu.raps import OpenVpnRemoteAccessProvider
+from seedemu.containerBundle import InternetMap
 
 
-    ###############################################################################
-    # Create Internet Exchanges 
-    ix100 = base.createInternetExchange(100)
-    ix101 = base.createInternetExchange(101)
-    ix102 = base.createInternetExchange(102)
-    ix103 = base.createInternetExchange(103)
-    ix104 = base.createInternetExchange(104)
-    ix105 = base.createInternetExchange(105)
-
-    # Customize names (for visualization purpose)
-    ix100.getPeeringLan().setDisplayName('NYC-100')
-    ix101.getPeeringLan().setDisplayName('San Jose-101')
-    ix102.getPeeringLan().setDisplayName('Chicago-102')
-    ix103.getPeeringLan().setDisplayName('Miami-103')
-    ix104.getPeeringLan().setDisplayName('Boston-104')
-    ix105.getPeeringLan().setDisplayName('Huston-105')
+SYRACUSE_ASN = 11872
+SYRACUSE_EXAMPLE_PREFIXES = ["128.230.0.0/16"]
+HYBRID_ASN = 99999
+HYBRID_DEFAULT_PREFIXES = ["0.0.0.0/1", "128.0.0.0/1"]
 
 
-    ###############################################################################
-    # Create Transit Autonomous Systems 
-
-    ## Tier 1 ASes
-    Makers.makeTransitAs(base, 2, [100, 101, 102, 105], 
-        [(100, 101), (101, 102), (100, 105)] 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build the B03 hybrid Internet example.")
+    parser.add_argument("legacy_platform", nargs="?", choices=["amd", "arm"])
+    parser.add_argument("--platform", choices=["amd", "arm"])
+    parser.add_argument("--output", default=str(SCRIPT_DIR / "output"))
+    parser.add_argument("--dumpfile")
+    parser.add_argument("--hosts-per-as", type=int, default=2)
+    parser.add_argument(
+        "--live-prefixes",
+        action="store_true",
+        help="Fetch live prefixes for AS11872 instead of using deterministic example prefixes.",
     )
-
-    Makers.makeTransitAs(base, 3, [100, 103, 104, 105], 
-        [(100, 103), (100, 105), (103, 105), (103, 104)]
-    )
-
-    Makers.makeTransitAs(base, 4, [100, 102, 104], 
-        [(100, 104), (102, 104)]
-    )
-
-    ## Tier 2 ASes
-    Makers.makeTransitAs(base, 11, [102, 105], [(102, 105)])
-    Makers.makeTransitAs(base, 12, [101, 104], [(101, 104)])
+    parser.add_argument("--override", dest="override", action="store_true", default=True)
+    parser.add_argument("--no-override", dest="override", action="store_false")
+    parser.add_argument("--skip-render", dest="render", action="store_false", default=True)
+    args = parser.parse_args()
+    args.platform = args.platform or args.legacy_platform or "amd"
+    return args
 
 
-    ###############################################################################
-    # Create single-homed stub ASes. "None" means create a host only 
-
-    Makers.makeStubAsWithHosts(emu, base, 150, 100, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 151, 100, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 152, 101, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 153, 101, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 154, 102, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 160, 103, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 161, 103, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 162, 103, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 163, 104, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 164, 104, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 170, 105, hosts_per_as)
-    Makers.makeStubAsWithHosts(emu, base, 171, 105, hosts_per_as)
-
-    # Allow outside computers to VPN into AS-152's network
-    as152 = base.getAutonomousSystem(152)
-    as152.getNetwork('net0').enableRemoteAccess(ovpn)
-
-    ###############################################################################
-    # Create real-world AS.
-    # AS11872 is the Syracuse University's autonomous system
-
-    as11872 = base.createAutonomousSystem(11872)
-    as11872.createRealWorldRouter('rw-11872-syr').joinNetwork('ix102', '10.102.0.118')
-
-    ###############################################################################
-    # Create hybrid AS.
-    # AS99999 is the emulator's autonomous system that routes the traffics 
-    #   to the real-world internet
-    as99999 = base.createAutonomousSystem(99999)
-    as99999.createRealWorldRouter('rw-real-world', 
-        prefixes=['0.0.0.0/1', '128.0.0.0/1']).joinNetwork('ix100', '10.100.0.99')
+def resolve_platform(name: str) -> Platform:
+    return Platform.AMD64 if name == "amd" else Platform.ARM64
 
 
-
-    ###############################################################################
-    # Peering via RS (route server). The default peering mode for RS is 
-    # PeerRelationship.Peer, which means each AS will only export its customers 
-    # and their own prefixes. 
-    # We will use this peering relationship to peer all the ASes in an IX.
-    # None of them will provide transit service for others. 
-
-    ebgp.addRsPeers(100, [2, 3, 4])
-    ebgp.addRsPeers(102, [2, 4])
-    ebgp.addRsPeers(104, [3, 4])
-    ebgp.addRsPeers(105, [2, 3])
-
-    # To buy transit services from another autonomous system, 
-    # we will use private peering  
-
-    ebgp.addPrivatePeerings(100, [2],  [150, 151], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(100, [3],  [150, 99999], PeerRelationship.Provider)
-
-    ebgp.addPrivatePeerings(101, [2],  [12], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(101, [12], [152, 153], PeerRelationship.Provider)
-
-    ebgp.addPrivatePeerings(102, [2, 4],  [11, 154], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(102, [11], [154, 11872], PeerRelationship.Provider)
-
-    ebgp.addPrivatePeerings(103, [3],  [160, 161, 162 ], PeerRelationship.Provider)
-
-    ebgp.addPrivatePeerings(104, [3, 4], [12], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(104, [4],  [163], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(104, [12], [164], PeerRelationship.Provider)
-
-    ebgp.addPrivatePeerings(105, [3],  [11, 170], PeerRelationship.Provider)
-    ebgp.addPrivatePeerings(105, [11], [171], PeerRelationship.Provider)
+def add_remote_access(base: Base) -> None:
+    ovpn = OpenVpnRemoteAccessProvider()
+    base.getAutonomousSystem(152).getNetwork("net0").enableRemoteAccess(ovpn)
 
 
-    ###############################################################################
-    # Add layers to the emulator
-    emu.addLayer(base)
-    emu.addLayer(routing)
-    emu.addLayer(ebgp)
-    emu.addLayer(ibgp)
-    emu.addLayer(ospf)
-    emu.addLayer(web)
+def add_real_world_as(base: Base, ebgp: Ebgp, use_live_prefixes: bool = False) -> None:
+    prefixes = None if use_live_prefixes else SYRACUSE_EXAMPLE_PREFIXES
+    as11872 = base.createAutonomousSystem(SYRACUSE_ASN)
+    as11872.createRealWorldRouter("rw-11872-syr", prefixes=prefixes).joinNetwork("ix102", "10.102.0.118")
+    ebgp.addPrivatePeerings(102, [11], [SYRACUSE_ASN], PeerRelationship.Provider)
 
+
+def add_default_real_world_gateway(base: Base, ebgp: Ebgp) -> None:
+    as99999 = base.createAutonomousSystem(HYBRID_ASN)
+    as99999.createRealWorldRouter(
+        "rw-real-world",
+        prefixes=HYBRID_DEFAULT_PREFIXES,
+    ).joinNetwork("ix100", "10.100.0.99")
+    ebgp.addPrivatePeerings(100, [3], [HYBRID_ASN], PeerRelationship.Provider)
+
+
+def build_emulator(hosts_per_as: int = 2, use_live_prefixes: bool = False) -> Emulator:
+    emu = mini_internet.build_emulator(hosts_per_as=hosts_per_as)
+
+    base: Base = emu.getLayer("Base")
+    ebgp: Ebgp = emu.getLayer("Ebgp")
+
+    add_remote_access(base)
+    add_real_world_as(base, ebgp, use_live_prefixes=use_live_prefixes)
+    add_default_real_world_gateway(base, ebgp)
+    return emu
+
+
+def run(
+    dumpfile=None,
+    hosts_per_as: int = 2,
+    output=None,
+    platform=Platform.AMD64,
+    override: bool = True,
+    render: bool = True,
+    use_live_prefixes: bool = False,
+):
+    emu = build_emulator(hosts_per_as=hosts_per_as, use_live_prefixes=use_live_prefixes)
     if dumpfile is not None:
-        # Save it to a component file, so it can be used by other emulators
-        emu.dump(dumpfile) 
-    else:
+        emu.dump(dumpfile)
+        return
+
+    if render:
         emu.render()
-        emu.compile(Docker(platform=platform), './output', override=True)
+
+    output_dir = Path(output or SCRIPT_DIR / "output").resolve()
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    docker = Docker(platform=platform)
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
+    emu.compile(docker, str(output_dir), override=override)
+
+
+def main() -> int:
+    args = parse_args()
+    run(
+        dumpfile=args.dumpfile,
+        hosts_per_as=args.hosts_per_as,
+        output=str(Path(args.output).resolve()),
+        platform=resolve_platform(args.platform),
+        override=args.override,
+        render=args.render,
+        use_live_prefixes=args.live_prefixes,
+    )
+    return 0
+
 
 if __name__ == "__main__":
-    run()
+    raise SystemExit(main())

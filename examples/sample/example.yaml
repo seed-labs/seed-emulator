@@ -1,0 +1,69 @@
+id: sample-example-runner
+name: TestRunner SEED Emulator Sample
+description: A small A00-style SEED Emulator topology used to demonstrate TestRunner lifecycle commands.
+runner: internet
+script: sample_example.py
+platform: amd
+features:
+  - example-runner
+  - ipv4-default
+  - web-service
+  - ebgp-route-server
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: sample emulator services are running
+      type: compose-ps
+      services:
+        - hnode_150_web
+        - hnode_151_web
+        - hnode_152_web
+        - brdnode_150_router0
+        - brdnode_151_router0
+        - brdnode_152_router0
+      retries: 30
+      interval: 2
+
+probes:
+  - name: AS151 web host reaches AS150 web service
+    type: exec
+    service: hnode_151_web
+    command: curl -fsS http://10.150.0.71
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: AS152 web host reaches AS151 web service
+    type: exec
+    service: hnode_152_web
+    command: curl -fsS http://10.151.0.71
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: AS150 can ping AS152 web host
+    type: ping
+    service: hnode_150_web
+    target: 10.152.0.71
+    count: 3
+    retries: 10
+    interval: 3
+
+test_programs:
+  - name: sample custom runtime validation
+    script: test_runtime.py
+    timeout: 180

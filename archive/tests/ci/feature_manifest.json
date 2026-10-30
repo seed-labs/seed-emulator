@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "features": {
+    "ipv4-default": {
+      "status": "covered",
+      "description": "Legacy IPv4 examples continue to compile and build without requiring any new control-plane capability.",
+      "unit_groups": [],
+      "compile_examples": [
+        "basic-a00-simple-as"
+      ],
+      "build_examples": [
+        "basic-a00-simple-as"
+      ],
+      "runtime_groups": []
+    },
+    "ipv6-core": {
+      "status": "declared-gap",
+      "description": "Repository-level IPv6 readiness is tracked here, but this K8s integration branch does not currently carry a representative IPv6 example or runtime probe.",
+      "unit_groups": [],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": [],
+      "notes": "Keep declared as a gap until native IPv6 topology/API coverage or another representative IPv6 example is added."
+    },
+    "routing-bird-frr": {
+      "status": "declared-gap",
+      "description": "BIRD/FRR interoperability coverage from the source CI framework is not currently carried by this K8s integration branch.",
+      "unit_groups": [],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": [],
+      "notes": "Keep declared as a gap until the branch includes a maintained BIRD/FRR example and matching runtime probe."
+    },
+    "exabgp-service": {
+      "status": "declared-gap",
+      "description": "ExaBGP coverage exists on the source CI framework branch, but this K8s integration branch does not carry ExaBgpService or its examples.",
+      "unit_groups": [],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": [],
+      "notes": "Keep declared as a gap until ExaBGP service support is present on this branch."
+    },
+    "looking-glass": {
+      "status": "declared-gap",
+      "description": "Looking Glass service support is present, but the source CI framework examples are not present on this K8s integration branch.",
+      "unit_groups": [],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": [],
+      "notes": "Keep declared as a gap until the representative Looking Glass example is merged here."
+    },
+    "dns-endpoint": {
+      "status": "covered",
+      "description": "DNS endpoint behavior is represented by the mini Internet plus DNS example.",
+      "unit_groups": [],
+      "compile_examples": [
+        "internet-b02-mini-internet-with-dns"
+      ],
+      "build_examples": [
+        "internet-b02-mini-internet-with-dns"
+      ],
+      "runtime_groups": []
+    },
+    "legacy-guard": {
+      "status": "declared-gap",
+      "description": "Removed legacy control-plane API guards exist on the source CI framework branch, but those tests are not present on this K8s integration branch.",
+      "unit_groups": [],
+      "compile_examples": [],
+      "build_examples": [],
+      "runtime_groups": [],
+      "notes": "Keep declared as a gap until control-plane guard tests are merged here."
+    }
+  },
+  "unit_groups": {},
+  "runtime_groups": {},
+  "examples": {
+    "basic-a00-simple-as": {
+      "description": "Small IPv4 default behavior smoke example.",
+      "script": "examples/basic/A00_simple_as/simple_as.py",
+      "args": [
+        "amd"
+      ],
+      "clean": [
+        "output"
+      ],
+      "expected": [
+        "output/docker-compose.yml"
+      ],
+      "compile": true,
+      "build": true
+    },
+    "internet-b02-mini-internet-with-dns": {
+      "description": "Mini Internet with DNS component and local DNS endpoints.",
+      "script": "examples/internet/B02_mini_internet_with_dns/mini_internet_with_dns.py",
+      "args": [
+        "amd"
+      ],
+      "clean": [
+        "output",
+        "base_internet.bin",
+        "dns_component.bin"
+      ],
+      "expected": [
+        "output/docker-compose.yml"
+      ],
+      "compile": true,
+      "build": true
+    }
+  }
+}

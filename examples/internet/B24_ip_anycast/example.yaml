@@ -1,0 +1,66 @@
+id: internet-b24-ip-anycast
+name: IP Anycast
+description: A B00-based mini Internet that demonstrates two AS180 sites announcing and serving the same anycast IP address.
+runner: internet
+script: ip_anycast.py
+platform: amd
+features:
+  - ipv4-default
+  - mini-internet
+  - ebgp-private-peering
+  - ip-anycast
+  - web-service
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - base_internet.bin
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B24 anycast services are running
+      type: compose-ps
+      services:
+        - hnode_150_host_0
+        - hnode_170_host_0
+        - hnode_180_host-0
+        - hnode_180_host-1
+        - brdnode_180_router0
+        - brdnode_180_router1
+      retries: 40
+      interval: 3
+
+probes:
+  - name: AS150 reaches the IX100-side anycast site
+    type: exec
+    service: hnode_150_host_0
+    command: curl -fsS http://10.180.0.100 | grep -q 'ix100-west'
+    expect_exit: 0
+    retries: 40
+    interval: 5
+    timeout: 45
+
+  - name: AS170 reaches the IX105-side anycast site
+    type: exec
+    service: hnode_170_host_0
+    command: curl -fsS http://10.180.0.100 | grep -q 'ix105-east'
+    expect_exit: 0
+    retries: 40
+    interval: 5
+    timeout: 45
+
+test_programs:
+  - name: B24 custom runtime validation
+    script: test_runtime.py
+    timeout: 600

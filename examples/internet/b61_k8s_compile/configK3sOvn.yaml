@@ -1,0 +1,23 @@
+kind: physicalOvn
+clusterName: seedemu-b61-physical
+
+nodes:
+  - name: amd
+    role: master
+    ip: 10.202.236.88
+    connection: local
+    ssh:
+      user: lxl
+      key: ~/.ssh/id_ed25519
+  - name: idc
+    role: worker
+    ip: 10.202.191.39
+    ssh:
+      user: seed
+      key: ~/.ssh/id_ed25519
+
+fabric:
+  type: ovn
+
+registry:
+  port: 5000

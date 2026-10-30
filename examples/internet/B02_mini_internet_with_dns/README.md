@@ -42,10 +42,10 @@ from examples.internet.B00_mini_internet import mini_internet
 from examples.internet.B01_dns_component import dns_component
 
 mini_internet.run(dumpfile='./base_internet.bin')
-dns_component.run(dumpfile='./dns-component.bin')
+dns_component.run(dumpfile='./dns_component.bin')
 
 emuA.load('./base_internet.bin')
-emuB.load('./dns-component.bin')
+emuB.load('./dns_component.bin')
 emu = emuA.merge(emuB, DEFAULT_MERGERS)
 ```
 
@@ -98,7 +98,7 @@ emu.addBinding(Binding('global-dns', filter = Filter(asn=153, nodeName="local-dn
 ```
 
 We need to add 10.153.0.53 as the local DNS server for all the nodes in the emulation.
-This is done by adding the following record  record in `/etc/resolve.conf`:
+This is done by adding the following record in `/etc/resolve.conf`:
 ```
 nameserver 10.153.0.53
 ```
@@ -148,3 +148,65 @@ customization will be carried to the physical nodes. This way,
 the customization can be done when a virtual node is created, instead
 of waiting for it to be bound to a physical node.
 Our DNS component is already modified to use the new design. 
+
+
+## Interacting with Nameservers Using `nsupdate`
+
+After the emulator starts running, we can use the `nsupdate` command to interact with the nameservers. All the nameservers inside the emulator are configured with the following setting inside the `/etc/bind/named.conf.options` file:
+```
+allow-update { any; };
+```
+
+This allows anyone to update the DNS records on this server. We have provided an example `add_record.sh` in the current folder to demonstrate how to add a record to the `example.net` server. Run the following:
+```
+./add_record.sh 1.2.3.4
+```
+
+After running it, go to any container, and run `"dig www.example.net"`, you will see that the IP address of `www.example.net` becomes `1.2.3.4`. Users can refer to the manual of `nsupdate` for more examples.
+
+
+## Standardized TestRunner lifecycle
+
+This example includes an `example.yaml` manifest so it can be compiled, built,
+started, probed, tested, and stopped by `seedemu.testing`.
+
+Run the full lifecycle from the repository root:
+
+```sh
+python seedemu/testing/cli.py all examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+```
+
+The lifecycle can also be run step by step:
+
+```sh
+python seedemu/testing/cli.py clean examples/internet/B02_mini_internet_with_dns/example.yaml
+python seedemu/testing/cli.py compile examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+python seedemu/testing/cli.py build examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+python seedemu/testing/cli.py up examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+python seedemu/testing/cli.py probe examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+python seedemu/testing/cli.py test examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+python seedemu/testing/cli.py down examples/internet/B02_mini_internet_with_dns/example.yaml --artifact-dir ci-artifacts/b02-mini-internet-with-dns
+```
+
+The tests focus only on DNS behavior introduced by this example. They do not
+repeat B00's mini-Internet reachability tests.
+
+The declarative probes check that representative hosts can resolve records from
+the DNS component:
+
+- `twitter.com` resolves to `1.1.1.1`
+- `google.com` resolves to `2.2.2.2`
+- `example.net` resolves to `3.3.3.3`
+- `syr.edu` resolves to `128.230.18.63`
+
+The custom `test_runtime.py` program checks DNS-specific deployment details:
+
+- `local-dns-1` is created in AS152 with address `10.152.0.53`.
+- `local-dns-2` is created in AS153 with address `10.153.0.53`.
+- AS160 and AS170 hosts use `10.152.0.53` as their resolver.
+- Representative hosts in other ASes use `10.153.0.53` as their resolver.
+- The B01 DNS component records resolve through those local DNS cache servers.
+- The `add_record.sh` dynamic-update helper exists.
+- An `nsupdate` command adds `www.example.net A 5.6.7.8`, and a client can
+  resolve the dynamically added record through the local DNS cache.
+

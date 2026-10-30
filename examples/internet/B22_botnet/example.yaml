@@ -1,0 +1,70 @@
+id: internet-b22-botnet
+name: Botnet
+description: A B00-based mini Internet that deploys one BYOB controller and six bot clients across multiple ASes.
+runner: internet
+script: botnet_basic.py
+platform: amd
+features:
+  - ipv4-default
+  - mini-internet
+  - botnet
+  - byob
+  - command-and-control
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - base_internet.bin
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 2400
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: B22 controller and representative network services are running
+      type: compose-ps
+      services:
+        - hnode_150_bot-controller
+        - brdnode_150_router0
+        - hnode_161_host_0
+      retries: 40
+      interval: 3
+
+probes:
+  - name: controller has the DDoS helper script
+    type: exec
+    service: hnode_150_bot-controller
+    command: test -f /tmp/ddos.py
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: controller has the BYOB shell helper
+    type: exec
+    service: hnode_150_bot-controller
+    command: test -x /bin/start-byob-shell
+    expect_exit: 0
+    retries: 20
+    interval: 3
+
+  - name: controller exposes the BYOB dropper endpoint
+    type: exec
+    service: hnode_150_bot-controller
+    command: curl -fsS http://127.0.0.1:446/clients/droppers/client.py >/dev/null
+    expect_exit: 0
+    retries: 60
+    interval: 5
+    timeout: 45
+
+test_programs:
+  - name: B22 custom runtime validation
+    script: test_runtime.py
+    timeout: 900

@@ -20,7 +20,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires = [
-        'requests'
+        'geopy',
+        'requests',
+        'PyYAML',
     ],
-    python_requires = '>=3.6'
+    python_requires = '>=3.10'
 )

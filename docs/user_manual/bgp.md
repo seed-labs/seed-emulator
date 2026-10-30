@@ -82,7 +82,7 @@ and `PeerRelationship.Unfiltered` peers.
 
 We show how to allow the nodes inside an emulator to communicate
 with the machines on the real Internet. A complete example
-can be found [here](../../examples/A03-real-world/). 
+can be found [here](../../examples/basic/A03_real_world/).
 To achieve this goal, we first need to create 
 a BGP router to announce the real-world network 
 prefixes inside the emulator, so the packets going to the 

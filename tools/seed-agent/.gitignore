@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Task-local research state for the paper-researcher agent (kept out of VCS so the harness stays small)
+agents/paper-researcher/runs/
+
+# Local text extraction of paper.pdf (regenerate with: pdftotext -layout paper.pdf paper.txt)
+paper.txt

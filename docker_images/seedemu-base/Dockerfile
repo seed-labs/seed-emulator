@@ -1,7 +1,7 @@
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN echo 'exec zsh' > /root/.bashrc
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl dnsutils ipcalc iproute2 iputils-ping jq mtr-tiny nano netcat tcpdump termshark vim-nox zsh
+RUN apt-get update && apt-get install -y --no-install-recommends curl dnsutils ipcalc iproute2 iputils-ping jq mtr-tiny nano netcat-openbsd tcpdump termshark vim-nox zsh
 COPY zshrc /root/.zshrc

@@ -1,0 +1,36 @@
+kind: kvmOvn
+clusterName: seedemu-b61-kvm
+
+defaults:
+  masterName: seedemu-b61-kvm-master
+  workerNamePrefix: seedemu-b61-kvm-worker
+  ipPrefix: 192.168.122
+  masterIpStart: 200
+  workerIpStart: 201
+  macPrefix: 52:54:00:61:10
+  masterMacStart: 200
+  workerMacStart: 201
+
+master:
+  vcpus: 12
+  memoryMb: 10240
+  diskGb: 80
+
+workers:
+  count: 2
+  vcpus: 6
+  memoryMb: 10240
+  diskGb: 80
+
+kvm:
+  legacyBaseImagePath: ""
+
+ssh:
+  user: ubuntu
+  key: ~/.ssh/id_ed25519
+
+fabric:
+  type: ovn
+
+registry:
+  port: 5000
