@@ -131,7 +131,7 @@ def run(
     # Generate the Docker files.
     output_dir = Path(output or SCRIPT_DIR / "output").resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    docker = Docker(platform=platform), str(output_dir)
+    docker = Docker(platform=platform) 
     # Add Internet visualization services: topology, geographic map, and traffic observation.
     # The second argument is a container name suffix that distinguishes bundle instances.
     internet_map_bundle = InternetMap(emu, ".map.seed")
@@ -139,7 +139,7 @@ def run(
     internet_map_bundle.setPorts(list(range(8081, 8089)))
     # Register the bundle with the Docker compiler to generate its containers during emu.compile().
     docker.addContainerBundle(internet_map_bundle)
-    emu.compile(docker, override=override)
+    emu.compile(docker, str(output_dir), override=override)
 
 
 def main() -> int:
