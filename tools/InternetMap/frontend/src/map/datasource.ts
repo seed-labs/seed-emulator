@@ -4,7 +4,7 @@ import {BgpPeer, EmulatorNetwork, EmulatorNode} from '../common/types';
 
 export const META_CLASS = 'org.seedsecuritylabs.seedemu.meta.class';
 
-export type DataEvent = 'packet' | 'dead' | 'vis';
+export type DataEvent = 'packet' | 'dead' | 'vis' | 'vm';
 
 export interface Vertex extends NodeOptions {
     id: string;
@@ -52,6 +52,7 @@ export class DataSource {
     private _errorHandler: (error: any) => void;
 
     private _visEventHandler: (params: any) => void;
+    private _VMEventHandler: (params: any) => void;
 
     /**
      * construct new data provider.
@@ -191,6 +192,29 @@ export class DataSource {
             }
         });
 
+        // VM ws
+        this._socketVis = new WebSocket(`${this._wsProtocol}://${location.host}${this._apiBase}/vm`);
+        this._socketVis.addEventListener('message', (ev) => {
+            let msg = ev.data.toString();
+
+            let object = JSON.parse(msg);
+            if (this._VMEventHandler) {
+                this._VMEventHandler(object);
+            }
+        });
+
+        this._socketVis.addEventListener('error', (ev) => {
+            if (this._errorHandler) {
+                this._errorHandler(ev);
+            }
+        });
+
+        this._socketVis.addEventListener('close', (ev) => {
+            if (this._errorHandler) {
+                this._errorHandler(ev);
+            }
+        });
+
         this._connected = true;
     }
 
@@ -294,6 +318,10 @@ export class DataSource {
                 break
             case 'vis':
                 this._visEventHandler = callback;
+                break
+            case 'vm':
+                this._VMEventHandler = callback;
+                break
         }
     }
 
@@ -395,5 +423,9 @@ export class DataSource {
         })
 
         return groups;
+    }
+
+    get nets(): EmulatorNetwork[] {
+        return this._nets;
     }
 }

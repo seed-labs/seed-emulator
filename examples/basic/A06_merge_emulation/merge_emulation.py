@@ -10,6 +10,7 @@ from seedemu.core import Emulator
 from seedemu.mergers import DEFAULT_MERGERS
 from seedemu.layers import Base, Routing, Ebgp
 from seedemu.compiler import Docker, Platform
+from seedemu.containerBundle import InternetMap
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -99,7 +100,15 @@ def run(
 
     output_dir = Path(output or SCRIPT_DIR / "output").resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    emu_merged.compile(Docker(platform=platform), str(output_dir), override=override)
+    docker = Docker(platform=platform)
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu_merged, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
+    emu_merged.compile(docker, str(output_dir), override=override)
 
 
 def main() -> int:

@@ -5,7 +5,7 @@ import {bpfCompletionTree} from '../common/bpf';
 import {Completion} from '../common/completion';
 import {EmulatorNetwork, EmulatorNode} from '../common/types';
 import {WindowManager} from '../common/window-manager';
-import {DataSource, NodesType, EdgesType, Vertex, META_CLASS} from './datasource';
+import {DataSource, EdgesType, META_CLASS, NodesType, Vertex} from './datasource';
 
 declare global {
     interface Window {
@@ -83,8 +83,6 @@ interface PlaylistItem {
     nodes: string[],
     at: number
 };
-
-const count = 10;
 
 const staticDefault = {borderWidth: 1}
 const dynamicDefault = {borderWidth: 4}
@@ -681,6 +679,49 @@ export class MapUi {
                 }, adjustedDelay)
             }
         });
+
+        this._datasource.on('vm', (data) => {
+            if (!data || !this._nodes) {
+                return;
+            }
+
+            const networkInfo = this._datasource.nets.find((net) => net['Name'] === data['networkName']) as EmulatorNetwork;
+            const asn = networkInfo.meta.emulatorInfo.scope;
+            const id = this.generateRandomHash(),
+                label = `${asn}/${data.nodename}`,
+                type = 'node',
+                custom = 'custom',
+                shape = 'triangle';
+
+            if (this._nodes.get({
+                filter: item => item.label.split('/').pop() === data.nodename
+            }).length) {
+                return;
+            }
+            this._addNode({
+                id, label, type, shape, group: asn, custom,
+                object: {
+                    Id: id,
+                    meta: {
+                        relation: {
+                            parent: new Set([networkInfo.Id])
+                        },
+                        emulatorInfo: {
+                            role: "Host",
+                            asn: parseInt(asn),
+                            name: data.nodename,
+                            nets: [
+                                {
+                                    name: 'net0',
+                                    address: data['ip'],
+                                }
+                            ]
+                        }
+                    }
+                }
+            } as Vertex);
+            this._addEdge(id, networkInfo.Id, data['ip']);
+        });
     }
 
     /**
@@ -1203,7 +1244,6 @@ export class MapUi {
 
                 if (vertex.type == 'node') {
                     let node = vertex.object as EmulatorNode;
-
                     itemDetails = node.meta.emulatorInfo.nets.map(net => net.address).join(', ');
                     itemName = `${node.meta.emulatorInfo.role}: ${itemName}`;
                 }
@@ -1965,5 +2005,27 @@ export class MapUi {
         }));
 
         nodes.update(updates);
+    }
+
+    private _addNode(vertex:Vertex){
+        this._nodes.add(vertex)
+    }
+
+    private _addEdge(from:string, to:string, label:string){
+        this._edges.add({
+            from,
+            to,
+            label,
+        })
+    }
+
+    generateRandomHash(length: number = 12): string {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            const randomIndex = Math.floor(Math.random() * characters.length);
+            result += characters[randomIndex];
+        }
+        return result;
     }
 }
