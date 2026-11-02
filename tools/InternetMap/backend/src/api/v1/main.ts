@@ -281,6 +281,42 @@ router.post('/container/vis/set', express.json(), async function (req, res, next
     next();
 });
 
+router.post('/vm', express.json(), async function (req, res, next) {
+    if (!req.body['networkName'] || !req.body['nodename'] || !req.body['ip']) {
+        res.json({
+            ok: false,
+            result: 'the [networkName & nodename & ip] parameter must be provided, and neither can be empty'
+        });
+        next();
+        return;
+    }
+
+    let deadSockets: WebSocket[] = [];
+    let data = {
+        role: 'Host',
+        custom: 'custom',
+        ...req.body
+    };
+
+    VMSubscribers.forEach(socket => {
+        if (socket.readyState == 1) {
+            socket.send(JSON.stringify(data));
+        }
+
+        if (socket.readyState > 1) {
+            deadSockets.push(socket);
+        }
+    });
+
+    deadSockets.forEach(socket => VMSubscribers.splice(VMSubscribers.indexOf(socket), 1));
+
+    res.json({
+        ok: true
+    });
+
+    next();
+});
+
 router.ws('/console/:id', async function (ws, req, next) {
     try {
         if (process.env.CONSOLE === 'false') {
@@ -299,7 +335,8 @@ router.ws('/console/:id', async function (ws, req, next) {
 
 var snifferSubscribers: WebSocket[] = [];
 var currentSnifferFilter: string = '';
-var visSubscribers: WebSocket[] = [];
+let visSubscribers: WebSocket[] = [];
+let VMSubscribers: WebSocket[] = [];
 
 router.post('/sniff', express.json(), async function (req, res, next) {
     sniffer.setListener((nodeId, data) => {
@@ -352,6 +389,11 @@ router.ws('/sniff', async function (ws, req, next) {
 
 router.ws('/container/vis/set', async function (ws, req, next) {
     visSubscribers.push(ws);
+    next();
+});
+
+router.ws('/vm', async function (ws, req, next) {
+    VMSubscribers.push(ws);
     next();
 });
 

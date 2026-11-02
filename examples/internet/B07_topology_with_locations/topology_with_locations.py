@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """Generate transit and stub ASes with two hosts per IX (500 total nodes)."""
 
 from __future__ import annotations
+from seedemu.containerBundle import InternetMap
 
 import argparse
 from collections import Counter
@@ -506,22 +506,6 @@ def main():
     # Add Internet visualization services: topology, geographic map, and traffic observation.
     # The second argument is a container name suffix that distinguishes bundle instances.
     bundle = InternetMap(emu, ".map.seed")
-    # Customize the bundle network; provide at least one IP per container, in creation order.
-    # All IPs must belong to the configured subnet, which should not overlap other networks.
-    bundle.setDefaultNetwork(
-        name="internetMap_network",
-        prefix=".map",
-        ip_addresses=[
-            "172.30.0.10",
-            "172.30.0.11",
-            "172.30.0.12",
-            "172.30.0.13",
-        ],
-        network_config={
-            "driver": "bridge",
-            "ipam": {"config": [{"subnet": "172.30.0.0/24", "gateway": "172.30.0.1"}]},
-        },
-    )
     # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
     bundle.setPorts(list(range(8081, 8089)))
     # Register the bundle with the Docker compiler to generate its containers during emu.compile().

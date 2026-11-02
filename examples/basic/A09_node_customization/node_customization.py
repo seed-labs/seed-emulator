@@ -60,7 +60,15 @@ def main() -> None:
     node.appendStartCommand("python3 /myprog.py", fork=True)
 
     emu.render()
-    emu.compile(Docker(platform=platform), str(output), override=True)
+    docker = Docker(platform=platform)
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
+    emu.compile(docker, str(output), override=True)
 
 
 if __name__ == "__main__":

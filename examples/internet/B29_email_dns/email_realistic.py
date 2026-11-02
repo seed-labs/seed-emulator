@@ -12,6 +12,7 @@ from seedemu.services.EmailService import EmailService
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter, Action
 from seedemu.utilities import Makers
+from seedemu.containerBundle import InternetMap
 
 def create_realistic_network(emu):
     """创建更真实的网络拓扑"""
@@ -445,7 +446,13 @@ def run(platform="auto"):
             dns=f"10.{mail['asn']}.0.53",
         )
     email_svc.attach_to_docker(docker)
-
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
     emu.compile(docker, "./output", override=True)
     emu.updateOutputDirectory(docker, email_svc.get_output_callbacks())
     
@@ -507,7 +514,7 @@ SEED Realistic Email System (29-1) created!
    Internet Map: http://localhost:8080/pro/map
 
 ======================================================================
-    "")
+    """)
 
 if __name__ == "__main__":
     platform = sys.argv[1] if len(sys.argv) > 1 else "auto"

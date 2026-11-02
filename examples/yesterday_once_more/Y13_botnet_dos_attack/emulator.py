@@ -13,6 +13,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
 B00_DIR = REPO_ROOT / "examples" / "internet" / "B00_mini_internet"
 TRAFFIC_VISUALIZER_SOURCE_DIR = REPO_ROOT / "tools" / "TrafficVisualizer"
+BOTNETLAB_SOURCE_DIR = REPO_ROOT / "tools" / "BotnetLab"
 
 for path in [REPO_ROOT, B00_DIR]:
     if str(path) not in sys.path:
@@ -20,19 +21,26 @@ for path in [REPO_ROOT, B00_DIR]:
 
 from mini_internet import build_emulator
 from seedemu.compiler import Docker, Platform
-from seedemu.core import Action, Binding, Emulator, Filter, Node
-from seedemu.services import BotnetClientService, BotnetService
+from seedemu.core import Emulator, Node
 
 
 BOT_CONTROLLER_IP = "10.150.0.66"
 BOT_CANDIDATE_ASNS = [152, 154, 160, 161, 162, 163, 164, 170, 171]
 AUTOMATIC_HOST_SLOTS_PER_AS = 29
+FIRST_AUTOMATIC_HOST = 71
+FIRST_MANUAL_HOST = 2
+LAST_MANUAL_HOST = 253
+RESERVED_HOST_OFFSETS = {154: {129}}
 VICTIM_HOST = (151, "host_0")
 VICTIM_IP = "10.151.0.71"
 VICTIM_ROUTER = (151, "router0")
 LEGITIMATE_CLIENT_HOST = (153, "host_0")
 DEMO_DIR = "/opt/botnet-dos"
 TRAFFIC_VISUALIZER_DIR = f"{DEMO_DIR}/traffic_visualizer"
+BOTNETLAB_DIR = f"{DEMO_DIR}/botnet_lab"
+BOTNETLAB_TOKEN = "y13-botnet-lab"
+BOTNETLAB_HOST_PORT = 8083
+BOTNETLAB_CONTAINER_PORT = 8080
 TRAFFIC_VISUALIZER_HOST_PORT = 8081
 TRAFFIC_VISUALIZER_CONTAINER_PORT = 8080
 HEALTH_PROBE_HOST_PORT = 8082
@@ -60,9 +68,7 @@ def parse_args() -> argparse.Namespace:
         parser.error(f"--hosts-per-as must be between 1 and {AUTOMATIC_HOST_SLOTS_PER_AS - 1}")
     if args.bot_count < 1:
         parser.error("--bot-count must be at least 1")
-    maximum_bots = len(BOT_CANDIDATE_ASNS) * (
-        AUTOMATIC_HOST_SLOTS_PER_AS - args.hosts_per_as
-    )
+    maximum_bots = maximum_bot_count(args.hosts_per_as)
     if args.bot_count > maximum_bots:
         parser.error(
             f"--bot-count cannot exceed {maximum_bots} with "
@@ -100,49 +106,112 @@ def install_traffic_visualizer_file(node: Node, name: str) -> None:
     node.setFile(f"{TRAFFIC_VISUALIZER_DIR}/{name}", content)
 
 
+def install_botnet_lab_file(node: Node, name: str) -> None:
+    content = (BOTNETLAB_SOURCE_DIR / name).read_text(encoding="utf-8")
+    node.setFile(f"{BOTNETLAB_DIR}/{name}", content)
+
+
 def prepare_demo_dir(node: Node) -> None:
-    node.addBuildCommand(f"mkdir -p {DEMO_DIR} {TRAFFIC_VISUALIZER_DIR}")
-    node.appendStartCommand(f"mkdir -p {DEMO_DIR} {TRAFFIC_VISUALIZER_DIR}")
-
-
-def configure_bot_node(node: Node, index: int) -> None:
-    node.addSoftware("python3")
-    prepare_demo_dir(node)
-    install_example_file(node, "bot_attack.py")
-    node.appendStartCommand(f"chmod +x {DEMO_DIR}/bot_attack.py")
-    node.setDisplayName(f"Bot-{index:03d}")
-    node.appendClassName("BotnetDosBot")
-
-
-def configure_controller(emu: Emulator, botnet: BotnetService) -> None:
-    botnet.install("bot-controller")
-    node = emu.getVirtualNode("bot-controller")
-    node.setDisplayName("Bot-Controller")
-    node.setFile("/bin/show-attack-command", read_example_file("show_attack_command.sh"))
-    node.appendStartCommand("chmod +x /bin/show-attack-command")
-    node.appendClassName("BotnetDosController")
-    emu.addBinding(
-        Binding(
-            "bot-controller",
-            filter=Filter(ip=BOT_CONTROLLER_IP, nodeName="bot-controller"),
-            action=Action.NEW,
-        )
+    node.addBuildCommand(
+        f"mkdir -p {DEMO_DIR} {TRAFFIC_VISUALIZER_DIR} {BOTNETLAB_DIR}"
+    )
+    node.appendStartCommand(
+        f"mkdir -p {DEMO_DIR} {TRAFFIC_VISUALIZER_DIR} {BOTNETLAB_DIR}"
     )
 
 
-def configure_bots(emu: Emulator, clients: BotnetClientService, bot_count: int) -> None:
+def configure_bot_node(node: Node, index: int, asn: int, address: str) -> None:
+    node.addSoftware("python3")
+    prepare_demo_dir(node)
+    install_example_file(node, "bot_attack.py")
+    install_botnet_lab_file(node, "agent.py")
+    node.appendStartCommand(
+        f"chmod +x {DEMO_DIR}/bot_attack.py {BOTNETLAB_DIR}/agent.py"
+    )
+    node.appendStartCommand(
+        f"python3 {BOTNETLAB_DIR}/agent.py "
+        f"--controller http://{BOT_CONTROLLER_IP}:{BOTNETLAB_CONTAINER_PORT} "
+        f"--token {BOTNETLAB_TOKEN} --bot-id bot-{index:03d} "
+        f"--hostname bot-node-{index:03d} --address {address} --asn {asn} "
+        f"--handler udp_load={DEMO_DIR}/bot_attack.py "
+        f"--metadata display_name=Bot-{index:03d} "
+        ">> /var/log/y13-botnet-agent.log 2>&1",
+        fork=True,
+    )
+    node.setDisplayName(f"Bot-{index:03d}")
+    node.appendClassName("BotnetDosBot")
+    node.appendClassName("BotnetLabAgent")
+
+
+def configure_controller(node: Node) -> None:
+    node.addSoftware("python3")
+    prepare_demo_dir(node)
+    install_botnet_lab_file(node, "controller.py")
+    install_botnet_lab_file(node, "botctl.py")
+    node.addPortForwarding(BOTNETLAB_HOST_PORT, BOTNETLAB_CONTAINER_PORT)
+    node.setFile(
+        "/bin/botctl",
+        "#!/bin/sh\n"
+        f"exec python3 {BOTNETLAB_DIR}/botctl.py "
+        f"--controller http://127.0.0.1:{BOTNETLAB_CONTAINER_PORT} "
+        f"--token {BOTNETLAB_TOKEN} \"$@\"\n",
+    )
+    node.appendStartCommand(
+        f"chmod +x {BOTNETLAB_DIR}/controller.py {BOTNETLAB_DIR}/botctl.py /bin/botctl"
+    )
+    node.appendStartCommand(
+        f"python3 {BOTNETLAB_DIR}/controller.py --host 0.0.0.0 "
+        f"--port {BOTNETLAB_CONTAINER_PORT} --token {BOTNETLAB_TOKEN} "
+        "--cors-origin '*' >> /var/log/y13-botnet-controller.log 2>&1",
+        fork=True,
+    )
+    node.setDisplayName("Bot-Controller")
+    node.appendClassName("BotnetDosController")
+    node.appendClassName("BotnetLabController")
+
+
+def available_host_offsets(asn: int, hosts_per_as: int) -> list[int]:
+    """Return deterministic offsets that do not conflict with B00 hosts."""
+    offsets = list(
+        range(FIRST_AUTOMATIC_HOST + hosts_per_as, LAST_MANUAL_HOST + 1)
+    )
+    offsets.extend(range(FIRST_MANUAL_HOST, FIRST_AUTOMATIC_HOST))
+    reserved = RESERVED_HOST_OFFSETS.get(asn, set())
+    return [offset for offset in offsets if offset not in reserved]
+
+
+def maximum_bot_count(hosts_per_as: int) -> int:
+    return sum(
+        len(available_host_offsets(asn, hosts_per_as))
+        for asn in BOT_CANDIDATE_ASNS
+    )
+
+
+def configure_bots(emu: Emulator, bot_count: int, hosts_per_as: int) -> None:
+    base = get_base(emu)
+    offsets = {
+        asn: available_host_offsets(asn, hosts_per_as)
+        for asn in BOT_CANDIDATE_ASNS
+    }
+    bots_per_as = {asn: 0 for asn in BOT_CANDIDATE_ASNS}
+    asn_cursor = 0
     for index in range(bot_count):
-        vnode = f"bot-node-{index:03d}"
-        asn = BOT_CANDIDATE_ASNS[index % len(BOT_CANDIDATE_ASNS)]
-        clients.install(vnode).setServer("bot-controller")
-        configure_bot_node(emu.getVirtualNode(vnode), index)
-        emu.addBinding(
-            Binding(
-                vnode,
-                filter=Filter(asn=asn, nodeName=vnode),
-                action=Action.NEW,
-            )
+        for _ in BOT_CANDIDATE_ASNS:
+            asn = BOT_CANDIDATE_ASNS[asn_cursor]
+            asn_cursor = (asn_cursor + 1) % len(BOT_CANDIDATE_ASNS)
+            if bots_per_as[asn] < len(offsets[asn]):
+                break
+        else:
+            raise ValueError("bot address pool exhausted")
+        offset = offsets[asn][bots_per_as[asn]]
+        bots_per_as[asn] += 1
+        address = f"10.{asn}.0.{offset}"
+        node = (
+            base.getAutonomousSystem(asn)
+            .createHost(f"bot-node-{index:03d}")
+            .joinNetwork("net0", address=address)
         )
+        configure_bot_node(node, index, asn, address)
 
 
 def configure_victim_router(router: Node) -> None:
@@ -165,6 +234,7 @@ def visualizer_config(bot_count: int) -> str:
         bot_count * DEFAULT_BOT_PPS * (DEFAULT_UDP_PAYLOAD_BYTES + 28) * 8 / 1_000_000,
         2,
     )
+    options["botnet_api_port"] = BOTNETLAB_HOST_PORT
     return json.dumps(config, indent=2) + "\n"
 
 
@@ -236,28 +306,28 @@ def configure_legitimate_client(host: Node) -> None:
 
 
 def build_y13_emulator(hosts_per_as: int = 2, bot_count: int = 8) -> Emulator:
-    available_per_as = AUTOMATIC_HOST_SLOTS_PER_AS - hosts_per_as
-    maximum_bots = len(BOT_CANDIDATE_ASNS) * available_per_as
-    if hosts_per_as < 1 or available_per_as < 1:
+    if hosts_per_as < 1 or hosts_per_as >= AUTOMATIC_HOST_SLOTS_PER_AS:
         raise ValueError(
             f"hosts_per_as must be between 1 and {AUTOMATIC_HOST_SLOTS_PER_AS - 1}"
         )
+    maximum_bots = maximum_bot_count(hosts_per_as)
     if bot_count < 1 or bot_count > maximum_bots:
         raise ValueError(
             f"bot_count must be between 1 and {maximum_bots} for hosts_per_as={hosts_per_as}"
         )
     emu = build_emulator(hosts_per_as=hosts_per_as)
-    botnet = BotnetService()
-    clients = BotnetClientService()
-
-    configure_controller(emu, botnet)
-    configure_bots(emu, clients, bot_count)
+    controller = (
+        get_base(emu)
+        .getAutonomousSystem(150)
+        .createHost("bot-controller")
+        .joinNetwork("net0", address=BOT_CONTROLLER_IP)
+    )
+    configure_controller(controller)
+    configure_bots(emu, bot_count, hosts_per_as)
     configure_victim_router(get_router(emu, *VICTIM_ROUTER))
     configure_victim(get_host(emu, *VICTIM_HOST), bot_count)
     configure_legitimate_client(get_host(emu, *LEGITIMATE_CLIENT_HOST))
 
-    emu.addLayer(botnet)
-    emu.addLayer(clients)
     return emu
 
 

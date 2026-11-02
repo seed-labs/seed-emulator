@@ -1,13 +1,13 @@
 id: yesterday-y13-botnet-dos-attack
 name: Botnet Denial-of-Service Attack
-description: B00 mini-Internet topology with a BYOB controller, distributed bots, and victim-impact visualization.
+description: B00 mini-Internet topology with a BotnetLab controller, distributed bots, and victim-impact visualization.
 runner: internet
 script: emulator.py
 platform: amd
 features:
   - mini-internet
   - botnet
-  - byob
+  - botnet-lab
   - command-and-control
   - udp-denial-of-service
   - traffic-visualization
@@ -24,7 +24,7 @@ compile:
 
 build:
   enabled: true
-  timeout: 2400
+  timeout: 1800
 
 runtime:
   compose: output/docker-compose.yml
@@ -40,14 +40,13 @@ runtime:
       interval: 3
 
 probes:
-  - name: controller exposes the BYOB dropper endpoint
+  - name: BotnetLab controller is healthy
     type: exec
     service: hnode_150_bot-controller
-    command: curl -fsS http://127.0.0.1:446/clients/droppers/client.py >/dev/null
+    command: python3 -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:8080/healthz').status == 200"
     expect_exit: 0
-    retries: 60
-    interval: 5
-    timeout: 45
+    retries: 30
+    interval: 2
 
   - name: traffic visualizer is healthy
     type: exec

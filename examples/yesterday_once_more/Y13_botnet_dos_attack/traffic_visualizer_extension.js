@@ -11,6 +11,12 @@
   let serviceTimeline;
   let bandwidthTimeline;
   let impactConfig;
+  let configuredBotCount;
+  let connectedBots;
+  let runningBots;
+  let commandProgress;
+  let botnetApiUrl;
+  let botnetFetchPending = false;
 
   function setStatus(label, className) {
     serviceStatus.textContent = label;
@@ -116,28 +122,77 @@
     });
   }
 
-  function createBots(count) {
-    const visibleCount = Math.min(count, 24);
+  function renderBots(bots) {
+    const visibleCount = Math.min(Math.max(configuredBotCount, bots.length), 24);
     botField.replaceChildren();
     for (let index = 0; index < visibleCount; index += 1) {
+      const status = bots[index];
       const bot = document.createElement('span');
-      bot.className = 'bot-node';
-      bot.title = `Configured bot ${index + 1}`;
+      const state = status?.online ? status.agent_state : 'offline';
+      bot.className = `bot-node ${state === 'running' ? 'running' : state === 'offline' ? 'offline' : 'online'}`;
+      bot.title = status
+        ? `${status.bot_id}: ${state} (AS${status.asn || '?'})`
+        : `Configured bot ${index + 1}: not registered`;
       bot.style.setProperty('--delay', `${(index % 8) * -0.11}s`);
       bot.innerHTML = '<span class="bot-head"></span><span class="bot-body"></span>';
       botField.appendChild(bot);
     }
-    if (count > visibleCount) {
+    const total = Math.max(configuredBotCount, bots.length);
+    if (total > visibleCount) {
       const remainder = document.createElement('span');
       remainder.className = 'bot-remainder';
-      remainder.textContent = `+${count - visibleCount}`;
+      remainder.textContent = `+${total - visibleCount}`;
       botField.appendChild(remainder);
+    }
+  }
+
+  function renderBotnetStatus(botSnapshot, commandSnapshot, root) {
+    const bots = botSnapshot.bots || [];
+    const online = bots.filter((bot) => bot.online);
+    const running = online.filter((bot) => bot.agent_state === 'running');
+    const latest = commandSnapshot.commands?.[0];
+    connectedBots.textContent = `${botSnapshot.online_count}/${configuredBotCount}`;
+    runningBots.textContent = String(running.length);
+    commandProgress.textContent = latest
+      ? `${latest.state} (${latest.assignment_count} bots)`
+      : 'No command';
+    renderBots(bots);
+
+    const state = root.querySelector('#attack-state');
+    if (running.length) {
+      state.textContent = 'COMMAND ACTIVE';
+      state.className = 'attack-state active';
+    } else {
+      state.textContent = 'C2 READY';
+      state.className = 'attack-state idle';
+    }
+  }
+
+  async function fetchBotnetStatus(root) {
+    if (!botnetApiUrl || botnetFetchPending) return;
+    botnetFetchPending = true;
+    try {
+      const [botsResponse, commandsResponse] = await Promise.all([
+        fetch(`${botnetApiUrl}/api/bots`, {cache: 'no-store'}),
+        fetch(`${botnetApiUrl}/api/commands`, {cache: 'no-store'}),
+      ]);
+      if (!botsResponse.ok || !commandsResponse.ok) throw new Error('BotnetLab API unavailable');
+      renderBotnetStatus(await botsResponse.json(), await commandsResponse.json(), root);
+    } catch (_error) {
+      const state = root.querySelector('#attack-state');
+      state.textContent = 'C2 OFFLINE';
+      state.className = 'attack-state offline';
+      connectedBots.textContent = '--';
+      runningBots.textContent = '--';
+      commandProgress.textContent = 'Unavailable';
+    } finally {
+      botnetFetchPending = false;
     }
   }
 
   TrafficVisualizer.registerExtension({
     mount({root, config}) {
-      const botCount = Number(config.bot_count) || 0;
+      configuredBotCount = Number(config.bot_count) || 0;
       const botPps = Number(config.bot_pps) || 0;
       const payloadBytes = Number(config.udp_payload_bytes) || 0;
       const offeredLoad = Number(config.offered_load_mbps) || 0;
@@ -145,11 +200,14 @@
         <section class="botnet-panel" aria-label="Botnet activity">
           <div class="botnet-heading">
             <div><div class="label">Command-and-control</div><strong>Distributed bot activity</strong></div>
-            <span class="attack-state idle" id="attack-state">IDLE</span>
+            <span class="attack-state idle" id="attack-state">CONNECTING</span>
           </div>
           <div class="bot-field" id="bot-field"></div>
           <div class="extension-grid botnet-details">
-            <div class="extension-card"><div class="label">Configured bots</div><span class="extension-value">${botCount}</span></div>
+            <div class="extension-card"><div class="label">Configured bots</div><span class="extension-value">${configuredBotCount}</span></div>
+            <div class="extension-card"><div class="label">Connected bots</div><span class="extension-value" id="connected-bots">--</span></div>
+            <div class="extension-card"><div class="label">Running bots</div><span class="extension-value" id="running-bots">--</span></div>
+            <div class="extension-card"><div class="label">Latest command</div><span class="extension-value" id="command-progress">Waiting</span></div>
             <div class="extension-card"><div class="label">Default rate per bot</div><span class="extension-value">${botPps} pps</span></div>
             <div class="extension-card"><div class="label">Default UDP payload</div><span class="extension-value">${payloadBytes} B</span></div>
             <div class="extension-card"><div class="label">Default offered load</div><span class="extension-value">${offeredLoad.toFixed(2)} Mbps</span></div>
@@ -183,6 +241,9 @@
         impact_bandwidth_stale_seconds: Number(config.impact_bandwidth_stale_seconds) || 12,
       };
       botField = root.querySelector('#bot-field');
+      connectedBots = root.querySelector('#connected-bots');
+      runningBots = root.querySelector('#running-bots');
+      commandProgress = root.querySelector('#command-progress');
       observedRate = root.querySelector('#observed-rate');
       averageSize = root.querySelector('#average-size');
       serviceStatus = root.querySelector('#impact-status');
@@ -193,26 +254,26 @@
       serviceAverageThroughput = root.querySelector('#impact-average-throughput');
       serviceTimeline = root.querySelector('#impact-timeline');
       bandwidthTimeline = root.querySelector('#bandwidth-timeline');
-      createBots(botCount);
+      const botnetApiPort = Number(config.botnet_api_port);
+      botnetApiUrl = config.botnet_api_url || (
+        botnetApiPort
+          ? `${window.location.protocol}//${window.location.hostname}:${botnetApiPort}`
+          : ''
+      );
+      renderBots([]);
+      fetchBotnetStatus(root);
       showWaiting();
     },
     update(stats, {root, formatBytes}) {
-      const active = stats.packets_last_second > 0;
-      botField.classList.toggle('active', active);
-      const state = root.querySelector('#attack-state');
-      state.textContent = active ? 'TRAFFIC ACTIVE' : 'IDLE';
-      state.className = `attack-state ${active ? 'active' : 'idle'}`;
       observedRate.textContent = `${(stats.ip_bytes_last_second * 8 / 1_000_000).toFixed(2)} Mbps`;
       averageSize.textContent = formatBytes(stats.average_ip_packet_size);
+      fetchBotnetStatus(root);
       updateImpact(stats.impact);
     },
     reset({root}) {
-      botField.classList.remove('active');
-      const state = root.querySelector('#attack-state');
-      state.textContent = 'IDLE';
-      state.className = 'attack-state idle';
       observedRate.textContent = '0.00 Mbps';
       averageSize.textContent = '0 B';
+      fetchBotnetStatus(root);
       showWaiting();
     },
   });

@@ -17,6 +17,7 @@ from seedemu.compiler import Docker, Platform
 from seedemu.core import Binding, Emulator, Filter
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, PeerRelationship, Routing
 from seedemu.services import WebService
+from seedemu.containerBundle import InternetMap
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,7 +97,15 @@ def main() -> int:
 
     output_dir = Path(args.output).resolve()
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    emu.compile(Docker(platform=resolve_platform(args.platform)), str(output_dir), override=args.override)
+    docker = Docker(platform=resolve_platform(args.platform))
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map_bundle = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map_bundle.setPorts(list(range(8081, 8089)))
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map_bundle)
+    emu.compile(docker, str(output_dir), override=args.override)
     print("Generated A12 Docker output in {}".format(output_dir))
     return 0
 

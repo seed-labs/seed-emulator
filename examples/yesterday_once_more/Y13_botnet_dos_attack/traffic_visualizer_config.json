@@ -15,6 +15,7 @@
       "udp_payload_bytes": 1200,
       "victim_address": "10.151.0.71:9000",
       "health_api_port": 8082,
+      "botnet_api_port": 8083,
       "impact_latency_warning_ms": 150,
       "impact_stale_seconds": 4,
       "impact_chart_max_ms": 500,

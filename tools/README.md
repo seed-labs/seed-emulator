@@ -18,3 +18,8 @@ tools/run-example-test.sh A01
 tools/run-example-test.sh A02a probe
 tools/run-example-test.sh B02 all
 ```
+
+## BotnetLab
+
+`BotnetLab` is a small controller/agent toolkit for dependency-free,
+allowlisted botnet demonstrations in SEED examples.
