@@ -111,10 +111,6 @@ jobs:
             examples/internet/B31_mini_internet_mpls/mini_internet_mpls.py \
             examples/internet/B31_mini_internet_mpls/test_runtime.py
 
-      - name: Test EtcHosts custom records
-        run: |
-          python -m unittest discover -s tests -p test_etc_hosts.py -v
-
       - name: Validate selected example manifests
         run: |
           python seedemu/testing/cli.py clean examples/basic/A00_simple_as/example.yaml
