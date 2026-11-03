@@ -101,7 +101,7 @@ class Base(Layer, Graphable):
     def render(self, emulator: Emulator) -> None:
         for ((scope, type, name), obj) in emulator.getRegistry().getAll().items():
 
-            if type not in ['rs', 'rnode', 'hnode', 'csnode']:
+            if type not in ['rs', 'rnode', 'hnode', 'csnode', 'extnode']:
                 continue
 
             node: Node = obj

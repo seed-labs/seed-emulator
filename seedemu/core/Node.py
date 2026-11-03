@@ -1132,6 +1132,19 @@ sed -i 's/!__default_gw__!/'"$gw"'/g' /etc/bird/bird.conf
 exit 0
 """
 
+class ExtensionNode(Node):
+    """!
+    @brief Generic node for project-defined extensions.
+
+    ExtensionNode retains the standard Node build and runtime APIs but does not
+    automatically attach to networks or install routing, protocols, daemons, or
+    project-specific behavior.
+    """
+
+    def __init__(self, name: str, asn: int, scope: str = None):
+        super().__init__(name, NodeRole.ExtensionNode, asn, scope)
+
+
 class Router(Node):
     """!
     @brief Node extension class.

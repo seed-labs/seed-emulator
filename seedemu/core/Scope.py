@@ -46,6 +46,7 @@ class ScopeType(IntEnum):
     CSNODE = 4
     BRDNODE = 8
     RSNODE = 16
+    EXTNODE = 32
     @staticmethod
     def from_node(node: 'Node'):
         from .enums import NodeRole
@@ -63,6 +64,8 @@ class ScopeType(IntEnum):
                 return ScopeType.RSNODE
             case NodeRole.OpenVpnRouter:
                 return ScopeType.RNODE
+            case NodeRole.ExtensionNode:
+                return ScopeType.EXTNODE
 
 
 

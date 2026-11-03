@@ -4,7 +4,7 @@ from .Printable import Printable
 from .Network import Network
 from .AddressAssignmentConstraint import AddressAssignmentConstraint
 from .enums import NetworkType, NodeRole
-from .Node import Node, Router, ROUTER_BGP_ROLE_EDGE
+from .Node import ExtensionNode, Node, Router, ROUTER_BGP_ROLE_EDGE
 from .Scope import ScopeTier, Scope
 from .Emulator import Emulator
 from .Configurable import Configurable
@@ -58,6 +58,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
     __subnets: List[IPv4Network]
     __routers: Dict[str, Node]
     __hosts: Dict[str, Node]
+    __extension_nodes: Dict[str, ExtensionNode]
     __nets: Dict[str, Network]
     __name_servers: List[str]
     __clusters: Dict[str, Tuple[Set[str], Set[str]]]
@@ -78,6 +79,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         super().__init__()
         self.__hosts = {}
         self.__routers = {}
+        self.__extension_nodes = {}
         self.__nets = {}
         self.__asn = asn
         self.__subnets = None if asn > 255 else list(IPv4Network(subnetTemplate.format(asn)).subnets(new_prefix = 24))
@@ -504,6 +506,7 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         for (key, val) in self.__nets.items(): reg.register(str(self.__asn), 'net', key, val)
         for (key, val) in self.__hosts.items(): reg.register(str(self.__asn), 'hnode', key, val)
         for (key, val) in self.__routers.items(): reg.register(str(self.__asn), 'rnode', key, val)
+        for (key, val) in self.__extension_nodes.items(): reg.register(str(self.__asn), 'extnode', key, val)
 
     def inheritOptions(self, emulator: Emulator):
         """! trickle down any overrides the user might have done on AS level """
@@ -541,6 +544,9 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
             router.configure(emulator)
             if router.isBorderRouter():
                 emulator.getRegistry().register( str(self.__asn), 'brdnode', name, router )
+
+        for extension_node in self.__extension_nodes.values():
+            extension_node.configure(emulator)
 
     def getAsn(self) -> int:
         """!
@@ -686,6 +692,30 @@ class AutonomousSystem(Printable, Graphable, Configurable, Customizable):
         @returns list of hosts.
         """
         return list(self.__hosts.keys())
+
+    def addExtensionNode(self, node: ExtensionNode) -> ExtensionNode:
+        """!
+        @brief Add an ExtensionNode to this AS's lifecycle inventory.
+
+        This is a lifecycle index, not domain ownership. The same object is
+        indexed without copying it, and extension projects retain their own
+        domain ownership and construction rules.
+        """
+        assert isinstance(node, ExtensionNode), 'node must be an ExtensionNode'
+        assert node.getAsn() == self.__asn, 'ExtensionNode belongs to a different AS'
+        name = node.getName()
+        assert name not in self.__extension_nodes, \
+            'ExtensionNode with name {} already exists.'.format(name)
+        self.__extension_nodes[name] = node
+        return node
+
+    def getExtensionNode(self, name: str) -> ExtensionNode:
+        """!@brief Retrieve an ExtensionNode from the lifecycle inventory."""
+        return self.__extension_nodes[name]
+
+    def getExtensionNodes(self) -> List[str]:
+        """!@brief Get the names of ExtensionNodes in the lifecycle inventory."""
+        return list(self.__extension_nodes.keys())
 
     def _doCreateGraphs(self, emulator: Emulator):
         """!

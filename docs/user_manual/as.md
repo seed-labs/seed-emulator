@@ -5,6 +5,7 @@
 - [The Default IP Prefix/Address Assignment for Networks/Hosts](#default-assignment-network-host)
 - [Overwrite the Default Network Prefix Assignment](#overwrite-default-prefix)
 - [Overwrite the Default IP addresses Assignment](#overwrite-default-host-ip)
+- [Attach extension nodes](#extension-nodes)
 
 
 <a id="default-assignment-network-host"></a>
@@ -78,3 +79,26 @@ instead. Both `createInternetExchange` and `createNetwork` accept the `aac`
 argument, which will alter the auto address assignment behavior. For details,
 please refer to the API documentation.
 
+<a id="extension-nodes"></a>
+## Attach extension nodes
+
+Projects can model a specialized physical node by subclassing the public
+`ExtensionNode` base and attaching the same object to an autonomous system:
+
+```python
+from seedemu.core import ExtensionNode
+
+node = ExtensionNode("special-0", asn=150)
+as150.addExtensionNode(node)
+assert as150.getExtensionNode("special-0") is node
+```
+
+The AS extension-node inventory participates in registration (`extnode`),
+configuration, Base rendering, and compiler discovery. It is a lifecycle
+inventory: the extension project may retain domain ownership of the same
+object. Names must be unique within the extension-node inventory. Attaching an
+extension node does not copy AS name servers or legacy Global/AS-wide generic
+options to it.
+
+Extension nodes do not become Binding candidates or routing/service nodes
+merely by being attached. A project must opt into those behaviors separately.

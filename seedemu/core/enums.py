@@ -40,3 +40,6 @@ class NodeRole(Enum):
 
     ## OpenVpn router node.
     OpenVpnRouter = "OpenVpnRouter"
+
+    ## Generic extension node.
+    ExtensionNode = "ExtensionNode"

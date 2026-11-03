@@ -530,7 +530,7 @@ class Docker(Compiler):
         groupIter: Dict[str, int] = {}
 
         for ((scope, type, name), obj) in registry.getAll().items():
-            if type not in ['rnode', 'csnode', 'hnode', 'snode', 'rs', 'snode']:
+            if type not in ['rnode', 'csnode', 'hnode', 'snode', 'rs', 'snode', 'extnode']:
                 continue
 
             node: Node = obj
@@ -762,6 +762,12 @@ class Docker(Compiler):
                 value = 'Route Server'
             )
 
+        if type == 'extnode':
+            labels += DockerCompilerFileTemplates['compose_label_meta'].format(
+                key = 'role',
+                value = 'ExtensionNode'
+            )
+
         if node.getDisplayName() != None:
             labels += DockerCompilerFileTemplates['compose_label_meta'].format(
                 key = 'displayname',
@@ -817,6 +823,7 @@ class Docker(Compiler):
         if role == NodeRole.ControlService: return 'cs'
         if role == NodeRole.RouteServer: return 'rs'
         if role == NodeRole.BorderRouter: return 'brd'
+        if role == NodeRole.ExtensionNode: return 'ext'
         assert False, 'unknown node role {}'.format(role)
 
     def _contextToPrefix(self, scope: str, type: str) -> str:
@@ -863,12 +870,14 @@ class Docker(Compiler):
         @brief Given a node, compute its final container_name, as it will be
         known in the docker-compose file.
         """
+        primary_ip = '' if node.getRole() == NodeRole.ExtensionNode and \
+            len(node.getInterfaces()) == 0 else node.getInterfaces()[0].getAddress()
         name = self.__naming_scheme.format(
             asn = node.getAsn(),
             role = self._nodeRoleToString(node.getRole()),
             name = node.getName(),
             displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
-            primaryIp = node.getInterfaces()[0].getAddress()
+            primaryIp = primary_ip
         )
 
         return sub(r'[^a-zA-Z0-9_.-]', '_', name)
@@ -1095,7 +1104,15 @@ class Docker(Compiler):
         chdir('..')
 
         name = self._getComposeNodeName(node)
-        return DockerCompilerFileTemplates['compose_service'].format(
+        service_template = DockerCompilerFileTemplates['compose_service']
+        if node.getRole() == NodeRole.ExtensionNode and \
+                len(node.getInterfaces()) == 0:
+            service_template = service_template.replace(
+                '        networks:\n{networks}',
+                '        network_mode: none\n',
+                1
+            )
+        return service_template.format(
             nodeId = real_nodename,
             nodeName = name,
             dependsOn = md5(image.getName().encode('utf-8')).hexdigest(),
@@ -1200,6 +1217,8 @@ class Docker(Compiler):
                         return f'{base}_RSNODE'
                     case ScopeType.RNODE:
                         return f'{base}_RNODE'
+                    case ScopeType.EXTNODE:
+                        return f'{base}_EXTNODE'
                     case _:
                         #TODO: combination (ORed) Flags not yet implemented
                         raise NotImplementedError
@@ -1217,6 +1236,8 @@ class Docker(Compiler):
                         return f'{base}_{s.asn}_RSNODE'
                     case ScopeType.RNODE:
                         return f'{base}_{s.asn}_RNODE'
+                    case ScopeType.EXTNODE:
+                        return f'{base}_{s.asn}_EXTNODE'
                     case _:
                         # combination (ORed) Flags not yet implemented
                         #TODO: How should we call CSNODE|HNODE or BRDNODE|RSNODE|RNODE ?!
@@ -1337,6 +1358,10 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+            if type == 'extnode':
+                self._log('compiling extension node {} for as{}...'.format(name, scope))
+                self.__services += self._compileNode(obj)
+
         for containerBundle in self.__containerBundles:
             bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
             self.__services += bundle_services
@@ -1362,11 +1387,19 @@ class Docker(Compiler):
             )
 
         toplevelvolumes = self._computeComposeTopLvlVolumes()
+        compose_networks = self.__networks
+        if self.__networks == '' and any(
+            type == 'extnode' and
+            obj.getRole() == NodeRole.ExtensionNode and
+            len(obj.getInterfaces()) == 0
+            for ((scope, type, name), obj) in registry.getAll().items()
+        ):
+            compose_networks = '    {}\n'
 
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
             services=self.__services,
-            networks=self.__networks,
+            networks=compose_networks,
             volumes=toplevelvolumes,
             dummies=local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
