@@ -174,7 +174,7 @@ DockerCompilerFileTemplates['compose_network'] = """\
     {netId}:
         driver_opts:
             com.docker.network.driver.mtu: {mtu}
-        ipam:
+{gatewayModeOption}        ipam:
             config:
                 - subnet: {prefix}
         labels:
@@ -1243,6 +1243,13 @@ class Docker(Compiler):
             netId = self._getRealNetName(net),
             prefix = net.getAttribute('dummy_prefix') if self.__self_managed_network and net.getType() != NetworkType.Bridge else net.getPrefix(),
             mtu = net.getMtu(),
+            # Emulated routers carry direct-routed traffic between networks.
+            # Docker 28.2+ filters direct-routed traffic per container IP.
+            # External Bridge networks retain Docker's default gateway mode.
+            gatewayModeOption = (
+                '            com.docker.network.bridge.gateway_mode_ipv4: nat-unprotected\n'
+                if net.getType() != NetworkType.Bridge else ''
+            ),
             labelList = self._getNetMeta(net)
         )
 
