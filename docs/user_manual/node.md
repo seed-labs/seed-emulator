@@ -122,4 +122,23 @@ this layer to the emulator; otherwise, the mappings will not be added.
 emu.addLayer(EtcHosts())
 ```
 
+## Extension nodes and network attachment
 
+`ExtensionNode` is the public base for specialized physical node types that
+need the ordinary SEED node lifecycle without pretending to be a Host or
+Router. It uses `NodeRole.ExtensionNode` and `ScopeType.EXTNODE`. An extension
+node may have zero interfaces or join a network with an explicit address:
+
+```python
+from seedemu.core import ExtensionNode
+
+node = ExtensionNode("special-0", asn=152)
+as152.addExtensionNode(node)
+node.joinNetwork("net0", "10.152.0.10")
+```
+
+Public metadata methods such as `setDisplayName`, `setDescription`,
+`setLabel`, and `setGeo` remain available. Docker serializes standard node
+metadata and custom labels; project-specific domain fields are not serialized
+unless the project explicitly projects them through a public Node metadata
+surface.

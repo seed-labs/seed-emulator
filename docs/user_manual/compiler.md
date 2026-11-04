@@ -14,6 +14,24 @@ on a single host.
 emu.compile(Docker(), './output/regular-docker')
 ```
 
+The Docker compiler recognizes registered `extnode` objects and compiles them
+through the standard node image, Dockerfile, naming, metadata, and Compose
+paths. A zero-interface `ExtensionNode` is emitted with `network_mode: none`;
+this special case does not change Host, Router, or other existing node output.
+
+Extension nodes do not receive the Base layer's default options automatically.
+For a newly created extension node, apply these defaults explicitly before
+calling `emu.render()`:
+
+```python
+for option in base.getAvailableOptions():
+    node.setOption(option)
+```
+
+This supplies the `sysctl_netipv4_conf_rp_filter` option required by the Docker
+compiler, along with the other Base defaults. Set any node-specific overrides
+after applying the defaults.
+
 ## Distributed Docker (`DistributedDocker`) compiler
 
 ```python
