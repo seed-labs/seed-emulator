@@ -1,0 +1,82 @@
+id: internet-b08-internet-map-bundle
+name: InternetMap with emulator access
+description: One visualization stack with a default IPAM bridge, an explicit AS151 API attachment, and a host-network observer.
+runner: internet
+script: internet_map_bundle.py
+platform: amd
+features:
+  - container-bundle
+  - internet-map
+  - static-addresses
+  - etc-hosts
+  - host-network-observer
+
+compile:
+  enabled: true
+  # This script accepts a positional platform, rather than --platform/--output.
+  standard_args: false
+  args: [amd]
+  env:
+    PYTHONDONTWRITEBYTECODE: "1"
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - output/emulator_api_server.map.seed.emu/Dockerfile
+    - output/internetmap_toplogy.map.seed.emu/Dockerfile
+    - output/internetmap_geo.map.seed.emu/Dockerfile
+    - output/traffic_observer.map.seed.emu/Dockerfile
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 2400
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: InternetMap stack and emulator gateway are running
+      type: compose-ps
+      services:
+        - emulator_api_server.map.seed.emu
+        - internetmap_toplogy.map.seed.emu
+        - internetmap_geo.map.seed.emu
+        - traffic_observer.map.seed.emu
+        - brdnode_151_router0
+      retries: 40
+      interval: 3
+
+probes:
+  # Published-port probes assume the runner and Docker daemon use the same host.
+  - name: topology UI responds on its published port
+    type: http
+    url: http://127.0.0.1:8092/
+    expect_status: 200
+    timeout: 5
+    retries: 30
+    interval: 2
+
+  - name: geographic UI responds on its published port
+    type: http
+    url: http://127.0.0.1:8093/
+    expect_status: 200
+    timeout: 5
+    retries: 30
+    interval: 2
+
+  - name: observer control port accepts connections
+    type: tcp
+    host: 127.0.0.1
+    port: 8091
+    timeout: 5
+    retries: 30
+    interval: 2
+
+test_programs:
+  - name: B08 InternetMap runtime checks
+    script: test_runtime.py
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    timeout: 420
