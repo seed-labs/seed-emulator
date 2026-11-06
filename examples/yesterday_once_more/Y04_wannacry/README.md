@@ -320,3 +320,9 @@ nonce = secrets.token_bytes(16)
 The monitor checks this property in practice by hashing the visible lab key on
 each infected/recovered host and reporting whether duplicate key fingerprints
 are observed.
+
+## InternetMap
+
+The compiler registers the InternetMap bundle explicitly. Port `8081` is the
+traffic observer control endpoint, `8082` is the topology UI, and `8083` is
+the geographic UI.

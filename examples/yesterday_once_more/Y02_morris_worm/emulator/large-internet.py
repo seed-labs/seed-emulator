@@ -277,22 +277,16 @@ def run(dumpfile=None, hosts_per_as=2):
     else: 
         emu.render()
 
-        docker = Docker(platform=platform, internetMapEnabled=False)
-
-        # Use the new internet-map:2.0
-        """
-        docker.attachCustomContainer(compose_entry = DOCKER_COMPOSE_ENTRY.format(
-                      name="seedemu_internetmap", 
-                      default_route=emu.getDefaultRouterByAsnAndNetwork(199, 'net0')),
-                asn=199, net='net0', ip_address='10.199.0.90',
-                port_forwarding="8080:8080/tcp",
-                node_name='internet-map', show_on_map=False)
-        """
-
-        docker.attachInternetMap(asn=199, net='net0', ip_address='10.199.0.90',
-                port_forwarding='8080:8080/tcp', 
-                env=[f'DEFAULT_ROUTE={emu.getDefaultRouterByAsnAndNetwork(199, "net0")}'])
-
+        docker = Docker(platform=platform)
+        # Add Internet visualization services: topology, geographic map, and traffic observation.
+        # The second argument is a container name suffix that distinguishes bundle instances.
+        internet_map = InternetMap(emu, ".map.seed")
+        # Add the emulator_api_server container to the emulation network with ASN 199 and network name 'net0'.
+        internet_map.addInternalNetwork(asn="199", network_name='net0', ip_addresses=['10.199.0.90'])
+        # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+        internet_map.setPorts([8078, 8079, 8080])
+        # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+        docker.addContainerBundle(internet_map)
 
         # Use the "morris-worm-base" custom base image
         docker.addImage(DockerImage('morris-worm-base', [], local = True))

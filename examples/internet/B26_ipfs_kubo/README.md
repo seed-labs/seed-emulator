@@ -1,6 +1,6 @@
 # Kubo Example
 This is designed to be a very simple example depicting how to install IPFS Kubo on many nodes.
-It uses the [mini-internet](../../B00-mini-internet/README.md) topology and configuration as its base layer, and builds Kubo on top of that.
+It uses the [mini-Internet](../B00_mini_internet/README.md) topology and configuration as its base layer, and builds Kubo on top of that.
 
 ## Building the Emulation
 1. Create an instance of the emulator.
@@ -8,13 +8,13 @@ It uses the [mini-internet](../../B00-mini-internet/README.md) topology and conf
     emu = Emulator()
     ```
 
-2. Load the pre-built emulation from the [mini-internet example](../06-mini-internet/README.md) as the base layer for this emulation.
+2. Load the pre-built emulation from the [mini-Internet example](../B00_mini_internet/README.md) as the base layer for this emulation.
     ```python
     emu.load('./base_component.bin')
     ```
     This works because we have a slightly modified version of the mini-internet Python script
     which dumps the emulation to a binary file, rather than compiling it for Docker (see the
-    last line of [base-component.py](base-component.py)). *If you wanted to build a topology
+    last line of [base_component.py](base_component.py)). *If you wanted to build a topology
     yourself, you could do that at this point instead of loading from a pre-built emulation.*
 
 3. Initialize the Kubo service. The defaults should be fine, but you may specify additional
@@ -64,13 +64,17 @@ of a node to a physical node in the Emulator. One way to do all of this is as fo
 
 6. Now, you are ready to render and compile the emulation. We'll do this for Docker.
     ```python
-    docker = Docker(internetMapEnabled = True)
+    docker = Docker()
     emu.render()
-    emu.compile(docker, OUTPUDIR, override = True)
+    internet_map = InternetMap(emu, ".map.seed")
+    internet_map.setPorts([8081, 8082, 8083])
+    docker.addContainerBundle(internet_map)
+    emu.compile(docker, OUTPUTDIR, override = True)
     ```
-    Here, we additionally enable the *Internet Map*, an emulator functionality that displays a
-    visualization of the emulation in your browser at http://localhost:8080/pro/map. We also enable override for our compiler, so that it will overwrite previous compiles each time we
-    run this script.
+    InternetMap is registered explicitly after rendering. Port `8081` is the
+    traffic observer control endpoint, `8082` is the topology UI, and `8083`
+    is the geographic UI. The `override` argument lets the compiler replace a
+    previous output directory.
 
 7. Finally, go ahead and run the emulation script, in this case, `kubo.py`. This will compile
 the emulation for Docker, and generate this in the `./output/` directory.
@@ -84,9 +88,10 @@ the emulation.
 ./output$ docker compose up
 ```
 
-- Now that the emulation is running, you can view the network topology and access each host
-via the Internet Map at http://localhost:8080/pro/map. Alternatively, you can use the `docker
-exec` command to attach a CLI session to a given Docker container.
+- Now that the emulation is running, open the topology UI at
+  <http://localhost:8082/> or the geographic UI at
+  <http://localhost:8083/>. Alternatively, use `docker exec` to attach a CLI
+  session to a container.
 - The best way to interact with IPFS here, is to use the Kubo CLI on any host that has Kubo
 installed.
 

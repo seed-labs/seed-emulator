@@ -133,7 +133,7 @@ def run(
 
         ###############################################################################
         # Final step: Generate the docker files
-        docker = Docker(internetMapEnabled=True, platform=platform)
+        docker = Docker(platform=platform)
         # Add Internet visualization services: topology, geographic map, and traffic observation.
         # The second argument is a container name suffix that distinguishes bundle instances.
         internet_map_bundle = InternetMap(emu, ".map.seed")

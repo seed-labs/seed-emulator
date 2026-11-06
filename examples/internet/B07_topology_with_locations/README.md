@@ -8,10 +8,10 @@ Use Python 3.10 or later with this repository's SeedEMU dependencies installed, 
 
 ```sh
 python -m pip install -r examples/internet/B07_topology_with_locations/requirements.txt
-python examples/internet/B07_topology_with_locations/topology_with_locations.py --nodes 200
+python examples/internet/B07_topology_with_locations/topology_with_locations.py
 ```
 
-The default is **500 emulated nodes**, seed `42`, and the `amd` platform. Output is written to this example's `output` directory, regardless of the working directory.
+The default is **150 emulated nodes**, seed `42`, and the `amd` platform. Output is written to this example's `output` directory, regardless of the working directory.
 
 Start the generated environment on a Docker host with Docker Compose:
 
@@ -24,14 +24,18 @@ The attached services are:
 
 | Service | Purpose |
 | --- | --- |
-| `seedemu_internet_map_toplogy` | Topology map; the service name uses this spelling in the compiler |
-| `seedemu_internet_map_geographic` | Geographic map |
-| `seedemu_emulator_service` | Backend shared by the maps |
-| `seedemu_traffic_observer_service` | Traffic observation backend used by the geographic map |
+| `internetmap_toplogy.map.seed` | Topology map; the service name uses this spelling in the bundle |
+| `internetmap_geo.map.seed` | Geographic map |
+| `emulator_api_server.map.seed` | Backend shared by the maps |
+| `traffic_observer.map.seed` | Traffic observation backend used by the geographic map |
 
-The compiler selects host ports in **8080–9999**, excluding host ports already published by emulation services in the generated Compose configuration. It allocates ports during compilation without probing sockets on the host. Read the generated Compose file or `docker compose ps` output to find each map's host port, then open `http://localhost:<port>` on the Docker host (or substitute the host's address). These ports must also be available on the deployment host.
+The script assigns port `8081` to the traffic observer control endpoint,
+`8082` to the topology UI, and `8083` to the geographic UI. Open
+<http://localhost:8082/> or <http://localhost:8083/> on the Docker host. The
+compiler does not probe the host, so all three ports must be available when the
+environment starts.
 
-The traffic observer uses host networking, the host PID namespace, privileged mode, and Linux kernel/BPF mounts. Run the full environment on a Linux Docker host that supports these facilities. The legacy built-in Internet map is disabled with `internetMapEnabled=False`; the map containers above are attached separately with `attachDockerhubContainer()`.
+The traffic observer uses host networking, the host PID namespace, privileged mode, and Linux kernel/BPF mounts. Run the full environment on a Linux Docker host that supports these facilities. The script creates an `InternetMap` bundle after rendering, assigns its ports with `setPorts()`, and registers it through `GeoDocker.addContainerBundle()` before compilation.
 
 To regenerate and rebuild an existing deployment, for example with 600 nodes:
 
@@ -46,7 +50,7 @@ On Windows systems whose default encoding causes console errors, run the generat
 
 | Option | Default | Behavior |
 | --- | --- | --- |
-| `--nodes`, `--node-count` | `500` | Total emulated nodes, including routers, IX route servers, and hosts; minimum `118` |
+| `--nodes`, `--node-count` | `150` | Total emulated nodes, including routers, IX route servers, and hosts; minimum `118` |
 | `--seed` | `42` | Seed for randomized city selection during transit planning |
 | `--platform` | `amd` | Select `amd` (AMD64) or `arm` (ARM64) for the Docker compiler |
 | Positional `amd` / `arm` | Unset | Legacy platform argument; an explicit `--platform` takes precedence |
@@ -63,19 +67,19 @@ python examples/internet/B07_topology_with_locations/topology_with_locations.py 
 python examples/internet/B07_topology_with_locations/topology_with_locations.py --nodes 119 --seed 7 --output ./output-119
 ```
 
-For Python callers, `build_emulator(seed=42, node_count=200)` returns `(emu, records, members)`. Its node-count default is **200**, whereas the CLI explicitly passes its default of **500**.
+For Python callers, `build_emulator(seed=42, node_count=200)` returns `(emu, records, members)`. Its node-count default is **200**, whereas the CLI explicitly passes its default of **150**.
 
 ## Node counts and topology
 
 For a requested total of `N` nodes:
 
-| Node type | Count | Count at the CLI default (`N = 500`) |
+| Node type | Count | Count at the CLI default (`N = 150`) |
 | --- | --- | --- |
 | IX route servers | 20 | 20 |
-| Transit routers | `N - 80` | 420 |
+| Transit routers | `N - 80` | 70 |
 | Stub routers | 20 | 20 |
 | Stub hosts | 40 | 40 |
-| Total emulated nodes | `N` | 500 |
+| Total emulated nodes | `N` | 150 |
 
 This count excludes visualization backends, map containers, and compiler-generated image helper services. The generated Compose file therefore contains more than `N` services.
 
@@ -89,7 +93,7 @@ The maximum supported size depends on the filtered city catalogue, available reg
 
 ## Geographic placement
 
-The city catalogue is [cityies.py](./cityies.py), including the spelling of its filename. The generator deduplicates coordinates, checks land coverage with `global-land-mask`, restricts latitude to `-60 < latitude < 66`, and excludes the desert-core rectangles listed in the script.
+The city catalogue is [cities.py](./cities.py). The generator deduplicates coordinates, checks land coverage with `global-land-mask`, restricts latitude to `-60 < latitude < 66`, and excludes the desert-core rectangles listed in the script.
 
 IX anchors are selected by farthest-point sampling within each continent:
 
@@ -130,14 +134,20 @@ Providers export full routes downstream; customers export local and customer rou
 
 `TransitMakerBase` and `TransitMakerAs` provide explicit internal prefixes to the four-argument transit Maker. IX interface addresses are set before rendering, allowing transit ASNs above 255 without using the ASN as an IPv4 octet.
 
-## Automatic validation
+## Automated testing
 
-After compilation, `validate_compose()` reads `docker-compose.yml` and checks:
+This directory includes `example.yaml` for the repository test runner and
+`test_runtime.py` for B07-specific checks. The manifest compiles the script's
+default 150-node topology with seed `42`. After the Compose environment is
+running, the runtime test checks:
 
 - The exact number of emulated nodes identified by their role labels, and the expected counts for all four topology roles.
 - One router and two hosts in each stub AS, with the correct IX anchor.
-- Geographic coordinates for nodes and global IX networks, with catalogue membership for unshifted locations.
-- Route-server anchor consistency and valid land offsets of at most approximately 2 km and less than one tenth of the nearest attached router's distance.
+- Geographic coordinates and required location metadata for nodes and global IX networks.
+- Route-server anchor consistency and display offsets of at most approximately 2 km.
 - Unique coordinates across all emulated nodes and exactly 20 global IX networks.
 
-Successful generation prints the node breakdown, total AS count, and output directory. These checks validate generated metadata; they do not run containers, verify BGP convergence, or test end-to-end connectivity. This example directory currently contains no standalone connectivity checker or regression test suite.
+It also checks representative cross-AS connectivity and probes both map UIs and
+the traffic observer control port. Successful generation itself prints the node
+breakdown, total AS count, and output directory; the runtime checks are run by
+the test harness, rather than by `topology_with_locations.py`.

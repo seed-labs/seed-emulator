@@ -103,7 +103,14 @@ def run(dumpfile=None):
        # Rendering compilation 
        emu.render()
        # change docker base to mirai-base
-       docker = Docker(internetMapEnabled=True)
+       docker = Docker()
+       # Add Internet visualization services: topology, geographic map, and traffic observation.
+       # The second argument is a container name suffix that distinguishes bundle instances.
+       internet_map = InternetMap(emu, ".map.seed")
+       # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+       internet_map.setPorts(list(range(8081, 8089)))
+       # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+       docker.addContainerBundle(internet_map)
        docker.addImage(DockerImage('mirai-base', [], local = True))
        for stub_as in [150, 151, 152, 153, 154, 160, 161, 162, 163, 164, 170, 171]:
         hosts = base.getAutonomousSystem(stub_as).getHosts()

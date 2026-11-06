@@ -6,6 +6,7 @@ from seedemu.services import WebService
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Binding, Filter
 import sys, os
+from seedemu.containerBundle import InternetMap
 
 # Note: the indent of the {name} field needs to match with the rest service entries
 # in the docker-compose.yml file. 
@@ -137,12 +138,6 @@ def run(dumpfile = None):
                 asn=150, net='net0', ip_address='10.150.0.81',
                 port_forwarding="9091:80/tcp", 
                 node_name='busybox2', show_on_map=True)
-
-        # Attach the Internet Map container to the emulator
-        # This API actually calls `attachCustomContainer` 
-        docker.attachInternetMap(asn=151, net='net0', ip_address='10.151.0.90',
-                       port_forwarding='8080:8080/tcp', env=['a=1', 'b=2'])
-
 
         ###############################################################################
         # Compilation

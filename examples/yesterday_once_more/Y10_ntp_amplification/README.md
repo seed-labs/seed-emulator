@@ -82,6 +82,10 @@ http://localhost:8081/api/stats
 http://localhost:8082/api/health
 ```
 
+The InternetMap bundle uses separate ports: `8078` for the traffic observer
+control endpoint, `8079` for the topology UI, and `8080` for the geographic
+UI. These avoid the attack dashboard's `8081` and `8082` ports.
+
 ### Change capacity at runtime
 
 Y10 installs the shared link controller on AS151's gateway. No limit is enabled

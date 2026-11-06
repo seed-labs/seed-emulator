@@ -130,6 +130,10 @@ Internet Map is still useful for seeing packets move through the topology, but
 the victim dashboard makes the key lesson clearer: a small number of spoofed
 requests can cause many hosts to send replies to the victim.
 
+The InternetMap bundle uses `8078` for the traffic observer control endpoint,
+`8079` for the topology UI, and `8080` for the geographic UI. The victim
+dashboard continues to use `8081`, with its health endpoint on `8082`.
+
 
 ## How The Smurf Attack Is Enabled
 

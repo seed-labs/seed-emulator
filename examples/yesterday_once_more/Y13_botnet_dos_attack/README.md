@@ -79,6 +79,10 @@ http://localhost:8083/api/bots        measured bot enrollment and state
 http://localhost:8083/api/commands    command progress
 ```
 
+The InternetMap bundle avoids those dashboard ports: `8078` is the traffic
+observer control endpoint, `8079` is the topology UI, and `8080` is the
+geographic UI.
+
 Each icon represents an actual BotnetLab registration. Online bots are visible, running bots animate,
 and unavailable bots remain dimmed.
 
