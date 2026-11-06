@@ -102,3 +102,9 @@ to Morris Worm in this incident collection.
 - The worm reads only `/opt/slammer-lab/targets.txt`.
 - Targets are restricted to lab prefixes such as `10.`.
 - Packet rate and duration are bounded by command-line options.
+
+## InternetMap
+
+The compiler registers the InternetMap bundle explicitly. Port `8081` is the
+traffic observer control endpoint, `8082` is the topology UI, and `8083` is
+the geographic UI.

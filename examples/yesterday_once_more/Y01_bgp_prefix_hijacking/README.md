@@ -6,3 +6,7 @@ We have provided two demos for this attack in the following folders using differ
 
 2. `demo_zju` folder: This demo is for a demonstration in our own university, where we have some special setup. This demo is not general for public. 
 
+Both compiler paths register the InternetMap bundle explicitly. Port `8081`
+is the traffic observer control endpoint, `8082` is the topology UI, and
+`8083` is the geographic UI.
+

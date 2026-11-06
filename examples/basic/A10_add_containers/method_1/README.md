@@ -65,18 +65,28 @@ We need to add the following options to the docker compose entry:
 ```
 
 
-## Adding the Internet MAP
+## Adding InternetMap
 
-We can add the Internet MAP tool (an independent container) to the emulator using 
-the `attachInternetMap` API, which is a wrapper for the `attachCustomContainer` API (with
-the docker compose entry hardcoded. In the future, we will develop useful tools for
-the emulator, and they can be added in such a way. 
+InternetMap is a four-service `ContainerBundle`. Create it after `emu.render()`,
+optionally attach its API service to an emulated network, assign three host
+ports, and register it with the Docker compiler:
 
+```python
+from seedemu.containerBundle import InternetMap
+
+internet_map = InternetMap(emu, ".map.seed")
+internet_map.addInternalNetwork(
+    asn="151",
+    network_name="net0",
+    ip_addresses=["10.151.0.90"],
+)
+internet_map.setPorts([8078, 8079, 8080])
+docker.addContainerBundle(internet_map)
 ```
-docker.attachInternetMap(asn=150, net='net0', ip_address='10.150.0.90',
-                  port_forwarding='8080:8080/tcp', env=['a=1', 'b=2'])
 
-```
+The ports are the traffic observer control endpoint, topology UI, and
+geographic UI, in that order. This example therefore exposes the two UIs at
+<http://localhost:8079/> and <http://localhost:8080/>.
 
 
 
@@ -99,6 +109,8 @@ docker.attachCustomContainer(
 
 ## Notes
 
-In this example, the custom container can be displayed on the map, but it cannot be operated on like other containers. We will resolve this issue in the future. 
+`show_on_map=True` adds SeedEMU metadata labels to the custom Compose service.
+It does not turn that service into a Base-layer node or add it to the emulator
+registry.
 
 

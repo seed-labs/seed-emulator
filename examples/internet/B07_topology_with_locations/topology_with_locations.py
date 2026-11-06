@@ -1,7 +1,6 @@
-"""Generate transit and stub ASes with two hosts per IX (500 total nodes)."""
+"""Generate transit and stub ASes with two hosts per IX."""
 
 from __future__ import annotations
-from seedemu.containerBundle import InternetMap
 
 import argparse
 from collections import Counter
@@ -10,7 +9,6 @@ from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
 import random
 import sys
-from typing import List
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
@@ -22,7 +20,7 @@ from seedemu.core import Emulator
 from seedemu.layers import Base, Ebgp, Ibgp, Ospf, PeerRelationship, Routing
 from seedemu.utilities import Makers
 from geopy.distance import geodesic
-from seedemu.containerBundle import InternetMap, ContainerBundle
+from seedemu.containerBundle import InternetMap
 
 # The supplied catalogue is named cityies.py, not cities.py.
 from cities import IX_LOCATIONS
@@ -448,8 +446,6 @@ def build_emulator(seed=42, node_count=200):
 
 
 class GeoDocker(Docker):
-    __containerBundles: List[ContainerBundle] = []
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.anchors = select_anchors(load_cities())
@@ -472,8 +468,8 @@ def parse_args():
         "--nodes",
         "--node-count",
         type=int,
-        default=500,
-        help=f"Total routers + IX route servers + hosts (default: 500; minimum: {MIN_NODE_COUNT}).",
+        default=150,
+        help=f"Total routers + IX route servers + hosts (default: 150; minimum: {MIN_NODE_COUNT}).",
     )
     parser.add_argument("--output", default=str(SCRIPT_DIR / "output"))
     parser.add_argument("--dumpfile")
@@ -498,18 +494,15 @@ def main():
         emu.render()
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    geoDocker = GeoDocker(
-        internetMapEnabled=False,
-        platform=Platform.AMD64 if args.platform == "amd" else Platform.ARM64,
-    )
+    geoDocker = GeoDocker(platform=Platform.AMD64 if args.platform == "amd" else Platform.ARM64,)
 
     # Add Internet visualization services: topology, geographic map, and traffic observation.
     # The second argument is a container name suffix that distinguishes bundle instances.
-    bundle = InternetMap(emu, ".map.seed")
+    internet_map = InternetMap(emu, ".map.seed")
     # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
-    bundle.setPorts(list(range(8081, 8089)))
+    internet_map.setPorts(list(range(8081, 8089)))
     # Register the bundle with the Docker compiler to generate its containers during emu.compile().
-    geoDocker.addContainerBundle(bundle)
+    geoDocker.addContainerBundle(internet_map)
 
     emu.compile(geoDocker, str(output), override=args.override)
 
