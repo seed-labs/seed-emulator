@@ -24,8 +24,7 @@ can be run through `seedemu.testing`.
 | `A07_compilers` | Demonstrates compiler and registry usage, including different compiler outputs. |
 | `A08_buildtime_docker` | Demonstrates using a build-time Docker container during emulator build, including generated artifacts from a helper image. |
 | `A09_node_customization` | Demonstrates node customization, including adding programs and custom behavior to nodes. |
-| `A10_add_containers` | Demonstrates attaching existing containers to networks inside an emulation. |
-| `A11_add_containers_new` | Demonstrates newer patterns for adding existing containers and displaying them in the Internet map. |
+| `A10_add_containers` | Demonstrates attaching existing containers to emulated networks with `attachCustomContainer`, adding visualization metadata, and registering the InternetMap bundle. It also points to the newer ContainerBundle approach in A14. |
 | `A12_bgp_mixed_backend` | Demonstrates mixed BIRD and FRR routing backends in the same IPv4 emulator topology. |
 | `A13_exabgp` | Demonstrates adding an ExaBGP speaker to the emulator and manually announcing or withdrawing routes through a helper script. |
 | `A15_toplogy_generator` | Demonstrates the NetworkX-based autonomous-system topology generator, including generated internal topology, eBGP attachment, iBGP mode selection, and topology artifacts. |

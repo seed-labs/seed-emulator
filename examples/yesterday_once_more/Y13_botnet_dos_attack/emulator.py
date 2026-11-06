@@ -22,6 +22,7 @@ for path in [REPO_ROOT, B00_DIR]:
 from mini_internet import build_emulator
 from seedemu.compiler import Docker, Platform
 from seedemu.core import Emulator, Node
+from seedemu.containerBundle import InternetMap
 
 
 BOT_CONTROLLER_IP = "10.150.0.66"
@@ -346,7 +347,15 @@ def run(
         return
     if render:
         emu.render()
-    emu.compile(Docker(platform=platform), output or str(SCRIPT_DIR / "output"), override=override)
+    docker = Docker(platform=platform)
+    # Add Internet visualization services: topology, geographic map, and traffic observation.
+    # The second argument is a container name suffix that distinguishes bundle instances.
+    internet_map = InternetMap(emu, ".map.seed")
+    # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+    internet_map.setPorts([8078, 8079, 8080])
+    # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+    docker.addContainerBundle(internet_map)
+    emu.compile(docker, output or str(SCRIPT_DIR / "output"), override=override)
 
 
 def main() -> int:

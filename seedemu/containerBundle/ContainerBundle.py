@@ -438,6 +438,9 @@ class PreparedContainer:
         """
         return self._name + self._suffix
 
+    def setStartScriptName(self, name: str):
+        self._start_script_name = name
+
     def setEntrypointWrapper(
         self,
         original_entrypoint: str,
@@ -480,38 +483,38 @@ class PreparedContainer:
         hostname = self.getHostname()
         mkdir(hostname)
         chdir(hostname)
+        if self._start_script_name:
+            if self._etc_hosts_records:
+                etchosts_content = "\n".join(
+                    f"{ip}\t{hostname}"
+                    for hostname, ip in set(self._etc_hosts_records)
+                )
+                self.setFile("/tmp/etc-hosts", etchosts_content)
+                etc_hosts_command = "cat /tmp/etc-hosts >> /etc/hosts"
+                if etc_hosts_command not in self._start_commands:
+                    insert_index = 0
+                    if len(self._start_commands) > 1:
+                        if self._start_commands[1] == "set -eu":
+                            insert_index = 2
+                        else:
+                            insert_index = 1
+                    self._start_commands.insert(insert_index, etc_hosts_command)
 
-        if self._etc_hosts_records:
-            etchosts_content = "\n".join(
-                f"{ip}\t{hostname}"
-                for hostname, ip in set(self._etc_hosts_records)
-            )
-            self.setFile("/tmp/etc-hosts", etchosts_content)
-            etc_hosts_command = "cat /tmp/etc-hosts >> /etc/hosts"
-            if etc_hosts_command not in self._start_commands:
+            if self._default_route:
                 insert_index = 0
                 if len(self._start_commands) > 1:
                     if self._start_commands[1] == "set -eu":
                         insert_index = 2
                     else:
                         insert_index = 1
-                self._start_commands.insert(insert_index, etc_hosts_command)
+                self._start_commands[insert_index:insert_index] = self._getDefaultRouteCommands()
 
-        if self._default_route:
-            insert_index = 0
-            if len(self._start_commands) > 1:
-                if self._start_commands[1] == "set -eu":
-                    insert_index = 2
-                else:
-                    insert_index = 1
-            self._start_commands[insert_index:insert_index] = self._getDefaultRouteCommands()
-
-        if self._start_commands:
-            if not self._start_commands[0].startswith("#!"):
-                self.setEntrypointWrapper(
-                    original_entrypoint=self._start_script_name, commands=self._start_commands
-                )
-            self.setFile(self._start_script_name, "\n".join(self._start_commands))
+            if self._start_commands:
+                if not self._start_commands[0].startswith("#!") :
+                    self.setEntrypointWrapper(
+                        original_entrypoint=self._start_script_name, commands=self._start_commands
+                    )
+                self.setFile(self._start_script_name, "\n".join(self._start_commands))
 
         dockerfile = self._generateDockerfile()
         if dockerfile:
@@ -673,8 +676,10 @@ class PreparedContainer:
             return ""
 
         self._service.update({"privileged": True})
+        image = self._service.pop("image", "")
+        assert image, f"Container {self.getHostname()!r} has no base image."
         dockerfile_lines = [
-            "FROM {}".format(self._service.pop("image", "")),
+            f"FROM {image}",
             "ARG DEBIAN_FRONTEND=noninteractive",
             "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping && rm -rf /var/lib/apt/lists/*",
         ]

@@ -16,7 +16,9 @@ local IPFS network. However, there are a few difficulties here:
 - Each instance of the Web UI only provides information for the node that it is hosted on, and
 access to the IPFS network.
 - The Web UI requires access to the **IPFS HTTP Gateway** which is also bundled with Kubo, and
-makes IPFS data available over HTTP on port 8080 (there does not seem to be an easy way to change this). *This conflicts with the default exposed port for the emulator's Internet Map.*
+makes IPFS data available over HTTP on port 8080. When an `InternetMap` bundle
+is also used, select three different host ports with `setPorts()`; InternetMap
+has no implicit default host-port allocation in the Docker compiler.
 - The Web UI requires access to the **IPFS RPC API** which is also bundled with Kubo, and makes it possible to gather information about the local node and make configuration changes.
 The RPC API runs over port 5001 by default (can be configured easily), which is also the port
 over which the Web UI is hosted.
@@ -37,7 +39,7 @@ and should be derived from there instead of set manually.
   and should be derived from here if possible.
 
 ### Educational Lab
-This would be based on the [Kubo dApp](/examples/not-ready-examples/28-kubo-dapp/README.md) example. It should combine IPFS Kubo with Ethereum smart contracts to show how to deploy a simple dApp and illustrate the basic functionality of both IPFS, and smart contracts.
+This would be based on the [Kubo dApp](/examples/internet/B27_ipfs_kubo_dapp/README.md) example. It should combine IPFS Kubo with Ethereum smart contracts to show how to deploy a simple dApp and illustrate the basic functionality of both IPFS, and smart contracts.
 
 Below, you will find a possible outline for the structure of this lab:
 1. Intro to IPFS
@@ -84,7 +86,7 @@ The following includes some technical notes on the implementation, including asp
     - `self._arch` must be the same as the architecture given to the compiler, Kubo should determine dynamically based on compiler arch.
 - `self._tmp_dir` is the location in which temporary setup files may be placed, right now just the bootstrap script.
     - Change `TEMPORARY_DIR` in `KuboService` to modify this.
-- `self._first_installed` may be used to expose a single node's Web UI to the host VM. We should find a better way to expose all nodes' Web UIs without individual port forwarding (which also conflicts with Internet Map default port 8080).
+- `self._first_installed` may be used to expose a single node's Web UI to the host VM. We should find a better way to expose all nodes' Web UIs without individual port forwarding. If InternetMap is enabled, its three explicitly selected ports must not overlap these forwards.
 - `self._doInstall(node:Node, server:KuboServer)` does all service-level installation (port bindings and bootstrapping), and then begins server-level installation for the given node.
     - Bootstrap list and bootstrap script are generated once when this method is first called, and reused for all other method calls.
 - `self._getBootstrapIps()` populates the service's bootstrap list using the first valid, local IPv4 address for each node.

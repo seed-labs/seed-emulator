@@ -1,321 +1,230 @@
-# Add a group of containers to emulator
+# ContainerBundle design
 
-Created: October 8, 2026 
+[ContainerBundle.py](../../seedemu/containerBundle/ContainerBundle.py) defines
+ContainerBundle and PreparedContainer. They generate independent Docker services
+alongside emulator nodes. Prepared containers are not Base-layer nodes and are
+not automatically added to the emulator registry.
 
-## Current implementation: two cooperating classes
+This document describes the current shared implementation. For the complete
+custom-subclass walkthrough, addresses, aliases, run commands, and tests, see
+[A14](../../examples/basic/A14_add_containerBundle/README.md). The concrete
+[InternetMap design](internet_map.md) has its runnable example in
+[B08](../../examples/internet/B08_internet_map_bundle/README.md).
 
-`seedemu/containerBundle/ContainerBundle.py` defines two layers of
-responsibility:
+## Responsibilities and lifecycle
 
-- `ContainerBundle` owns a group of services, shared network configuration,
-  port allocation, and the Compose fragments returned to the Docker compiler.
-- `PreparedContainer` owns one service definition, its network attachments,
-  staged files, startup commands, and generated Dockerfile context.
+| Component | Responsibility |
+| --- | --- |
+| ContainerBundle | Own containers, network pools, host-port settings, shared hosts records, and Compose fragments |
+| PreparedContainer | Store one service's Compose mapping, attachments, local hosts records, files, and startup commands |
+| Docker compiler | Register bundles, invoke configure/install, and combine their output with emulator-node services |
 
-The lifecycle is:
-
-```mermaid
-flowchart TD
-    subgraph row1["1. Create"]
-        direction LR
-        A[Create emulator] --> B[Render emulator] --> C[Create ContainerBundle]
-    end
-    subgraph row2["2. Register"]
-        direction RL
-        D[Create PreparedContainer objects] --> E[Configure network and ports] --> F[docker.addContainerBundle]
-    end
-    subgraph row3["3. Configure"]
-        direction LR
-        G[emu.compile] --> H[ContainerBundle.configure] --> I[Configure services and attachments]
-    end
-    subgraph row4["4. Install"]
-        direction RL
-        J[ContainerBundle.install] --> K[PreparedContainer.install] --> L[Dockerfiles and Compose YAML]
-    end
-    row1 --> row2 --> row3 --> row4
-```
-
-## `ContainerBundle` design
-
-Subclasses normally create their containers in `__init__`, configure them in
-`configure()`, and rely on the compiler to call `install()`:
-
-```python
-class ExampleBundle(ContainerBundle):
-    def __init__(self, emulator, suffix=".example"):
-        super().__init__(emulator=emulator, suffix=suffix)
-        self._createContainer("backend", suffix)
-
-    def configure(self):
-        self._required_port_number = 1
-        super().configure()
-        backend = self.getContainer("backend" + self.getSuffix())
-        backend.setContentAttribute({
-            "image": "busybox:latest",
-            "command": "sleep infinity",
-        })
-```
-
-`_createContainer(local_name, suffix)` registers a `PreparedContainer`. The
-registration key, Compose service name, `container_name`, and generated hostname
-are all `local_name + suffix`. `getName()` retains the unsuffixed logical name.
-Pass the suffixed key to `getContainer()`; `getContainers()`, `getEmulator()`,
-and `getSuffix()` provide inspection access.
-
-### Default network
-
-`setDefaultExternalNetwork()` defines the isolated Docker network shared by bundle
-services:
-
-```python
-bundle.setDefaultExternalNetwork(
-    name="example_network",
-    prefix="172.30.0.0/24",
-    ip_addresses=["172.30.0.10", "172.30.0.11"],
-    default_router="172.30.0.1",
-    type="bridge",
-)
-```
-
-`prefix` is an IPv4 subnet in CIDR notation. The method validates the subnet,
-gateway, address count, subnet membership, duplicate addresses, and gateway
-exclusion. It also creates the Compose IPAM configuration. Addresses are
-assigned in container creation order. `getDefaultExternalNetwork()` returns the
-stored dictionary, including the generated `network_config`, with a copied
-`ip_addresses` list. Configure the external network before calling this getter.
-
-The resulting structure is consumed by `configure()` and `install()`:
-
-```python
-{
-    "name": "example_network",
-    "prefix": "172.30.0.0/24",
-    "ip_addresses": ["172.30.0.10", "172.30.0.11"],
-    "default_router": "172.30.0.1",
-    "type": "bridge",
-    "network_config": {
-        "driver": "bridge",
-        "ipam": {"config": [{"subnet": "172.30.0.0/24", "gateway": "172.30.0.1"}]},
-    },
-}
-```
-
-`setDefaultExternalNetwork()` does not attach containers immediately. A bundle's
-`configure()` method selects an address for each container and calls
-`joinExternalNetwork()`. Later, `install()` emits the `network_config` as the
-Compose network definition.
-
-```mermaid
-flowchart TD
-    subgraph row1["1. Define network"]
-        direction LR
-        A[setDefaultExternalNetwork] --> B[Validate CIDR, gateway and addresses] --> C[Store network dictionary]
-    end
-    subgraph row2["2. Attach and install"]
-        direction RL
-        D[configure assigns addresses] --> E[PreparedContainer.joinExternalNetwork] --> F[install emits Compose IPAM network]
-    end
-    row1 --> row2
-```
-
-### Ports and lifecycle
-
-`setPorts()` stores a copy of the host-port pool. A subclass sets
-`_required_port_number` before calling `super().configure()`; the base method
-then validates that enough ports were supplied. The subclass consumes ports
-and fills service attributes during the same `configure()` call.
-
-`install()` calls `PreparedContainer.install()` for every registered service,
-filters emulator-owned networks from the bundle network section, and returns
-the generated service and network YAML fragments.
+Subclasses create prepared containers in `__init__`, set resource requirements,
+and configure service attributes in configure(). Render the emulator first so
+network checks can use configured interfaces. Registration alone does not run
+configuration.
 
 ```mermaid
 sequenceDiagram
+    participant U as Example script
+    participant E as Emulator
     participant D as Docker compiler
     participant B as ContainerBundle
     participant C as PreparedContainer
+    U->>E: render()
+    U->>B: construct and supply networks/ports
+    U->>D: addContainerBundle(bundle)
+    Note over D,B: Registration only
+    U->>E: compile(docker, output)
+    E->>D: compile emulator nodes
     D->>B: configure()
-    B->>B: validate ports and configure services
+    B->>C: configure services and attachments
     D->>B: install()
-    B->>C: install() for each service
+    B->>C: append shared hosts records and install()
     C-->>B: Compose service mapping
-    B-->>D: services and networks YAML
+    B-->>D: service and network YAML fragments
 ```
 
-### Internal emulator network
+The base configure() asserts the `_required_port_count` minimum, then sets
+`_is_configured = True`. Subclasses call it before their own setup, so the flag
+does not prove that subclass work succeeded. printEtcHostsRecords() requires
+the flag; call it after successful compilation.
 
-`allocateEmuNetworkAddress()` scans rendered host interfaces and selects the
-first network with enough free addresses. Each call reserves
-`_required_emu_network_address_number` addresses starting at network-address
-offset 10 (`10.150.0.10` for `10.150.0.0/24`). It skips all registered host,
-router, and border-router addresses, the gateway, network and broadcast
-addresses, and earlier bundle reservations. Reservations are stored on the
-network as `container_bundle_reserved_addresses`, so bundles share them.
-Insufficient candidates receive no partial reservation.
+Configuration and installation are not idempotent: attachments and records are
+appended, context directories are created, and derived-image generation consumes
+the image attribute. Treat them as one compilation pass. Building and starting
+containers are separate actions from compilation.
 
-Call after `emu.render()`. On success the method stores the following internal
-network dictionary and returns the bundle itself; it returns `None` when no
-network has enough capacity or no emulator is associated. The required count
-must be a non-negative integer; booleans and other invalid values raise
-`ValueError`.
+## Identity and lookup
 
-```python
-{
-    "network": "net_150_net0",
-    "emu_hostname": "host150",
-    "ip_addresses": ["10.150.0.10", "10.150.0.11"],
-    "default_route": "10.150.0.254",
-}
-```
+`_createContainer(local_name, suffix)` registers an object under its unsuffixed
+logical key. getContainer(local_name) uses that key. getContainers() returns a
+shallow copy of the mapping, retaining its objects; getEmulator() and getSuffix()
+expose the bundle inputs.
 
-Read the stored dictionary with `getDefaultInternalNetwork()` after successful
-allocation. Select one IP and pass the container's own hostname explicitly:
+| Value for logical name worker and suffix .example | Result |
+| --- | --- |
+| Registration key and getName() | worker |
+| getHostname() | worker.example |
+| Compose service key, final container_name, and build directory | worker.example |
 
-```python
-bundle._required_emu_network_address_number = 2
-if bundle.allocateEmuNetworkAddress() is None:
-    raise RuntimeError("No emulator host network is available")
-network_info = bundle.getDefaultInternalNetwork()
-container.joinInternalNetwork(
-    network=network_info["network"],
-    hostname=container.getHostname(),
-    ip_address=network_info["ip_addresses"][0],
-    default_route=network_info["default_route"],
-)
-```
+The suffix is appended verbatim. getHostname() does not set Docker's hostname
+attribute or the container's OS hostname, and does not isolate networks or ports.
 
-`setDefaultInternalNetwork(name, ip_addresses, default_route)` supplies a manual
-selection and returns the bundle. Supply enough addresses for the consuming
-services and ensure they are free: this setter does not validate or reserve
-them. The getter copies the address list. Prefer explicit allocation before
-the getter when no manual network has been set.
+## External network pools
 
-The method skips networks without a usable host address and converts address
-and router objects to strings. The bundle decides which network to select and
-which containers need it. `getInternalHostnameIpMappings()`
-and `getExternalHostnameIpMappings()` expose the collected hostname/IP data.
+`addExternalNetwork(network_name, prefix, ip_addresses, default_route,
+driver="bridge")` appends a pool to `_external_networks` and returns the bundle.
+The stored entry has network_name, prefix, ip_addresses, default_route, type
+(driver metadata), and network_config containing driver/IPAM settings.
+These are bundle-created Compose networks, not `external: true` declarations.
 
-## `PreparedContainer` design
+The method parses a canonical IPv4 subnet and gateway, requires a nonempty pool
+covering every prepared container, and checks membership, gateway exclusion,
+and unique addresses. Host-network containers count toward this pool minimum
+even if a concrete bundle leaves their slots unused. It does not inspect existing
+Docker networks or reserve addresses. The subclass assigns pool entries to
+containers; registration itself does not attach them.
 
-`PreparedContainer` is the mutable build description for one container. It
-stores its Compose mapping, internal and external network attachments, staged
-files, and startup commands.
+`PreparedContainer.joinExternalNetwork(network_name, hostname, ip_address)`
+checks IPv4 syntax and records attachment metadata. It sets a Compose static
+address only if the network has no existing service entry. The hostname is
+metadata; this method does not create hosts aliases.
 
-`getName()` returns the logical service name and `getHostname()` returns the
-name with the bundle suffix. `setContentAttribute()` merges Compose service
-attributes:
+During bundle installation, referenced non-emulator networks are matched by
+network_name against the pool list. Matching entries supply network_config;
+unmatched names get an empty definition. Static addresses require the generated
+network's subnet to contain them.
 
-```python
-container.setContentAttribute({
-    "image": "busybox:latest",
-    "command": "sleep infinity",
-})
-```
+## Internal emulator networks
 
-`joinExternalNetwork(network, hostname, ip_address)` attaches the container to
-the bundle Docker network with a static address. `joinInternalNetwork()`
-attaches it to an emulator network and records the network, hostname, address,
-and optional gateway. When `default_route` is supplied, the container records
-the gateway and inserts route setup before the application startup commands:
+`addInternalNetwork(asn, network_name, ip_addresses, default_route="")` resolves
+the Base-layer AS/network and stores asn, network_name, full_network_name,
+ip_addresses, and default_route. The full name comes from Network.getFullName().
+Supply ASN strings consistently with registry scopes.
 
-```sh
-DEFAULT_ROUTE="10.150.0.254"
-IFACE=$(ip route get "$DEFAULT_ROUTE" | awk '{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}')
-echo "gateway=$DEFAULT_ROUTE interface=$IFACE"
-ip route del default 2>/dev/null || true
-ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"
-```
+A supplied gateway must match a configured router interface. An omitted gateway
+is looked up in the rendered registry; no matching entry can leave it empty.
+The pool must meet `_required_internal_address_count`. Only that many leading
+addresses are checked for availability against configured emulator interfaces.
+There is no allocation or reservation, and pending prepared-container attachments
+are not included in that check. Callers must avoid conflicts across containers
+and bundles.
 
-The commands are inserted after an existing shebang and `set -eu` prologue
-when those lines are present. If startup commands are available,
-`install()` writes them to the configured start-script path and wraps the
-image entrypoint when the commands do not already form a complete script.
-This is required when a bundle service must reach the emulator network through
-its gateway.
+`PreparedContainer.joinInternalNetwork(asn, network_name, ip_address, hostname,
+default_route)` validates the address and any explicit gateway, records the
+attachment, and uses the full network name as the Compose key. Existing Compose
+addresses are retained. The first nonempty gateway becomes `_default_route` for
+startup preparation. A container can have external and internal attachments;
+a host-network service should not also have these Compose network attachments.
 
-The method is normally called by a bundle during `configure()`:
+getInternalNetworks() and getExternalNetworks() copy entry dictionaries and
+address lists. Nested external network_config values remain shared. The original
+internal input list is stored without a defensive copy.
 
-```python
-bundle._required_emu_network_address_number = 1
-if bundle.allocateEmuNetworkAddress() is None:
-    raise RuntimeError("No emulator host network is available")
-network = bundle.getDefaultInternalNetwork()
-container.joinInternalNetwork(
-    network=network["network"],
-    hostname=container.getHostname(),
-    ip_address=network["ip_addresses"][0],
-    default_route=network.get("default_route", ""),
-)
-```
+## Host ports and service attributes
 
-The internal attachment writes `ipv4_address` into the Compose network entry.
-The internal attachment and the external bundle attachment are independent.
-A container may therefore have two Compose network entries. The default route
-is optional and should be used only when outbound traffic must leave through
-the emulator gateway. A service using `network_mode: host` should not also be
-attached through this method.
+setPorts() copies the supplied list; getPorts() returns a copy of its current
+value. The base checks the minimum count but does not reserve or consume ports.
+Subclasses choose how to read them; A14 and InternetMap currently use indexes.
 
-`setFile()` stages a file in the generated image context. `setEtcHosts()`
-stages content that is appended to `/etc/hosts` during installation. The
-`install()` method creates the hostname directory, writes staged files and the
-startup script, generates a Dockerfile when needed, and returns the Compose
-service mapping. It also performs the final startup integration: `/tmp/etc-hosts`
-is appended to `/etc/hosts`, default-route commands are inserted, and a
-wrapper entrypoint is selected when generated commands must run before the
-image's normal process. `_addFile()` hashes destination paths to create
-staging names for Docker `COPY` instructions.
+PreparedContainer.updateServiceConfig(content) shallowly updates `_service`.
+Image, environment, healthcheck, command, ports, and extra_hosts are ordinary
+Compose attributes. Existing values for supplied keys are replaced; nested
+mappings are not recursively merged.
 
-The installation sequence is:
+## Hosts record ownership and delivery
 
-```mermaid
-flowchart TD
-    subgraph row1["1. Stage files"]
-        direction LR
-        A[PreparedContainer.install] --> B[Create hostname build directory] --> C[Stage files and /tmp/etc-hosts]
-    end
-    subgraph row2["2. Prepare startup"]
-        direction RL
-        D[Insert hosts and route commands] --> E{Startup commands present?}
-        E -- no --> F[Keep image entrypoint]
-        E -- yes --> G{Commands have shebang?}
-        G -- yes --> H[Write configured start script]
-        G -- no --> I[Create entrypoint wrapper]
-        I --> H
-    end
-    row1 --> row2
-    row2 --> J[Generate Dockerfile and return service mapping]
-```
+| Owner | Storage | Registration | Scope |
+| --- | --- | --- | --- |
+| Bundle | `_shared_etc_hosts_records` | bundle.addEtcHostsRecord(name, ip) | Every prepared container |
+| Container | `_etc_hosts_records` | container.addEtcHostsRecord(name, ip) | This container only |
 
-### `_getDefaultRouteCommands()`
+ContainerBundle.install() appends shared pairs through each container's public
+registration method. Local entries are retained and the shared list is not
+aliased, but the container's own list is mutated.
 
-This helper converts a gateway address into shell commands that can run inside
-the container. It first asks the kernel which interface reaches the gateway,
-then replaces the Docker-provided default route:
+With startup processing enabled, PreparedContainer.install() removes exact
+duplicate pairs using a set and stages `IP<TAB>hostname` lines at /tmp/etc-hosts.
+Order is unspecified. Distinct IPs for the same name remain separate lines;
+there is no implicit hostname override. A startup command appends this file to
+/etc/hosts when the container starts. printEtcHostsRecords() prints deduplicated
+shared records only.
 
-```sh
-DEFAULT_ROUTE="10.150.0.254"
-IFACE=$(ip route get "$DEFAULT_ROUTE" | awk '{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}')
-echo "gateway=$DEFAULT_ROUTE interface=$IFACE"
-ip route del default 2>/dev/null || true
-ip route add default via "$DEFAULT_ROUTE" dev "$IFACE"
-```
+Network attachment methods do not create these aliases. Shared delivery does
+not use Compose extra_hosts, though callers can independently set extra_hosts
+as a Compose attribute. setEtcHosts(content) is a legacy path: __etchosts_file
+is treated as an ordinary staged destination, not consumed as hosts content.
+Use addEtcHostsRecord for the current mechanism.
 
-The helper is only used when `joinInternalNetwork(..., default_route=...)`
-provides a non-empty gateway. The commands are inserted after an existing
-shebang and `set -eu` prologue when present. They are generated at container
-startup because Docker assigns the interface name at runtime.
+Bundle records do not update emulator-node hosts files. To publish an explicit
+container address to those nodes, register it with an EtcHosts layer before
+emu.render(). Prepared-container installation does not render that layer.
 
-For images that already have an entrypoint, `setEntrypointWrapper()` can run
-preparation commands and then delegate to the original entrypoint:
+## Startup processing and original images
 
-```python
-container.setEntrypointWrapper(
-    original_entrypoint="/entrypoint.sh",
-    commands=["cat /tmp/etc-hosts >> /etc/hosts"],
-)
-```
+`_start_script_name` defaults to /start.sh. setStartScriptName(name) selects the
+path. Passing an empty string disables automatic hosts, route, and startup-script
+processing during install(); it does not erase records or reset existing Compose
+entrypoint attributes.
 
-This avoids assuming that a generated `/start.sh` will be executed by an
-image whose `ENTRYPOINT` is fixed.
-The wrapper's Compose entrypoint is `["sh", self._start_script_name]`, using
-the configured script path.
+For an otherwise unmodified original-image service, configure image, networks,
+environment, and health checks, and call setStartScriptName("") before installing.
+If no files are staged and no build override is supplied, install() returns an
+image-based service without introducing a derived image or wrapper. It still
+creates the directory. Stored hosts records and route settings are not applied
+in this mode.
+
+When enabled, startup preparation inserts hosts/route commands ahead of application
+commands, after a shell prologue when present. A command list without a shebang
+is wrapped. A complete script is written to the selected path and depends on a
+compatible entrypoint already configured by the image or caller. The default
+/start.sh is not guaranteed to exist in arbitrary images.
+
+setEntrypointWrapper(original_entrypoint, commands) replaces the command list,
+selects /new-entrypoint.sh, and sets Compose entrypoint to
+`["sh", "/new-entrypoint.sh"]`. The wrapper uses set -eu, executes supplied
+commands, then delegates with `exec sh "<original_entrypoint>" "$@"`. Supply a
+shell-readable original script. A long-running command prevents delegation;
+an exec command replaces the wrapper. Arbitrary image ENTRYPOINT/CMD values
+are not automatically discovered or reconstructed.
+
+_getDefaultRouteCommands() runs ip route get at container startup to discover
+the gateway-facing interface, removes the default route, and adds the selected
+gateway. It requires the ip utility and suitable runtime network privileges.
+
+## File staging and derived images
+
+setFile(filename, content) stores destination/content pairs. install() creates
+the context directory named by getHostname(), prepares enabled startup files,
+and invokes _generateDockerfile().
+
+- No staged files: no Dockerfile is generated; image remains in the service.
+- Staged files: generation consumes image for FROM, asserts it is nonempty,
+  enables privileged mode, and installs iproute2 and iputils-ping with apt.
+  The current generator always adds this package step for derived images.
+- _addFile(path, content) uses MD5 of the destination for context filenames and
+  emits COPY instructions. Destinations ending in .sh also receive chmod +x.
+- The installer writes Dockerfile and sets the service build path.
+
+Files trigger derived-image generation even when startup processing is disabled.
+Base images must support the generated apt commands. Generating a Dockerfile
+does not supply an original entrypoint script that the base image lacks.
+The current implementation uses chdir() without exception-safe restoration;
+installation assumes the compiler's output-directory workflow.
+
+ContainerBundle.install() combines prepared services, excludes emulator-owned
+network definitions, and returns `(services_yaml, networks_yaml)`. With no
+services it returns two empty strings.
+
+## Runnable examples and validation
+
+Use the example READMEs for concrete source walkthroughs, generated services,
+addresses, aliases, ports, prerequisites, run commands, and test instructions:
+
+- [A14 custom ContainerBundle](../../examples/basic/A14_add_containerBundle/README.md)
+- [B08 InternetMap bundle](../../examples/internet/B08_internet_map_bundle/README.md)
+
+Both provide example.yaml and test_runtime.py using ComposeRuntimeTest. Their
+checks establish those scenarios, not universal image, entrypoint, or address
+allocation compatibility.

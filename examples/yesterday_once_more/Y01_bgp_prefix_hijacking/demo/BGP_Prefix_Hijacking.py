@@ -7,6 +7,7 @@ from seedemu.core import Emulator
 from seedemu.raps import OpenVpnRemoteAccessProvider
 from seedemu.utilities import Makers
 import os, sys
+from seedemu.containerBundle import InternetMap
 
 def run(dumpfile=None, hosts_per_as=2): 
     ###############################################################################
@@ -201,6 +202,13 @@ def run(dumpfile=None, hosts_per_as=2):
 
         # Attach the Internet Map container to the emulator
         docker = Docker(platform=platform)
+        # Add Internet visualization services: topology, geographic map, and traffic observation.
+        # The second argument is a container name suffix that distinguishes bundle instances.
+        internet_map = InternetMap(emu, ".map.seed")
+        # Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+        internet_map.setPorts(list(range(8081, 8089)))
+        # Register the bundle with the Docker compiler to generate its containers during emu.compile().
+        docker.addContainerBundle(internet_map)
         emu.compile(docker, './output', override=True)
 
 if __name__ == "__main__":

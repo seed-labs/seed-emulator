@@ -15,8 +15,6 @@ from shutil import copyfile
 import json
 from yaml import dump, safe_dump
 
-SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-internetmap:2.0'
-
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
 DockerCompilerFileTemplates['dockerfile'] = """\
@@ -181,15 +179,6 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['seedemu_internet_map'] = """\
-    {serviceName}:
-        image: {clientImage}
-        container_name: {containerName}
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        privileged: true
-"""
-
 DockerCompilerFileTemplates['port_forwarding_entry'] = """\
         ports:
             - {port_forwarding_field}
@@ -327,7 +316,7 @@ class Docker(Compiler):
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
-    __containerBundles: List[ContainerBundle] = []
+    __containerBundles: List[ContainerBundle]
 
     def __init__(
         self,
@@ -336,8 +325,6 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        internetMapEnabled: bool = True,
-        internetMapPort: int = 8080,
         clientHideServiceNet: bool = True,
         option_handling: OptionHandling = OptionHandling.CREATE_SEPARATE_ENV_FILE
     ):
@@ -363,11 +350,6 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
-        @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
-        Default to False. Note that the seedemu internetMap allows unauthenticated
-        access to all nodes, which can potentially allow root access to the
-        emulator host. Only enable seedemu in a trusted network.
-        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -379,8 +361,7 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__internet_map_enabled = internetMapEnabled
-        self.__internet_map_port = internetMapPort
+        self.__containerBundles = []
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -1341,13 +1322,6 @@ class Docker(Compiler):
             bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
             self.__services += bundle_services
             self.__networks += bundle_networks
-            
-        # Add the Internet Map contaienr to the emulator
-        if self.__internet_map_enabled:
-            self._log('enabling seedemu-internet-map...')
-
-            # Attach the Map container to the default network
-            self.attachInternetMap(port_forwarding="{}:8080/tcp".format(self.__internet_map_port))
 
         # Add custom entries (typically added through Docker::attachCustomContainer APIs)
         self.__services += self.__custom_services
@@ -1432,44 +1406,6 @@ class Docker(Compiler):
 
             if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
-
-    def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
-                      port_forwarding: str = '', env: list = [],
-                      show_on_map=False, node_name='seedemu_internet_map') -> Docker:
-        """!
-        @brief add the pre-built Map container to the emulator (the entry should not
-            include any network entry, as the network entry will be added here)
-
-        @param asn the autonomous system number of the network. -1 means no network
-            information is provided, so the container will be attached to the default
-            network provided by the docker
-        @param net the name of the network that this container is attached to.
-        @param ip_address the IP address set for this container. If no IP address is provided,
-            docker will provide one when building the image.
-        @param port_forwarding the port forwarding field.
-        @param env the list of the environment variables.
-        @param show_on_map it is show on the map.
-        @param node_name.
-
-        @returns self, for chaining API calls.
-        """
-
-        self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
-
-        # If this is not set to False, Docker compiler will attach another copy of the MAP
-        # container to the default network. This is to avoid that.
-        self.__internet_map_enabled = False
-
-        self.attachCustomContainer(
-            DockerCompilerFileTemplates['seedemu_internet_map'].format(
-                serviceName=node_name,
-                clientImage=SEEDEMU_INTERNET_MAP_IMAGE,
-                containerName=node_name,
-            ),
-            asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
-            node_name=node_name
-        )
-        return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
                               ip_address: str = '', port_forwarding: str = '', env: list = [],
