@@ -25,7 +25,7 @@ and to provide the illusion of mutability.
       - Currency symbol should be "ETH".
 3. Set up the Ethereum smart contract:
    1. Go to the [Remix IDE](https://remix.ethereum.org/#lang=en&optimize=true&runs=200&evmVersion=paris&version=soljson-v0.8.25).
-   2. In the file explorer pane on the left side of the page, click on the "Upload files" icon and upload the smart contract located at [contract/IPFS_Storage.sol](contract/IPFS_Storage.sol).
+   2. In the file explorer pane on the left side of the page, click on the "Upload files" icon and upload the smart contract located at [IPFS_Storage.sol](kubo-webhost-image/volumes/contract/IPFS_Storage.sol).
    3. Using the navigation bar on the left side, go to the "Solidity compiler". If you clicked the link above to access Remix, you immediately click "Compile IPFS_Storage.sol". Otherwise, click on "Advanced Configurations" and change the EVM version to "paris" and enable optimization. Then click "Compile IPFS_Storage.sol".
    4. Using the navigation bar on the left side, go to the "Deploy & run transactions" tab. Click on the "Environment" dropdown and select "Injected Provider - Metamask". Finally, click the "Deploy" button.
    5. In the "Deployed Contracts" section below, you can find the contract address. Copy this address to be used later.
@@ -75,13 +75,13 @@ For MetaMask, the process is simple:
 
 ## Emulator Code
 
-Below, you will find a walkthrough of the code used to build this emulation. This code is based on several pre-existing examples including [B00-mini-internet](/examples/B00-mini-internet/README.md) and [B06-blockchain](/examples/B06-blockchain/README.md).
+Below, you will find a walkthrough of the code used to build this emulation. Its base topology follows the [B00 mini-Internet example](../B00_mini_internet/README.md), with Ethereum and Kubo service layers added on top.
 
 ### Ethereum
 
-First, we import a pre-build base component including hosts and routing. This is based on [B00-mini-internet](/examples/B00-mini-internet/README.md) and is compiled by `base-component.py`.
+First, we import a pre-built base component including hosts and routing. This is based on the [B00 mini-Internet example](../B00_mini_internet/README.md) and is compiled by `base_component.py`.
 
-We then create the Ethereum layer based on the [B06-blockchain](/examples/B06-blockchain/README.md) example. We also create a blockchain instance using the proof-of-authority consensus protocol.
+We then create the Ethereum layer and a blockchain instance using the proof-of-authority consensus protocol.
 ```python
 eth = EthereumService()
 blockchain = eth.createBlockchain(chainName="POA", consensus=ConsensusMechanism.POA)
@@ -136,7 +136,9 @@ for asn in asns:
 
 ### InterPlanetary File System
 
-First, we create the Kubo service and change the HTTP gateway port to 8081, instead of the default port 8080 because this conflicts with the Internet Map.
+First, we create the Kubo service and expose its HTTP gateway on port `8081`.
+The InternetMap bundle uses `8078`, `8079`, and `8080` in this example so that
+the gateway and map services do not compete for a host port.
 ```python
 # Initialize the Kubo service:
 ipfs = KuboService(gatewayPort=8081)
@@ -235,9 +237,16 @@ webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 Following this, we simply compile as usual!
 
 ```python
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True)
+docker = Docker()
+internet_map = InternetMap(emu, ".map.seed")
+internet_map.setPorts([8078, 8079, 8080])
+docker.addContainerBundle(internet_map)
 emu.compile(docker, OUTPUTDIR, override = True)
 ```
+
+Port `8078` is the traffic observer control endpoint. Open the topology UI at
+<http://localhost:8079/> and the geographic UI at
+<http://localhost:8080/>.
 
 ## Deploying the Contract
 As is mentioned in the outline of the [Emulator Code](#emulator-code), we automatically compile and

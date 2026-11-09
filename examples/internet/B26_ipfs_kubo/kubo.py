@@ -75,7 +75,7 @@ for asNum in range(150, 172):
 emu.addLayer(ipfs)
 
 # Render and compile 
-docker = Docker(internetMapEnabled=True, platform=platform)  # Initialize the desired compiler
+docker = Docker(platform=platform)  # Initialize the desired compiler
 emu.render()
 # Add Internet visualization services: topology, geographic map, and traffic observation.
 # The second argument is a container name suffix that distinguishes bundle instances.

@@ -161,13 +161,15 @@ emu.addLayer(ospf)
 emu.render()
 
 # Use the "morris-worm-base" custom base image
-docker = Docker(internetMapEnabled=False)
+docker = Docker()
+# Add Internet visualization services: topology, geographic map, and traffic observation.
+# The second argument is a container name suffix that distinguishes bundle instances.
+internet_map = InternetMap(emu, ".map.seed")
+# Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+internet_map.setPorts([8078, 8079, 8080])
+# Register the bundle with the Docker compiler to generate its containers during emu.compile().
+docker.addContainerBundle(internet_map)
 docker.addImage(DockerImage('morris-worm-base', [], local = True))
-
-# Add the new internet-map 
-docker.attachCustomContainer(compose_entry = 
-             DOCKER_COMPOSE_ENTRY.format(name="seedemu_internetmap"))
-
 
 # Change the base for all the host nodes
 for stub_as in [150, 151, 152, 153, 154, 160, 161, 162, 163, 164, 170, 171]:
