@@ -41,7 +41,15 @@ internet_map.addInternalNetwork(
 ```
 
 The selected address must be available on that network. If `default_route` is
-omitted, the bundle reads the network's rendered default router.
+omitted, the bundle reads the network's rendered default router. The API's
+internal attachment automatically adds the SEED metadata labels required to
+display it as a Host node on the topology map when the service has no existing
+labels. The call checks but does not allocate or reserve the address.
+
+You can call `addInternalNetwork()` more than once. The API joins every
+configured internal network and uses the first address from each pool; the two
+UIs and traffic observer do not join them. The map's single `net.0` metadata
+entry describes the first internal attachment.
 
 <a id="ports"></a>
 ## Select ports
@@ -64,7 +72,7 @@ For `setPorts([8081, 8082, 8083])`, open:
 
 - Topology UI: <http://127.0.0.1:8082/>
 - Geographic UI: <http://127.0.0.1:8083/>
-- Traffic observer control endpoint: `127.0.0.1:8081`
+- Traffic observer HTTP control API: <http://127.0.0.1:8081/>
 
 The traffic observer uses host networking, the host PID namespace, privileged
 mode, Docker's socket, and Linux kernel/BPF mounts. Run the complete bundle on

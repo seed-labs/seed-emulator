@@ -21,7 +21,7 @@ InternetMap bundle containers:
   emulator_api_server.map.seed.emu
   emulator_api_server-e.map.seed.emu
   internetmap_toplogy.map.seed.emu
-  emulator_api_server-e.map.seed.emu-1
+  emulator_api_server-e1.map.seed.emu
   internetmap_geo.map.seed.emu
   ```
 

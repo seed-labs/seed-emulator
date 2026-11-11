@@ -12,6 +12,7 @@ from dataclasses import InitVar, dataclass, field
 from seedemu.core.Emulator import Emulator
 from seedemu.core.enums import NetworkType
 
+LABEL_PREFIX = "org.seedsecuritylabs.seedemu.meta."
 
 class IndentDumper(yaml.SafeDumper):
     """!
@@ -483,6 +484,7 @@ class PreparedContainer:
         hostname = self.getHostname()
         mkdir(hostname)
         chdir(hostname)
+
         if self._start_script_name:
             if self._etc_hosts_records:
                 etchosts_content = "\n".join(
@@ -560,10 +562,11 @@ class PreparedContainer:
         @param ip_address caller-selected address checked against this network.
         @param default_route gateway address, or empty for registry lookup.
 
-        Validates a supplied gateway and the address using configured network
-        interfaces; it does not reserve the address. This method only records
-        the attachment and the first nonempty gateway. It does not add hosts
-        records or register/render an EtcHosts layer.
+        Validates the gateway and IP address, records the attachment, and
+        preserves the first resolved default route. The IP address is validated
+        but not reserved. InternetMap labels are added only when the service has
+        no existing labels. This method does not add /etc/hosts records or
+        manage the EtcHosts layer.
         """
         network_obj = self._emulator.getLayer("Base").getAutonomousSystem(int(asn)).getNetwork(network_name)
         full_network_name = network_obj.getFullName()
@@ -597,6 +600,17 @@ class PreparedContainer:
         # Keep the first nonempty gateway supplied by an internal attachment.
         if not self._default_route:
             self._default_route = default_route
+
+        labels = self._service.setdefault("labels", {})
+        if not labels:
+            labels.update({
+                f"{LABEL_PREFIX}asn": asn,
+                f"{LABEL_PREFIX}nodename": hostname,
+                f"{LABEL_PREFIX}role": "Host",
+                f"{LABEL_PREFIX}net.0.name": network_name,
+                f"{LABEL_PREFIX}net.0.address": ip_address,
+                f"{LABEL_PREFIX}custom": 'custom',
+            })
 
     def joinExternalNetwork(self, network_name: str, hostname: str, ip_address: str) -> None:
         """!
