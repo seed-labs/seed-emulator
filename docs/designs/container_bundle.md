@@ -20,9 +20,10 @@ custom-subclass walkthrough, addresses, aliases, run commands, and tests, see
 | Docker compiler | Register bundles, invoke configure/install, and combine their output with emulator-node services |
 
 Subclasses create prepared containers in `__init__`, set resource requirements,
-and configure service attributes in configure(). Render the emulator first so
-network checks can use configured interfaces. Registration alone does not run
-configuration.
+and configure service attributes in configure(). Render the emulator before
+calling `addInternalNetwork()` so its checks can use configured interfaces;
+constructing or registering a bundle does not itself require rendering.
+Registration alone does not run configuration.
 
 ```mermaid
 sequenceDiagram
@@ -117,6 +118,19 @@ attachment, and uses the full network name as the Compose key. Existing Compose
 addresses are retained. The first nonempty gateway becomes `_default_route` for
 startup preparation. A container can have external and internal attachments;
 a host-network service should not also have these Compose network attachments.
+
+`joinInternalNetwork()` adds the SEED metadata labels consumed by InternetMap
+only when the service has no existing labels. The container is represented as
+role `Host`, using the supplied ASN, hostname, network name, and address, plus
+the `custom` marker. Containers without an internal attachment receive no map
+labels from ContainerBundle.
+
+The current metadata shape has one `net.0` entry. Calling
+`joinInternalNetwork()` more than once retains every Compose network attachment,
+but the labels continue to describe the first attachment that populated them.
+If any labels were configured earlier through `updateServiceConfig()`, the
+automatic InternetMap labels are not added; callers that supply their own labels
+must provide the complete metadata required by the map.
 
 getInternalNetworks() and getExternalNetworks() copy entry dictionaries and
 address lists. Nested external network_config values remain shared. The original

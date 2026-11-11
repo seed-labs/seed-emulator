@@ -147,7 +147,8 @@ class InternetMap(ContainerBundle):
     network); the traffic observer uses host networking. Host ports are read
     from indexes 0, 1, and 2 for observer control, topology HTTP, and geographic
     HTTP, respectively; the port list is not consumed. Only the API backend joins
-    the first explicitly supplied internal network, using its first address.
+    the first explicitly supplied internal network, using its first address;
+    that attachment also adds the metadata labels used to display it on the map.
     Use unique suffixes, networks, and port pools for multiple instances.
     """
 
@@ -200,8 +201,6 @@ class InternetMap(ContainerBundle):
                 "volumes": [
                     "/sys/kernel/debug:/sys/kernel/debug",
                     "/sys/fs/bpf:/sys/fs/bpf",
-                    "/sys/kernel/btf:/sys/kernel/btf:ro",
-                    "/lib/modules:/lib/modules:ro",
                     "/var/run/docker.sock:/var/run/docker.sock:ro",
                     "./traffic-observer-service/pcap:/data/pcap",
                 ],
@@ -269,14 +268,18 @@ class InternetMap(ContainerBundle):
         )
         internet_map_geographic._start_script_name = START_SCRIPT_NAME
 
-        if self._internal_networks:
-            internal_network = self._internal_networks[0]
+        for index in range(len(self._internal_networks)):
+            internal_network = self._internal_networks[index]
+            ip_address = internal_network["ip_addresses"][0]
             emulator_api_server.joinInternalNetwork(
                 asn=internal_network["asn"],
                 network_name=internal_network["network_name"],
                 hostname=emulator_api_server.getHostname(),
-                ip_address=internal_network["ip_addresses"][0],
+                ip_address=ip_address,
                 default_route=internal_network["default_route"],
             )
-            # The emulator_api_server needs to be added to the emulator network (internal network). The frequency of using the corresponding IP will be higher. Therefore, the 'hostname' is set as the alias of this IP.
-            self.addEtcHostsRecord(emulator_api_server.getHostname(), internal_network["ip_addresses"][0])
+            if index == 0:
+                # index == 0, the emulator_api_server needs to be added to the emulator network (internal network). The frequency of using the corresponding IP will be higher. Therefore, the 'hostname' is set as the alias of this IP.
+                self.addEtcHostsRecord(emulator_api_server.getHostname(), ip_address)
+            else:
+                self.addEtcHostsRecord(f"{emulator_api_server.getName()}-e{index}{self._suffix}", ip_address)

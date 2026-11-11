@@ -20,7 +20,7 @@ The script constructs one `InternetMap(emu, ".map.seed.emu")` deployment.
 | `emulator_api_server` | `emulator_api_server.map.seed.emu` | `172.30.0.10` | AS151/net0 at `10.151.0.16`; Docker socket | No published API port; bridge port 7071 |
 | `internetmap_toplogy` | `internetmap_toplogy.map.seed.emu` | `172.30.0.11` | Nginx proxies to API | `http://localhost:8092` |
 | `internetmap_geo` | `internetmap_geo.map.seed.emu` | `172.30.0.12` | Nginx proxies to API and host observer | `http://localhost:8093` |
-| `traffic_observer` | `traffic_observer.map.seed.emu` | none | Host network/PID and kernel mounts | Control port 8091 |
+| `traffic_observer` | `traffic_observer.map.seed.emu` | none | Host network/PID, debugfs/BPF mounts, and Docker socket | Control port 8091 |
 
 `toplogy` is the current spelling in the service key and image name. Use it
 verbatim in Compose commands. Logical lookup keys omit the suffix, whereas
@@ -71,10 +71,14 @@ Only the API joins the first internal pool using its first IP; the UIs do not
 join emulator networks, and the observer retains host networking. If a nonempty
 gateway is found, startup replaces the API container's default route with it.
 
-Without this internal attachment, the API still has its private bridge and
-Docker socket; it simply lacks a direct interface on the emulator network.
-This example uses explicit addInternalNetwork(), not an enable flag or an
-automatic address allocator.
+Without this internal attachment, the API still has its private bridge and Docker
+socket; it simply lacks a direct interface on the emulator network.
+This example uses explicit addInternalNetwork(); the method does not allocate
+or reserve an address. During configuration, the API's actual internal
+attachment automatically receives SEED metadata labels for AS151/net0, so it
+can appear as a Host on the topology map. There is no separate map-display
+switch. Without an internal attachment, the API receives no ContainerBundle map
+labels.
 
 To customize the bridge, insert a call before registration/compilation:
 
@@ -144,6 +148,8 @@ and enables privileged mode. The base images must support that build path.
 
 ## Automated verification
 
+[test_design.md](test_design.md) defines checks against the running containers,
+interfaces, ports, API/UI proxies, hosts records, and traffic observer.
 [example.yaml](example.yaml) defines the TestRunner lifecycle and published UI
 HTTP probes. [test_runtime.py](test_runtime.py) uses `ComposeRuntimeTest` to
 inspect generated configuration and run retried container commands. From the
