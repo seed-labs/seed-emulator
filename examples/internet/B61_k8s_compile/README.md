@@ -33,9 +33,11 @@ The CNI parent is selected by the deployment YAML, not by the compile command:
 If you change one of these interface values, keep the values in the same YAML
 consistent. You do not pass an interface to `mini_internet_k8s.py` and you do
 not manually edit every NetworkAttachmentDefinition. During `up`, k8sTools
-uses the chosen YAML's generated `configK3s.yaml` to write the required parent
-interface and MTU patches to `output/kustomization.yaml`, then creates the
-matching VLAN parent interfaces on the K3s nodes.
+uses the chosen YAML's generated `configK3s.yaml` to render the parent interface
+and MTU into `output/k8stools/runtime.yaml`, then creates matching VLAN parent
+interfaces on the selected K3s nodes. Explicit `fabric.vlanTrunks` mappings keep
+each trunk on its own NIC. The compatibility `render-kustomization` helper
+uses the same parent and MTU settings.
 
 ### Values you may customize
 
@@ -101,9 +103,62 @@ python3 ./K8sTools.py clean -f ./output -k kubeconfig.yaml
 python3 ./K8sTools.py destroy -d configK3s.yaml
 ```
 
+`up` defaults to `--partition nodeByAs`: all workloads in an AS stay together,
+subject to live CPU/memory requests and Pod slots. It builds shared image bases,
+imports node-specific image archives, deploys through bounded worker queues,
+and waits for Ready. Placement evidence is in `output/partitionApplied.json`;
+image/deployment evidence is under `output/k8stools/`. `--partition default`
+retains the compiler scheduling configuration. This example's generated
+startup scripts start BIRD automatically; the generic `up` command itself
+does not add the B63 experiment's explicit routing or measurement stages.
+
 `clean` removes only the SEED Emulator workload. `destroy` removes the K3s setup and
 the KVM/fabric resources recorded in `configK3s.yaml`; do not delete that file
 before cleanup. `down` remains an alias for `clean`.
+
+### Isolated local validation
+
+`configKvmValidation.yaml` requests one 4-vCPU/8-GiB master and two
+4-vCPU/8-GiB workers, with 40-GiB disks, distinct VM names, a dedicated
+`10.93.61.0/24` management network, and registry port 5061. Adjust these
+values if they are already in use. This single-host fabric is macvlan+VLAN;
+the K3s primary network uses Flannel VXLAN separately.
+
+```bash
+python3 ./mini_internet_k8s.py
+python3 ./K8sTools.py build --input configKvmValidation.yaml \
+  --config-k3s configK3s.yaml --kubeconfig kubeconfig.yaml --inventory inventory.yaml
+python3 ./K8sTools.py up -f output -k kubeconfig.yaml -d configK3s.yaml
+# Run the routing checks after BIRD has converged (all expected BGP sessions Established).
+python3 ./validateRuntime.py --output output --kubeconfig kubeconfig.yaml \
+  --artifact-dir ../../../ci-artifacts/b61-live/first
+python3 ./K8sTools.py clean -f output -k kubeconfig.yaml
+kubectl --kubeconfig kubeconfig.yaml wait --for=delete namespace/seedemu --timeout=180s
+python3 ./K8sTools.py up -f output -k kubeconfig.yaml -d configK3s.yaml
+# A newly Ready Pod can still have BGP sessions in Connect; inspect before validating.
+python3 ./validateRuntime.py --output output --kubeconfig kubeconfig.yaml \
+  --artifact-dir ../../../ci-artifacts/b61-live/redeploy
+python3 ./K8sTools.py clean -f output -k kubeconfig.yaml
+python3 ./K8sTools.py destroy -d configK3s.yaml
+```
+
+`validateRuntime.py` is read-only. Required `--kubeconfig` selects the cluster;
+required `--artifact-dir` selects the report directory. Optional `--output`
+defaults to this example's `output`, and `--namespace` defaults to `seedemu`.
+It verifies every expected Pod and secondary address, whole-AS placement on
+at least two workers, one stable BIRD/kernel-route representative per router
+AS, and bidirectional cross-worker/cross-AS pings covering every host, plus
+same-AS host pings. It records commands and raw results in
+`runtime-summary.json`. Run after routing has converged and VM load1 is below
+50; a failed check returns nonzero and retains evidence.
+`clean` submits namespace deletion asynchronously; wait for namespace deletion
+before reusing its name. `up` establishes Kubernetes readiness. BGP sessions
+can still be in Connect immediately afterward, so rerun the read-only checks
+after convergence rather than treating Ready as proof of route availability.
+
+The upstream Kubernetes compiler is kept unchanged. B61 expresses the custom
+host's runtime sysctls and forwarding nodes' disabled ICMP redirects through
+`appendStartCommand`, so these settings also appear in compiled startup scripts.
 
 ### Local KVM
 
@@ -188,11 +243,14 @@ ssh -i ~/.ssh/seedemu_k8s ubuntu@192.0.2.11 \
 | `configKvmMacvlan.yaml` | User input for local KVM. |
 | `configPhysicalMacvlan.yaml` | User input for existing physical nodes. |
 | `configMultiHostKvmMacvlan.yaml` | User input for KVM VMs distributed over multiple hypervisors. |
+| `configKvmValidation.yaml` | Isolated local input for lifecycle and cross-worker validation. |
 | `K8sTools.py` | Thin CLI wrapper for build/up/clean/destroy. |
 | `prepare.sh` | Optional prerequisite installer/verifier. |
 | `example.yaml` | Static-CI manifest consumed by `seedemu/testing/cli.py`; it enables compile and artifact validation only. |
 | `test_compile.py` | Read-only validator for Kubernetes resources, image contexts, networking metadata, and the three deployment renderings. |
-| `output/` | Generated compile output; `up` also writes deployment-specific kustomize output here. |
+| `validateRuntime.py` | Read-only live Kubernetes placement, routing and ping checks. |
+| `codex_worklog.md` | Migration commands, validation outcomes and artifact locations. |
+| `output/` | Generated compile output; `up` also writes placement and `k8stools/` deployment evidence here. |
 | `configK3s.yaml` | Generated infrastructure state consumed by `up` and `destroy`. |
 | `kubeconfig.yaml` | Generated cluster access file consumed by `up`, `clean`, and kubectl. |
 | `inventory.yaml` | Optional generated summary of node roles, addresses, and resources. |
@@ -204,8 +262,8 @@ The stages are deliberately separate:
 2. Build reads one YAML, creates or prepares the machines, installs K3s and
    Multus, and records the selected fabric/CNI parent in `configK3s.yaml`.
 3. Up reads `configK3s.yaml`, adapts the compiler output for that deployment,
-   creates required VLAN parents, builds/pushes images, applies the workload,
-   and waits for readiness.
+   partitions by AS, builds/imports per-node image archives, creates required
+   VLAN parents, submits worker queues, and waits for readiness.
 
 Add `--keep-temp` to a `K8sTools.py` command when its temporary setup/running
 directory must be retained for debugging.

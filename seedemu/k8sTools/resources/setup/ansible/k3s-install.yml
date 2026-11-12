@@ -1,4 +1,21 @@
 ---
+# Readiness gate: cloud-init may still hold apt locks after SSH becomes available.
+- name: Wait for initial guest provisioning
+  hosts: master:workers
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Check for cloud-init
+      stat:
+        path: /usr/bin/cloud-init
+      register: seed_cloud_init_binary
+    - name: Wait for cloud-init package installation to finish
+      command: cloud-init status --wait --long
+      async: 1800
+      poll: 5
+      changed_when: false
+      when: seed_cloud_init_binary.stat.exists
+
 # K3s Installation Playbook for SEED Emulator
 # Installs K3s with Multus + Macvlan CNI for L2 connectivity
 
@@ -193,6 +210,19 @@
         sudo -n ln -s /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d /etc/cni/net.d/multus.d
       args:
         executable: /bin/bash
+
+    - name: Ensure K3s image import directory exists on master
+      file:
+        path: /var/lib/rancher/k3s/agent/images
+        state: directory
+        mode: "0755"
+
+    - name: Preload Multus bootstrap image tar on master
+      copy:
+        src: "{{ seed_multus_bootstrap_tar }}"
+        dest: /var/lib/rancher/k3s/agent/images/seedemu-multus-bootstrap.tar
+        mode: "0600"
+      when: seed_multus_bootstrap_tar is defined and seed_multus_bootstrap_tar | length > 0
 
     - name: Get K3s token
       shell: cat /var/lib/rancher/k3s/server/node-token
@@ -561,6 +591,19 @@
         mode: "0755"
       when: not k3s_agent_dir.stat.exists or seed_k3s_force_reinstall | bool
 
+    - name: Ensure K3s image import directory exists on worker
+      file:
+        path: /var/lib/rancher/k3s/agent/images
+        state: directory
+        mode: "0755"
+
+    - name: Preload Multus bootstrap image tar on worker
+      copy:
+        src: "{{ seed_multus_bootstrap_tar }}"
+        dest: /var/lib/rancher/k3s/agent/images/seedemu-multus-bootstrap.tar
+        mode: "0600"
+      when: seed_multus_bootstrap_tar is defined and seed_multus_bootstrap_tar | length > 0
+
     - name: Install K3s agent
       shell: |
         curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_DOWNLOAD=true \
@@ -570,7 +613,7 @@
           K3S_TOKEN={{ hostvars[groups['master'][0]]['k3s_server_token'] }} \
           sh -
       args:
-        creates: /var/lib/rancher/k3s/agent
+        creates: /etc/systemd/system/k3s-agent.service
 
     - name: Install CNI plugins required by Multus (macvlan/ipvlan/static)
       shell: |

@@ -125,13 +125,14 @@ ensureExtraNetworks() {
 }
 
 loadExtraNetworkArgs() {
+    # $1: optional VM role; worker-only queue settings leave the master unchanged.
     # Convert kvm.extraNetworks into virt-install --network arguments.
     EXTRA_NETWORK_ARGS=()
     local arg
     while IFS= read -r arg; do
         [ -n "${arg}" ] || continue
         EXTRA_NETWORK_ARGS+=(--network "${arg}")
-    done < <(python3 "${HELPER}" "${CONFIG_PATH}" extra-network-args)
+    done < <(python3 "${HELPER}" "${CONFIG_PATH}" extra-network-args --role "${1:-master}")
 }
 
 collectExistingVms() {
@@ -257,10 +258,21 @@ users:
       - ${SSH_PUB_KEY}
 package_update: true
 packages:
-  - qemu-guest-agent
+  - ${kvmQemuGuestAgentPackage}
 runcmd:
   - [ systemctl, enable, --now, qemu-guest-agent ]
 EOF
+
+    # This opt-in benchmark policy runs before cloud-init package installation.
+    # Explicit apt installs still work; periodic background upgrades cannot
+    # reexecute systemd while containerd is creating experiment cgroups.
+    if [ "${kvmFreezeGuestUpdates}" = "true" ]; then
+        cat >> "${vm_dir}/user-data.yaml" <<'EOF'
+bootcmd:
+  - [sh, -ec, 'printf "%s\n" "APT::Periodic::Enable \"0\";" "APT::Periodic::Update-Package-Lists \"0\";" "APT::Periodic::Unattended-Upgrade \"0\";" "Unattended-Upgrade::Automatic-Reboot \"false\";" > /etc/apt/apt.conf.d/99seedemu-experiment-freeze']
+  - [systemctl, mask, --now, apt-daily.timer, apt-daily-upgrade.timer, apt-daily.service, apt-daily-upgrade.service, unattended-upgrades.service]
+EOF
+    fi
 
     cat > "${vm_dir}/meta-data.yaml" <<EOF
 instance-id: ${vm_name}
@@ -285,6 +297,7 @@ createOrStartVm() {
     local vcpus="$4"
     local memory_mb="$5"
     local disk_gb="$6"
+    local role="$7"
     local vm_disk="${kvmDiskDir}/${vm_name}.qcow2"
     local vm_cloud_dir="${kvmCloudInitDir}/${vm_name}"
 
@@ -302,11 +315,14 @@ createOrStartVm() {
     fi
 
     echo "Creating VM: ${vm_name} ip=${vm_ip} vcpus=${vcpus} memory_mb=${memory_mb} disk_gb=${disk_gb}"
+    loadExtraNetworkArgs "${role}"
     virt-install \
         --name "${vm_name}" \
         --memory "${memory_mb}" \
         --vcpus "${vcpus}" \
         --cpu host-passthrough \
+        --controller type=virtio-serial \
+        --channel unix,target_type=virtio,name=org.qemu.guest_agent.0 \
         --import \
         --os-variant generic \
         --network "network=${kvmNetwork},model=virtio,mac=${vm_mac}" \
@@ -478,7 +494,7 @@ main() {
         updateDhcpHost "${name}" "${ip}" "${mac}"
         createVmCloudInit "${name}"
         createVmDisk "${name}" "${disk_gb}"
-        createOrStartVm "${name}" "${ip}" "${mac}" "${vcpus}" "${memory_mb}" "${disk_gb}"
+        createOrStartVm "${name}" "${ip}" "${mac}" "${vcpus}" "${memory_mb}" "${disk_gb}" "${role}"
     done < "${PLANNED_NODES_TSV}"
 
     while IFS=$'\t' read -r name role ip mac vcpus memory_mb disk_gb; do

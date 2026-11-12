@@ -13,8 +13,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import yaml
 
 from seedemu.compiler.Docker import Docker
-from seedemu.core import Network, Node, OptionMode
-from seedemu.core.enums import NodeRole
+from seedemu.core import Network, Node
 
 
 INTERNET_MAP_META_PREFIX = "org.seedsecuritylabs.seedemu.meta."
@@ -517,8 +516,6 @@ class KubernetesCompiler(Docker):
         with open("Dockerfile", "w", encoding="utf-8") as handle:
             handle.write(dockerfile)
         self._patch_interface_setup_context(Path("Dockerfile"))
-        self._patch_runtime_sysctl_context(node, Path("Dockerfile"))
-        self._patch_router_start_context(node, Path("Dockerfile"))
         chdir(cwd)
 
         full_image_name = f"{self.__image_registry_prefix}/{real_nodename}:latest"
@@ -718,108 +715,6 @@ rm -f "${tmpfile}.stage2"
 """,
             encoding="utf-8",
         )
-
-    def _patch_router_start_context(self, node: Node, dockerfile_path: Path) -> None:
-        """Disable ICMP redirects in Kubernetes forwarding containers.
-
-        Kubernetes macvlan interfaces can place several emulated routers on
-        one L2 segment. A router that forwards a packet back through the same
-        interface otherwise emits an ICMP Redirect before the Echo Reply.
-        iputils ping counts that redirect as an error and can terminate early.
-        """
-        forwarding_roles = {
-            NodeRole.Router,
-            NodeRole.BorderRouter,
-            NodeRole.RouteServer,
-            NodeRole.OpenVpnRouter,
-        }
-        if node.getRole() not in forwarding_roles:
-            return
-
-        dockerfile = dockerfile_path.read_text(encoding="utf-8")
-        match = re.search(
-            r"^(COPY\s+)(\S+)(\s+/start\.sh\s*)$",
-            dockerfile,
-            re.MULTILINE,
-        )
-        if not match:
-            return
-
-        old_script_path = dockerfile_path.parent / match.group(2)
-        if not old_script_path.exists():
-            return
-
-        marker = "# Kubernetes forwarding nodes must not emit ICMP redirects."
-        start_script = old_script_path.read_text(encoding="utf-8")
-        if marker in start_script:
-            return
-        redirect_setup = (
-            f"{marker}\n"
-            "for redirect_flag in /proc/sys/net/ipv4/conf/*/send_redirects; do\n"
-            "    echo 0 > \"$redirect_flag\"\n"
-            "done\n"
-        )
-        if start_script.startswith("#!/bin/bash\n"):
-            start_script = "#!/bin/bash\n" + redirect_setup + start_script[len("#!/bin/bash\n"):]
-        else:
-            start_script = redirect_setup + start_script
-
-        new_source = md5(start_script.encode("utf-8")).hexdigest()
-        new_script_path = dockerfile_path.parent / new_source
-        new_script_path.write_text(start_script, encoding="utf-8")
-        if new_script_path != old_script_path:
-            old_script_path.unlink()
-        dockerfile = dockerfile[: match.start(2)] + new_source + dockerfile[match.end(2) :]
-        dockerfile_path.write_text(dockerfile, encoding="utf-8")
-
-    def _patch_runtime_sysctl_context(self, node: Node, dockerfile_path: Path) -> None:
-        """Apply Docker-compose runtime sysctls from inside a privileged Pod."""
-        commands: List[str] = []
-        for option, _scope in node.getScopedOptions(prefix="sysctl") or []:
-            if option.mode != OptionMode.RUN_TIME:
-                continue
-            if option.fullname() == "sysctl_netipv4_conf_rp_filter":
-                value = option.repr_runtime()
-            else:
-                value = repr(option)
-            if value is None:
-                continue
-            for setting in value.splitlines():
-                setting = setting.strip()
-                if setting:
-                    commands.append(f"sysctl -w {setting} > /dev/null 2>&1")
-        if not commands:
-            return
-
-        dockerfile = dockerfile_path.read_text(encoding="utf-8")
-        match = re.search(
-            r"^(COPY\s+)(\S+)(\s+/start\.sh\s*)$",
-            dockerfile,
-            re.MULTILINE,
-        )
-        if not match:
-            return
-        old_script_path = dockerfile_path.parent / match.group(2)
-        if not old_script_path.exists():
-            return
-
-        marker = "# Apply SeedEMU runtime sysctls inside the Kubernetes Pod."
-        start_script = old_script_path.read_text(encoding="utf-8")
-        if marker in start_script:
-            return
-        runtime_setup = f"{marker}\n" + "\n".join(commands) + "\n"
-        if start_script.startswith("#!/bin/bash\n"):
-            start_script = "#!/bin/bash\n" + runtime_setup + start_script[len("#!/bin/bash\n"):]
-        else:
-            start_script = runtime_setup + start_script
-
-        new_source = md5(start_script.encode("utf-8")).hexdigest()
-        new_script_path = dockerfile_path.parent / new_source
-        new_script_path.write_text(start_script, encoding="utf-8")
-        if new_script_path != old_script_path:
-            old_script_path.unlink()
-        dockerfile = dockerfile[: match.start(2)] + new_source + dockerfile[match.end(2) :]
-        dockerfile_path.write_text(dockerfile, encoding="utf-8")
 
     def _stage_base_image_contexts(self) -> None:
         used_images = sorted(getattr(self, "_used_images", set()))

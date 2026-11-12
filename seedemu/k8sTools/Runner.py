@@ -5,6 +5,7 @@ import os
 import signal
 import shlex
 import subprocess
+import sys
 import tempfile
 import shutil
 from pathlib import Path
@@ -22,20 +23,27 @@ from .Config import (
     writeYaml,
 )
 from .Utils import chmodScripts, copyTree
+from .partition import resolveAlgorithm
 
 
-def runCommand(args: list[str], *, cwd: str | Path | None = None) -> subprocess.CompletedProcess:
+def runCommand(
+    args: list[str],
+    *,
+    cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
     """Run one external command and fail immediately on errors.
 
     Args:
         args: Command argv. Shell expansion is intentionally avoided.
         cwd: Optional working directory.
+        env: Optional environment mapping for the child process.
     """
     print("+ " + shlex.join(args))
-    return subprocess.run(args, cwd=str(cwd) if cwd is not None else None, check=True)
+    return subprocess.run(args, cwd=str(cwd) if cwd is not None else None, env=env, check=True)
 
 
-def readOptionalPositiveIntEnv(name: str) -> int | None:
+def optionalPositiveIntEnv(name: str) -> int | None:
     """Return a positive integer environment variable, or None when unset."""
     raw = os.environ.get(name, "").strip()
     if not raw:
@@ -127,6 +135,24 @@ def inferImageRegistryPrefix(output_dir: Path) -> str:
     return "seedemu"
 
 
+def resolveCompiledManifest(output_dir: Path) -> Path:
+    """Return the workload manifest implied by compiler networking metadata."""
+    metadata_path = output_dir / "networking.yaml"
+    default_manifest = output_dir / "k8s.yaml"
+    kube_ovn_manifest = output_dir / "k8s.kube-ovn.yaml"
+    if metadata_path.exists():
+        metadata = loadYaml(metadata_path)
+        cni_type = str(metadata.get("cniType") or "").strip().lower().replace("_", "-")
+        backend = str(metadata.get("networkBackend") or "").strip().lower().replace("_", "-")
+        value = cni_type or backend
+        if value in {"kube-ovn", "ovn"} and kube_ovn_manifest.exists():
+            return kube_ovn_manifest
+        return default_manifest
+    if kube_ovn_manifest.exists():
+        return kube_ovn_manifest
+    return default_manifest
+
+
 def buildCluster(
     input_config: str | Path,
     config_k3s: str | Path,
@@ -175,9 +201,12 @@ def deployWorkload(
     config_k3s: str | Path,
     *,
     image_registry_prefix: str | None = None,
+    partition_algorithm: str | Path = "nodeByAs",
+    partition_pod_reserve: int = 0,
+    partition_max_nodes_per_worker: int = 900,
     keep_temp: bool = False,
 ) -> None:
-    """Run preflight, image build/push, deploy, and wait for workload readiness.
+    """Partition, build/preload image archives, deploy, and wait for readiness.
 
     Args:
         output_dir: Compile output directory containing images.yaml and k8s.yaml.
@@ -185,8 +214,18 @@ def deployWorkload(
         config_k3s: configK3s.yaml used to resolve registry and network backend.
         image_registry_prefix: Logical compiler image prefix. If omitted, it
             is inferred from images.yaml.
+        partition_algorithm: Built-in placement name or .py script path,
+            resolved before entering the temporary directory. ``nodeByAs``
+            is the default and binds every ASN group to one worker node.
+        partition_pod_reserve: Pod slots kept free on every eligible node.
+        partition_max_nodes_per_worker: Admission cap for one worker.
         keep_temp: Keep temporary running resources for debugging.
     """
+    if partition_pod_reserve < 0:
+        raise ValueError("partition_pod_reserve must be nonnegative")
+    if partition_max_nodes_per_worker < 1:
+        raise ValueError("partition_max_nodes_per_worker must be positive")
+    partition_algorithm = resolveAlgorithm(partition_algorithm)
     output_path = resolvePath(output_dir)
     kubeconfig_path = resolvePath(kubeconfig)
     config_path = resolvePath(config_k3s)
@@ -210,6 +249,30 @@ def deployWorkload(
         stage = running_dir / "ManageRunningStage.py"
         running_config = running_dir / "configRunning.yaml"
         runCommand(["python3", str(stage), "--config", str(running_config), "preflight"], cwd=running_dir)
+        partition_stage = running_dir / "partitionWorkload.py"
+        runCommand(
+            [
+                sys.executable,
+                str(partition_stage),
+                "--manifest",
+                str(resolveCompiledManifest(output_path)),
+                "--kubeconfig",
+                str(kubeconfig_path),
+                "--partition",
+                partition_algorithm,
+                "--pod-reserve",
+                str(partition_pod_reserve),
+                "--max-nodes-per-worker",
+                str(partition_max_nodes_per_worker),
+            ],
+            cwd=running_dir,
+            env={
+                **os.environ,
+                "PYTHONPATH": os.pathsep.join(
+                    [str(Path(__file__).resolve().parents[2]), os.environ.get("PYTHONPATH", "")]
+                ).rstrip(os.pathsep),
+            },
+        )
         runCommand(["python3", str(stage), "--config", str(running_config), "build"], cwd=running_dir)
         runCommand(["python3", str(stage), "--config", str(running_config), "up"], cwd=running_dir)
 
@@ -228,14 +291,26 @@ def cleanWorkload(output_dir: str | Path, kubeconfig: str | Path, *, keep_temp: 
         running_dir = copyTree("running", root / "running", overwrite=True)
         chmodScripts(running_dir)
         helper = running_dir / "ManageK8sManifest.py"
-        manifest = output_path / "k8s.kube-ovn.yaml"
-        if not manifest.exists():
-            manifest = output_path / "k8s.yaml"
+        manifest = resolveCompiledManifest(output_path)
         namespace = subprocess.check_output(
             ["python3", str(helper), "namespace", "--manifest", str(manifest)],
             text=True,
         ).strip()
-        if (output_path / "kustomization.yaml").exists():
+        runtime_manifest = output_path / "k8stools" / "runtime.yaml"
+        if runtime_manifest.is_file():
+            # Cluster-scoped OVN objects are outside the namespace lifecycle.
+            # Delete only compiler-owned cluster resources; namespace deletion
+            # handles workloads without expanding a thousands-image kustomization.
+            import yaml
+            loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+            docs = list(yaml.load_all(runtime_manifest.read_text(), Loader=loader))
+            cluster_docs = [doc for doc in docs if doc and doc.get("kind") in {"Subnet", "Vpc"}]
+            for index in range(0, len(cluster_docs), 250):
+                batch = root / f"clean-{index}.yaml"
+                batch.write_text(yaml.safe_dump_all(cluster_docs[index:index+250], sort_keys=False))
+                runCommand(["kubectl", "--kubeconfig", str(kubeconfig_path), "delete", "-f", str(batch),
+                            "--ignore-not-found=true", "--wait=false"])
+        elif (output_path / "kustomization.yaml").exists():
             runCommand(
                 [
                     "kubectl",
@@ -282,9 +357,7 @@ def destroyCluster(config_k3s: str | Path, *, keep_temp: bool = False) -> None:
         temp_config = setup_dir / "configK3s.yaml"
         writeYaml(temp_config, config)
         try:
-            destroy_physical_timeout = readOptionalPositiveIntEnv(
-                "SEED_K8S_DESTROY_PHYSICAL_TIMEOUT_SECONDS"
-            )
+            destroy_physical_timeout = optionalPositiveIntEnv("SEED_K8S_DESTROY_PHYSICAL_TIMEOUT_SECONDS")
             destroy_physical_cmd = ["python3", str(setup_dir / "DestroyPhysicalCluster.py"), str(temp_config)]
             if destroy_physical_timeout:
                 print(
@@ -437,26 +510,6 @@ def _buildPhysical(
     )
     writeYaml(setup_dir / "configK3s.yaml", config)
     runCommand(["python3", str(setup_dir / "PreparePhysicalNodes.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
-    fabric = config.get("fabric")
-    fabric_type = str(fabric.get("type", "none")).lower() if isinstance(fabric, dict) else "none"
-    if fabric_type == "linux-vxlan":
-        vxlan_dir = setup_dir / "vxlan"
-        runCommand(
-            [
-                "python3",
-                str(vxlan_dir / "ConfigureLinuxVxlanFabric.py"),
-                str(setup_dir / "configK3s.yaml"),
-            ],
-            cwd=setup_dir,
-        )
-        runCommand(
-            [
-                "python3",
-                str(vxlan_dir / "ValidateLinuxVxlanFabric.py"),
-                str(setup_dir / "configK3s.yaml"),
-            ],
-            cwd=setup_dir,
-        )
     runCommand(["python3", str(setup_dir / "ApplyK3sCluster.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     final_config = loadYaml(setup_dir / "configK3s.yaml")
     addK8sToolsMetadata(

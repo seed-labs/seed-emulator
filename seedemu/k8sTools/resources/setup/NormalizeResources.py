@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 
-def readMemoryMiB(resources: dict[str, Any], default: int = 0) -> int:
+def memoryMiB(resources: dict[str, Any], default: int = 0) -> int:
     """Read memory from resources, rejecting invalid or conflicting units."""
     converted = []
     for key, factor in (
@@ -30,7 +30,7 @@ def readMemoryMiB(resources: dict[str, Any], default: int = 0) -> int:
 
 def normalizeMemory(resources: dict[str, Any]) -> None:
     """Replace supported memory fields in resources with canonical memoryMb."""
-    value = readMemoryMiB(resources)
+    value = memoryMiB(resources)
     if value:
         for key in ("memoryGiB", "memoryGb", "memory_mb"):
             resources.pop(key, None)

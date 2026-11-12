@@ -19,7 +19,7 @@ from typing import Any
 from ManageMultiHostKvmConfig import expandPath, fabricVlanTrunks, hostList, loadYaml, vmPlan
 
 
-def renderShellCommand(commands: list[list[str]]) -> str:
+def shellCommand(commands: list[list[str]]) -> str:
     """Return a fail-fast remote shell command from argv-style commands."""
     return "set -euo pipefail; " + "; ".join(
         " ".join(shlex.quote(part) for part in command)
@@ -65,7 +65,7 @@ def runSsh(
     )
 
 
-def selectFirstNodeByHost(data: dict[str, Any]) -> list[dict[str, Any]]:
+def firstNodeByHost(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Return the first deterministic VM on each hypervisor."""
     nodes = vmPlan(data)
     selected: list[dict[str, Any]] = []
@@ -76,7 +76,7 @@ def selectFirstNodeByHost(data: dict[str, Any]) -> list[dict[str, Any]]:
     return selected
 
 
-def createSetupCommands(
+def setupCommands(
     *,
     master_interface: str,
     vlan_id: int,
@@ -125,7 +125,7 @@ def createSetupCommands(
     ]
 
 
-def createCleanupCommand(vlan_interface: str, macvlan_interface: str) -> str:
+def cleanupCommand(vlan_interface: str, macvlan_interface: str) -> str:
     """Return an idempotent cleanup command for one temporary probe."""
     commands = [
         f"sudo -n ip link del {shlex.quote(macvlan_interface)} >/dev/null 2>&1 || true",
@@ -156,7 +156,7 @@ def probePair(
     vlan_id = int(trunk["vlanEnd"])
     master_interface = str(trunk["masterInterface"])
 
-    cleanup = createCleanupCommand(vlan_interface, macvlan_interface)
+    cleanup = cleanupCommand(vlan_interface, macvlan_interface)
     for node in (left, right):
         runSsh(user=user, key=key, ip=str(node["ip"]), command=cleanup)
 
@@ -165,8 +165,8 @@ def probePair(
             user=user,
             key=key,
             ip=str(left["ip"]),
-            command=renderShellCommand(
-                createSetupCommands(
+            command=shellCommand(
+                setupCommands(
                     master_interface=master_interface,
                     vlan_id=vlan_id,
                     vlan_interface=vlan_interface,
@@ -180,8 +180,8 @@ def probePair(
             user=user,
             key=key,
             ip=str(right["ip"]),
-            command=renderShellCommand(
-                createSetupCommands(
+            command=shellCommand(
+                setupCommands(
                     master_interface=master_interface,
                     vlan_id=vlan_id,
                     vlan_interface=vlan_interface,
@@ -195,7 +195,7 @@ def probePair(
             user=user,
             key=key,
             ip=str(left["ip"]),
-            command=renderShellCommand(
+            command=shellCommand(
                 [["ping", "-I", macvlan_interface, "-c", str(ping_count), "-W", str(ping_timeout), right_ip]]
             ),
             capture_output=True,
@@ -204,7 +204,7 @@ def probePair(
             user=user,
             key=key,
             ip=str(right["ip"]),
-            command=renderShellCommand(
+            command=shellCommand(
                 [["ping", "-I", macvlan_interface, "-c", str(ping_count), "-W", str(ping_timeout), left_ip]]
             ),
             capture_output=True,
@@ -213,7 +213,7 @@ def probePair(
             user=user,
             key=key,
             ip=str(left["ip"]),
-            command=renderShellCommand(
+            command=shellCommand(
                 [
                     [
                         "ping",
@@ -237,7 +237,7 @@ def probePair(
             user=user,
             key=key,
             ip=str(right["ip"]),
-            command=renderShellCommand(
+            command=shellCommand(
                 [
                     [
                         "ping",
@@ -302,7 +302,7 @@ def probeIsolation(
     vlan_interface = f"pfv{test_index}"
     macvlan_interface = f"pfm{test_index}"
     master_interface = str(trunk["masterInterface"])
-    cleanup = createCleanupCommand(vlan_interface, macvlan_interface)
+    cleanup = cleanupCommand(vlan_interface, macvlan_interface)
 
     for node in (left, right):
         runSsh(user=user, key=key, ip=str(node["ip"]), command=cleanup)
@@ -311,8 +311,8 @@ def probeIsolation(
             user=user,
             key=key,
             ip=str(left["ip"]),
-            command=renderShellCommand(
-                createSetupCommands(
+            command=shellCommand(
+                setupCommands(
                     master_interface=master_interface,
                     vlan_id=vlan_end,
                     vlan_interface=vlan_interface,
@@ -326,8 +326,8 @@ def probeIsolation(
             user=user,
             key=key,
             ip=str(right["ip"]),
-            command=renderShellCommand(
-                createSetupCommands(
+            command=shellCommand(
+                setupCommands(
                     master_interface=master_interface,
                     vlan_id=vlan_end - 1,
                     vlan_interface=vlan_interface,
@@ -341,7 +341,7 @@ def probeIsolation(
             user=user,
             key=key,
             ip=str(left["ip"]),
-            command=renderShellCommand(
+            command=shellCommand(
                 [["ping", "-I", macvlan_interface, "-c", str(ping_count), "-W", str(ping_timeout), right_ip]]
             ),
             capture_output=True,
@@ -386,7 +386,7 @@ def main() -> int:
     trunks = fabricVlanTrunks(data)
     if args.mtu_payload_bytes is None:
         args.mtu_payload_bytes = min(int(trunk["mtu"]) for trunk in trunks) - 28 if trunks else 1372
-    nodes = selectFirstNodeByHost(data)
+    nodes = firstNodeByHost(data)
     if not trunks:
         print("[fabric-validate] SKIP: no VLAN fabric trunks configured")
         return 0

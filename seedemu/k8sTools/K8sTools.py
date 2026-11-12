@@ -43,9 +43,13 @@ class K8sTools:
         configK3s: str | Path,
         *,
         imageRegistryPrefix: str | None = None,
+        partitionAlgorithm: str | Path = "nodeByAs",
+        partitionPodReserve: int = 0,
+        partitionMaxNodesPerWorker: int = 900,
+        partition: str | Path | None = None,
         keepTemp: bool = False,
     ) -> None:
-        """Build/push images, deploy workload, and wait for readiness.
+        """Partition, build shared image archives, preload nodes, deploy, and wait for readiness.
 
         Args:
             outputDir: Compile output directory.
@@ -53,13 +57,23 @@ class K8sTools:
             configK3s: configK3s.yaml with registry and network backend data.
             imageRegistryPrefix: Logical compiler image prefix. If omitted,
                 it is inferred from images.yaml.
+            partitionAlgorithm: Built-in name or .py script path relative to
+                the caller's working directory; defaults to ``nodeByAs``.
+            partitionPodReserve: Pod slots kept free on eligible nodes.
+            partitionMaxNodesPerWorker: Admission cap for one worker.
+            partition: Compatibility alias for partitionAlgorithm.
             keepTemp: Keep temporary running resources for debugging.
         """
+        if partition is not None:
+            partitionAlgorithm = partition
         deployWorkload(
             outputDir,
             kubeconfig,
             configK3s,
             image_registry_prefix=imageRegistryPrefix,
+            partition_algorithm=partitionAlgorithm,
+            partition_pod_reserve=partitionPodReserve,
+            partition_max_nodes_per_worker=partitionMaxNodesPerWorker,
             keep_temp=keepTemp,
         )
 
@@ -111,13 +125,32 @@ class K8sTools:
         build.add_argument("--inventory", help="optional output inventory.yaml with node resources")
         build.add_argument("--keep-temp", action="store_true", help="keep temporary setup resources")
 
-        up = sub.add_parser("up", help="build images and deploy workload")
+        up = sub.add_parser("up", help="build/preload images and deploy through bounded queues", allow_abbrev=False)
         up.add_argument("-f", "--folder", required=True, help="compile output directory")
         up.add_argument("-k", "--kubeconfig", required=True, help="kubeconfig.yaml")
         up.add_argument("-d", "--config-k3s", required=True, help="configK3s.yaml")
         up.add_argument(
             "--image-registry-prefix",
             help="logical compiler image prefix; inferred from images.yaml when omitted",
+        )
+        up.add_argument(
+            "--partition",
+            dest="partition",
+            default="nodeByAs",
+            metavar="NAME_OR_SCRIPT.py",
+            help="built-in placement name or Python script path (default: nodeByAs)",
+        )
+        up.add_argument(
+            "--partition-pod-reserve",
+            type=int,
+            default=0,
+            help="Pod slots to reserve on every eligible node (default: 0)",
+        )
+        up.add_argument(
+            "--partition-max-nodes-per-worker",
+            type=int,
+            default=900,
+            help="maximum workload Pods assigned to one worker (default: 900)",
         )
         up.add_argument("--keep-temp", action="store_true", help="keep temporary running resources")
 
@@ -144,6 +177,9 @@ class K8sTools:
                 args.kubeconfig,
                 args.config_k3s,
                 imageRegistryPrefix=args.image_registry_prefix,
+                partitionAlgorithm=args.partition,
+                partitionPodReserve=args.partition_pod_reserve,
+                partitionMaxNodesPerWorker=args.partition_max_nodes_per_worker,
                 keepTemp=args.keep_temp,
             )
         elif args.command == "down":

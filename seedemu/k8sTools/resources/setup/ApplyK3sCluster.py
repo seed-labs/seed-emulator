@@ -266,12 +266,13 @@ verifyConnectivity() {
 
 runAnsibleInstall() {
     echo "[2/10] Installing K3s via generated Ansible inventory"
-    local inventory_tmp playbook_tmp node_count
+    local inventory_tmp playbook_tmp node_count multus_tar_path
     mkdir -p "${setupTmpDir}"
     inventory_tmp="$(mktemp "${setupTmpDir}/ansible-inventory.XXXXXX.yml")"
     playbook_tmp="$(mktemp "${setupTmpDir}/k3s-install.XXXXXX.yml")"
     helper write-ansible-inventory --output "${inventory_tmp}" >/dev/null
     node_count="$(helper nodes-tsv | wc -l | tr -d ' ')"
+    multus_tar_path="$(saveHostImageTarball "${MULTUS_BOOTSTRAP_IMAGE}")"
     sed "s/ready_nodes.stdout | int >= 3/ready_nodes.stdout | int >= ${node_count}/" \
         "${PLAYBOOK_PATH}" > "${playbook_tmp}"
     ANSIBLE_HOST_KEY_CHECKING=False \
@@ -279,7 +280,9 @@ runAnsibleInstall() {
         ansible-playbook \
         -i "${inventory_tmp}" \
         "${playbook_tmp}" \
-        --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none"
+        --extra-vars "seed_multus_bootstrap_tar=${multus_tar_path}" \
+        --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none" \
+        < /dev/null
     rm -f "${inventory_tmp}" "${playbook_tmp}"
 }
 

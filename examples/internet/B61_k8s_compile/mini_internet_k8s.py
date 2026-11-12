@@ -165,6 +165,13 @@ def build_emulator(hosts_per_as=2) -> Emulator:
 
     o = OptionRegistry().sysctl_netipv4_udp_rmem_min(5000, mode=OptionMode.RUN_TIME)
     new_host.setOption(o)
+    # The upstream Kubernetes compiler does not translate runtime sysctl options.
+    # Express this example's required settings through the portable startup API.
+    new_host.appendStartCommand(
+        "sysctl -w net.ipv4.conf.all.rp_filter=0 "
+        "net.ipv4.conf.default.rp_filter=0 net.ipv4.udp_rmem_min=5000"
+    )
+    new_host.appendStartCommand("echo 0 > /proc/sys/net/ipv4/conf/net0/rp_filter")
 
     ###############################################################################
     # Peering via route servers.
@@ -203,6 +210,24 @@ def build_emulator(hosts_per_as=2) -> Emulator:
     return emu
 
 
+def configureForwardingRuntime(emulator: Emulator) -> None:
+    """Disable ICMP redirects on rendered emulator's forwarding nodes.
+
+    The upstream compiler remains unchanged. Startup commands run inside the
+    privileged Pods after their secondary interfaces have been configured.
+    """
+    from seedemu.core.enums import NodeRole
+
+    forwarding = {NodeRole.Router, NodeRole.BorderRouter, NodeRole.RouteServer,
+                  NodeRole.OpenVpnRouter}
+    for (_, kind, _), node in emulator.getRegistry().getAll().items():
+        if kind in {"rnode", "rs"} and node.getRole() in forwarding:
+            node.appendStartCommand(
+                'for redirect_flag in /proc/sys/net/ipv4/conf/*/send_redirects; '
+                'do echo 0 > "$redirect_flag"; done'
+            )
+
+
 def main() -> int:
     args = parse_args()
 
@@ -223,6 +248,7 @@ def main() -> int:
 
     emu = build_emulator(hosts_per_as=HOSTS_PER_AS)
     emu.render()
+    configureForwardingRuntime(emu)
     emu.compile(compiler, str(output_dir), override=True)
 
     print("=" * 72)

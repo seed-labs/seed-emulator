@@ -147,6 +147,14 @@ def addK8sToolsMetadata(
     outputs = _mapping(config, "outputs")
     outputs["kubeconfig"] = str(Path(kubeconfig).expanduser().resolve())
     tools = _mapping(config, "k8sTools")
+    # Freeze workload options in generated state. Later up commands need only
+    # configK3s.yaml, even if the original input YAML has moved or been removed.
+    original = loadYaml(source_config)
+    running = (original.get("k8sTools") or {}).get("running")
+    if running is not None:
+        tools["running"] = copy.deepcopy(running)
+    if isinstance(original.get("deploy"), dict):
+        config["deploy"] = copy.deepcopy(original["deploy"])
     destroy = {
         "type": destroy_type,
     }

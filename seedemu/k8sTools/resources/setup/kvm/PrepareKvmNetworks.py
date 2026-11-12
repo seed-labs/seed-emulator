@@ -36,7 +36,7 @@ def loadConfig(path: Path) -> dict[str, Any]:
     return data
 
 
-def readValue(mapping: dict[str, Any], *names: str, default: Any = None) -> Any:
+def value(mapping: dict[str, Any], *names: str, default: Any = None) -> Any:
     """Return the first present camelCase or snake_case field."""
     for name in names:
         if name in mapping:
@@ -44,23 +44,23 @@ def readValue(mapping: dict[str, Any], *names: str, default: Any = None) -> Any:
     return default
 
 
-def readManagementNetworkSpec(config: dict[str, Any]) -> dict[str, str]:
+def managementNetworkSpec(config: dict[str, Any]) -> dict[str, str]:
     """Return the requested management network fields."""
     kvm = config.get("kvm") if isinstance(config.get("kvm"), dict) else {}
     return {
-        "name": str(readValue(kvm, "network", default="default") or "default"),
-        "bridge": str(readValue(kvm, "networkBridge", "network_bridge", default="") or ""),
-        "cidr": str(readValue(kvm, "networkCidr", "network_cidr", default="") or ""),
-        "gateway": str(readValue(kvm, "networkGateway", "network_gateway", default="") or ""),
-        "dhcpStart": str(readValue(kvm, "dhcpStart", "dhcp_start", default="") or ""),
-        "dhcpEnd": str(readValue(kvm, "dhcpEnd", "dhcp_end", default="") or ""),
+        "name": str(value(kvm, "network", default="default") or "default"),
+        "bridge": str(value(kvm, "networkBridge", "network_bridge", default="") or ""),
+        "cidr": str(value(kvm, "networkCidr", "network_cidr", default="") or ""),
+        "gateway": str(value(kvm, "networkGateway", "network_gateway", default="") or ""),
+        "dhcpStart": str(value(kvm, "dhcpStart", "dhcp_start", default="") or ""),
+        "dhcpEnd": str(value(kvm, "dhcpEnd", "dhcp_end", default="") or ""),
     }
 
 
-def readExtraNetworkSpecs(config: dict[str, Any]) -> list[dict[str, str]]:
+def extraNetworkSpecs(config: dict[str, Any]) -> list[dict[str, str]]:
     """Return normalized L2-only networks for additional VM NICs."""
     kvm = config.get("kvm") if isinstance(config.get("kvm"), dict) else {}
-    raw = readValue(kvm, "extraNetworks", "extra_networks", default=[]) or []
+    raw = value(kvm, "extraNetworks", "extra_networks", default=[]) or []
     if not isinstance(raw, list):
         raise SystemExit("kvm.extraNetworks must be a list")
 
@@ -69,8 +69,8 @@ def readExtraNetworkSpecs(config: dict[str, Any]) -> list[dict[str, str]]:
     for index, item in enumerate(raw):
         if not isinstance(item, dict):
             raise SystemExit(f"kvm.extraNetworks[{index}] must be a mapping")
-        name = str(readValue(item, "name", "network", default="") or "").strip()
-        bridge = str(readValue(item, "bridge", default="") or "").strip()
+        name = str(value(item, "name", "network", default="") or "").strip()
+        bridge = str(value(item, "bridge", default="") or "").strip()
         if not name:
             raise SystemExit(f"kvm.extraNetworks[{index}] requires name or network")
         if not bridge:
@@ -82,7 +82,7 @@ def readExtraNetworkSpecs(config: dict[str, Any]) -> list[dict[str, str]]:
     return result
 
 
-def renderManagementNetworkXml(spec: dict[str, str]) -> str:
+def managementNetworkXml(spec: dict[str, str]) -> str:
     """Render one validated NAT management network as libvirt XML."""
     required = ("name", "bridge", "cidr", "gateway", "dhcpStart", "dhcpEnd")
     missing = [field for field in required if not spec.get(field)]
@@ -129,7 +129,7 @@ def renderManagementNetworkXml(spec: dict[str, str]) -> str:
     return ET.tostring(root, encoding="unicode") + "\n"
 
 
-def renderLayer2NetworkXml(spec: dict[str, str]) -> str:
+def layer2NetworkXml(spec: dict[str, str]) -> str:
     """Render one unnumbered bridge network as libvirt XML."""
     root = ET.Element("network")
     ET.SubElement(root, "name").text = spec["name"]
@@ -142,7 +142,7 @@ def renderLayer2NetworkXml(spec: dict[str, str]) -> str:
     return ET.tostring(root, encoding="unicode") + "\n"
 
 
-def runVirsh(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def virsh(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     """Run one virsh command against system libvirt."""
     command = ["virsh", "-c", LIBVIRT_URI, *args]
     result = subprocess.run(command, text=True, capture_output=True, check=False)
@@ -163,14 +163,14 @@ def defineNetwork(xml: str) -> None:
         handle.write(xml)
         path = Path(handle.name)
     try:
-        runVirsh("net-define", str(path))
+        virsh("net-define", str(path))
     finally:
         path.unlink(missing_ok=True)
 
 
-def readActualBridge(name: str) -> str:
+def actualBridge(name: str) -> str:
     """Return the bridge configured for one existing libvirt network."""
-    result = runVirsh("net-dumpxml", name)
+    result = virsh("net-dumpxml", name)
     root = ET.fromstring(result.stdout)
     bridge = root.find("bridge")
     return str(bridge.get("name") or "") if bridge is not None else ""
@@ -178,27 +178,23 @@ def readActualBridge(name: str) -> str:
 
 def ensureNetwork(spec: dict[str, str], *, management: bool) -> None:
     """Define, start, and validate one requested network."""
-    exists = runVirsh("net-info", spec["name"], check=False).returncode == 0
+    exists = virsh("net-info", spec["name"], check=False).returncode == 0
     if not exists:
-        xml = (
-            renderManagementNetworkXml(spec)
-            if management
-            else renderLayer2NetworkXml(spec)
-        )
+        xml = managementNetworkXml(spec) if management else layer2NetworkXml(spec)
         print(f"Defining libvirt network {spec['name']} bridge={spec['bridge']}")
         defineNetwork(xml)
 
     expected_bridge = spec.get("bridge", "")
-    observed_bridge = readActualBridge(spec["name"])
+    observed_bridge = actualBridge(spec["name"])
     if expected_bridge and observed_bridge != expected_bridge:
         raise SystemExit(
             f"libvirt network {spec['name']} uses bridge {observed_bridge or '<none>'}, "
             f"expected {expected_bridge}"
         )
 
-    runVirsh("net-start", spec["name"], check=False)
-    runVirsh("net-autostart", spec["name"])
-    info = runVirsh("net-info", spec["name"]).stdout.lower()
+    virsh("net-start", spec["name"], check=False)
+    virsh("net-autostart", spec["name"])
+    info = virsh("net-info", spec["name"]).stdout.lower()
     if "active:" not in info or "active:           yes" not in info:
         # Locale-independent fallback for variable spacing in virsh output.
         active = any(
@@ -225,8 +221,8 @@ def main() -> int:
     """Prepare every network needed before VM creation."""
     args = parseArgs()
     config = loadConfig(args.config)
-    ensureNetwork(readManagementNetworkSpec(config), management=True)
-    for spec in readExtraNetworkSpecs(config):
+    ensureNetwork(managementNetworkSpec(config), management=True)
+    for spec in extraNetworkSpecs(config):
         ensureNetwork(spec, management=False)
     return 0
 

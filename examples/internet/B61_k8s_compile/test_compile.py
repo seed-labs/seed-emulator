@@ -893,6 +893,8 @@ def validateDeploymentRendering(
     running_stage = (
         repo_root / "seedemu" / "k8sTools" / "resources" / "running" / "ManageRunningStage.py"
     )
+    sys.path.insert(0, str(running_stage.parent))
+    from manageWorkload import createRuntimeManifest
     local_input = example_dir / "configKvmMacvlan.yaml"
     physical_input = example_dir / "configPhysicalMacvlan.yaml"
     multi_input = example_dir / "configMultiHostKvmMacvlan.yaml"
@@ -931,6 +933,11 @@ def validateDeploymentRendering(
             ("physical", physical_input, "br-seedemu", 1400),
             ("multi-host-kvm", multi_setup, "ens3", 1400),
         ]
+        mtu_setup = temp_dir / "configK3s-mtu-override.yaml"
+        mtu_config = loadYamlMapping(local_setup)
+        mtu_config.setdefault("cni", {})["mtu"] = 1360
+        mtu_setup.write_text(yaml.safe_dump(mtu_config, sort_keys=False), encoding="utf-8")
+        modes.append(("local-kvm-mtu-override", mtu_setup, "ens2", 1360))
         for mode, setup_config, expected_parent, expected_mtu in modes:
             running_config = temp_dir / f"running-{mode}.yaml"
             writeRunningConfig(running_config, setup_config, output_dir)
@@ -967,6 +974,17 @@ def validateDeploymentRendering(
                 require(
                     config.get("mtu") == expected_mtu, f"{mode} NAD {name} uses unexpected MTU"
                 )
+            # Exercise the archive/worker-queue renderer used by normal up,
+            # independently of the compatibility kustomization renderer.
+            fast_output = temp_dir / f"fast-{mode}"
+            shutil.copytree(output_dir, fast_output)
+            fast_config = temp_dir / f"fast-running-{mode}.yaml"
+            writeRunningConfig(fast_config, setup_config, fast_output)
+            runtime_docs = createRuntimeManifest(fast_config)[-2]
+            fast_nads = {d["metadata"]["name"]: json.loads(d["spec"]["config"])
+                         for d in runtime_docs if d.get("kind") == "NetworkAttachmentDefinition"}
+            require(fast_nads == effective_configs,
+                    f"{mode} fast runtime NADs differ from the validated deployment rendering")
             patch_count = len(kustomization.get("patches") or [])
             results[mode] = {
                 "parent": expected_parent,
@@ -974,6 +992,7 @@ def validateDeploymentRendering(
                 "nads": len(effective_configs),
                 "patches": patch_count,
                 "images": len(image_rewrites),
+                "fast_runtime_matches": True,
             }
             if artifact_dir is not None:
                 generated_dir = artifact_dir / "generated"

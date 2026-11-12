@@ -16,6 +16,7 @@ interfaces for Kubernetes and image builds.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import shlex
 import shutil
@@ -23,11 +24,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
-try:
-    from .ManageK8sManifest import running_context
-except ImportError:
-    from ManageK8sManifest import running_context
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -73,7 +69,8 @@ def context(config: Path) -> dict[str, str]:
     Args:
         config: Path to configRunning.yaml.
     """
-    return running_context(str(config))
+    import ManageK8sManifest as manifestTools
+    return manifestTools.running_context(str(config))
 
 
 def checkOutput(config: Path) -> dict[str, str]:
@@ -296,6 +293,37 @@ def ensureBuildBaseImages(output_dir: Path, ssh_command: list[str] | None) -> No
             registry/build host is local.
     """
     images = externalBuildBaseImages(output_dir)
+    # Compiler hash tags identify already prepared bases. Transfer locally
+    # cached bases as well so a fresh builder preserves their exact contents
+    # instead of rebuilding them from mutable upstream tags/package indexes.
+    compiler_bases = sorted({image for dockerfile in output_dir.rglob("Dockerfile")
+        if (image := firstFromImage(dockerfile)) and isCompilerHashBaseTag(image)})
+    images.extend(image for image in compiler_bases if image not in images and dockerImageExists(image))
+    # Preserve cached pre-COPY software variants too (for example iperf3).
+    # Their identity is derived from the immutable base ID and instructions.
+    from buildImageArchives import dockerfile_build_instructions, docker_image_id
+    base_ids: dict[str, str | None] = {}
+    inspected_variants: set[tuple] = set()
+    for dockerfile in sorted(output_dir.glob("*/Dockerfile")):
+        base = firstFromImage(dockerfile)
+        if not base:
+            continue
+        if base not in base_ids:
+            base_ids[base] = docker_image_id(base) if dockerImageExists(base) else None
+        if base_ids[base] is None:
+            continue
+        try:
+            instructions = dockerfile_build_instructions(dockerfile)
+        except RuntimeError:
+            # Custom Dockerfiles can use the existing registry build mode.
+            continue
+        key = (base, instructions)
+        if instructions and key not in inspected_variants:
+            inspected_variants.add(key)
+            digest = hashlib.sha256("\n".join((base_ids[base], *instructions)).encode()).hexdigest()
+            variant = "seedemu-fast-base:" + digest[:24]
+            if variant not in images and dockerImageExists(variant):
+                images.append(variant)
     if not images:
         return
     print("[k8s_build] ensuring Docker build base images: " + ", ".join(images))
@@ -308,69 +336,9 @@ def ensureBuildBaseImages(output_dir: Path, ssh_command: list[str] | None) -> No
 
 
 def buildImages(config: Path) -> None:
-    """Stage compiler output on the registry node and build/push images.
-
-    Args:
-        config: Path to configRunning.yaml.
-    """
-    values = checkOutput(config)
-    output_dir = Path(values["outputDir"])
-    registry_prefix = values["registryPrefix"].rstrip("/")
-    registry_host = registry_prefix.split("/", 1)[0].split(":", 1)[0]
-    remote_dir = f"/tmp/seedemu-native-build-{time.strftime('%Y%m%d_%H%M%S')}-{os.getpid()}"
-    build_command = [
-        "python3",
-        "./BuildRegistryImages.py",
-        "--output-dir",
-        f"{remote_dir}/output",
-        "--registry-prefix",
-        registry_prefix,
-        "--image-registry-prefix",
-        values["imageRegistryPrefix"],
-    ]
-
-    if values["masterConnection"] == "local":
-        print(f"[k8s_build] master is local; staging compile output in {remote_dir}/output")
-        remote_root = Path(remote_dir)
-        if remote_root.exists():
-            shutil.rmtree(remote_root)
-        (remote_root / "output").mkdir(parents=True)
-        (remote_root / "running").mkdir(parents=True)
-        copyTreeContents(output_dir, remote_root / "output")
-        copyTreeContents(SCRIPT_DIR, remote_root / "running")
-        ensureBuildBaseImages(output_dir, None)
-        print("[k8s_build] running local build")
-        runCommand(["sudo", "-n", *build_command], cwd=remote_root / "running")
-        return
-
-    ssh_target = f"{values['sshUser']}@{registry_host}"
-    ssh_command = [
-        "ssh",
-        "-i",
-        values["sshKey"],
-        "-o",
-        "StrictHostKeyChecking=no",
-        "-o",
-        "UserKnownHostsFile=/dev/null",
-        "-o",
-        "LogLevel=ERROR",
-        "-o",
-        "BatchMode=yes",
-        ssh_target,
-    ]
-    print(f"[k8s_build] uploading compile output to {ssh_target}:{remote_dir}/output")
-    ensureBuildBaseImages(output_dir, ssh_command)
-    runCommand(
-        [
-            *ssh_command,
-            f"rm -rf {shlex.quote(remote_dir)} && mkdir -p {shlex.quote(remote_dir + '/output')} {shlex.quote(remote_dir + '/running')}",
-        ]
-    )
-    streamTarToRemote(output_dir, ssh_command, f"tar -C {shlex.quote(remote_dir + '/output')} -xzf -")
-    streamTarToRemote(SCRIPT_DIR, ssh_command, f"tar -C {shlex.quote(remote_dir + '/running')} -xzf -")
-    remote_build = " ".join(shlex.quote(part) for part in build_command)
-    print(f"[k8s_build] running build on {ssh_target}")
-    runCommand([*ssh_command, f"cd {shlex.quote(remote_dir + '/running')} && sudo -n {remote_build}"])
+    """Build shared bases and import placement-specific workload image archives."""
+    from manageWorkload import buildWorkloadImages
+    buildWorkloadImages(config)
 
 
 def renderKustomization(config: Path) -> dict[str, str]:
@@ -399,6 +367,8 @@ def renderKustomization(config: Path) -> dict[str, str]:
             values["cniMasterInterface"],
             "--cni-mtu",
             values["cniMtu"],
+            "--cni-vlan-parents",
+            values["cniVlanParents"],
             "--attached-cni-type",
             values["attachedCniType"],
             "--output",
@@ -578,68 +548,15 @@ def ensureNamespace(kubeconfig: str, namespace: str) -> None:
 
 
 def deploy(config: Path) -> None:
-    """Apply workload resources and wait for all SeedEMU pods to become ready.
-
-    Args:
-        config: Path to configRunning.yaml.
-    """
-    values = renderKustomization(config)
-    namespace = namespaceForManifest(values["manifest"])
-    print("=== native-k8s deploy ===")
-    print(f"output_dir={values['outputDir']}")
-    print(f"manifest={values['manifest']}")
-    print(f"kustomization={values['kustomization']}")
-    print(f"network_backend={values['networkBackend']}")
-    print(f"kubeconfig={values['kubeconfig']}")
-    print(f"namespace={namespace}")
-    ensureNamespace(values["kubeconfig"], namespace)
-    prepareMacvlanVlanInterfaces(config, values)
-    runCommand(["kubectl", "--kubeconfig", values["kubeconfig"], "apply", "-k", values["outputDir"]])
-    waitReady(config)
+    """Prepare network parents and deploy through bounded worker queues."""
+    from manageWorkload import deployWorkload
+    deployWorkload(config)
 
 
 def waitReady(config: Path) -> None:
-    """Wait for deployment rollouts and SeedEMU pods.
-
-    Args:
-        config: Path to configRunning.yaml.
-    """
-    values = checkOutput(config)
-    namespace = namespaceForManifest(values["manifest"])
-    names = helperOutput(["deployment-names", "--manifest", values["manifest"]]).splitlines()
-    for name in names:
-        if not name:
-            continue
-        print(f"[rollout] deployment/{name}")
-        runCommand(
-            [
-                "kubectl",
-                "--kubeconfig",
-                values["kubeconfig"],
-                "-n",
-                namespace,
-                "rollout",
-                "status",
-                f"deployment/{name}",
-                f"--timeout={values['rolloutTimeoutSeconds']}s",
-            ]
-        )
-    runCommand(
-        [
-            "kubectl",
-            "--kubeconfig",
-            values["kubeconfig"],
-            "-n",
-            namespace,
-            "wait",
-            "--for=condition=Ready",
-            "pod",
-            "-l",
-            "seedemu.io/workload=seedemu",
-            f"--timeout={values['rolloutTimeoutSeconds']}s",
-        ]
-    )
-    print("Deploy completed successfully.")
+    """Check expected controller/Pod readiness using shared API observations."""
+    from manageWorkload import waitWorkloadReady
+    waitWorkloadReady(config)
 
 
 def clean(config: Path) -> None:

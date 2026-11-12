@@ -4,7 +4,7 @@
 Inputs:
 - configRunning.yaml, which points to configK3s.yaml and compile output.
 - configK3s.yaml, whose master node provides the default registry/SSH target.
-- k8s.kube-ovn.yaml or k8s.yaml plus images.yaml from compile output.
+- k8s.kube-ovn.yaml or k8s.yaml plus images.yaml/images.txt from compile output.
 
 Outputs:
 - scalar values consumed by ManageRunningStage.py,
@@ -24,6 +24,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+YAML_DUMPER = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
 
 
 _LOCAL_IPS: set[str] | None = None
@@ -85,7 +88,7 @@ def get_nested(data: dict[str, Any], path: str, default: Any = None) -> Any:
 
 
 def normalizeNetworkValue(value: Any) -> str:
-    """Normalize a network backend or CNI value from YAML/compiler metadata."""
+    """Normalize a network backend or CNI value from YAML/env/compiler metadata."""
     return str(value or "").strip().lower().replace("_", "-")
 
 
@@ -106,11 +109,8 @@ def loadCompileNetworking(output_dir: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def resolveCompileNetworkBackend(
-    compile_networking: dict[str, Any],
-    fallback: str,
-) -> str:
-    """Resolve the backend, giving compile-time CNI metadata priority."""
+def resolveCompileNetworkBackend(compile_networking: dict[str, Any], fallback: str) -> str:
+    """Resolve running backend, giving compile-time CNI metadata priority."""
     cni_type = normalizeNetworkValue(compile_networking.get("cniType"))
     network_backend = normalizeNetworkValue(compile_networking.get("networkBackend"))
     if cni_type:
@@ -304,6 +304,7 @@ def running_context(config_path: str) -> dict[str, str]:
     default_network_backend = "kube-ovn" if fabric_type in {"ovn", "kube-ovn"} else "macvlan"
     network_backend = resolveCompileNetworkBackend(compile_networking, default_network_backend)
     manifest_path = resolveManifestPath(running, output_dir, network_backend)
+    images_path = resolveImagesMetadataPath(output_dir)
     default_cni_master = (
         str(get_nested(setup, "fabric.bridgeName", "br-seedemu"))
         if fabric_type in {"linux-vxlan", "vxlan", "linux_vxlan"}
@@ -316,33 +317,24 @@ def running_context(config_path: str) -> dict[str, str]:
             get_nested(
                 setup,
                 "cni.localLinkCniType",
-                get_nested(
-                    setup,
-                    "fabric.attachedCniType",
-                    os.environ.get("SEED_LOCAL_LINK_CNI_TYPE", "kube-ovn"),
-                ),
+                get_nested(setup, "fabric.attachedCniType", os.environ.get("SEED_LOCAL_LINK_CNI_TYPE", "kube-ovn")),
             ),
         )
     )
     compile_cni_type = normalizeNetworkValue(compile_networking.get("cniType"))
     if compile_cni_type and network_backend != "kube-ovn":
         attached_cni_type = compile_cni_type
-    raw_cni_mtu = get_nested(
-        setup,
-        "cni.mtu",
-        get_nested(setup, "fabric.mtu", compile_networking.get("cniMtu", 1400)),
-    )
-    try:
-        cni_mtu = int(raw_cni_mtu or 1400)
-    except (TypeError, ValueError) as exc:
-        raise SystemExit(f"CNI MTU must be an integer, got {raw_cni_mtu!r}") from exc
-    if cni_mtu < 576 or cni_mtu > 65535:
-        raise SystemExit(f"CNI MTU must be in range 576..65535, got {cni_mtu}")
+    cni_mtu = int(get_nested(setup, "cni.mtu",
+                  get_nested(setup, "fabric.mtu", compile_networking.get("cniMtu") or 1400)))
+    if not 576 <= cni_mtu <= 65535:
+        raise ValueError("CNI MTU must be in range 576..65535")
+    vlan_parents = {str(trunk["name"]): str(trunk["masterInterface"])
+                    for trunk in get_nested(setup, "fabric.vlanTrunks", [])}
     return {
         "setupConfig": str(setup_config_path),
         "outputDir": str(output_dir),
         "manifest": str(manifest_path),
-        "imagesYaml": str(resolveImagesPath(output_dir)),
+        "imagesYaml": str(images_path),
         "kustomization": str(output_dir / "kustomization.yaml"),
         "imageRegistryPrefix": str(running.get("imageRegistryPrefix") or "seedemu"),
         "registryPrefix": f"{registry_host}:{registry_port}",
@@ -362,6 +354,7 @@ def running_context(config_path: str) -> dict[str, str]:
         "masterConnection": str((master_node or {}).get("connection") or "ssh"),
         "cniMasterInterface": str(get_nested(setup, "cni.defaultMasterInterface", default_cni_master)),
         "cniMtu": str(cni_mtu),
+        "cniVlanParents": json.dumps(vlan_parents),
         "networkBackend": network_backend,
         "attachedCniType": attached_cni_type,
         "rolloutTimeoutSeconds": str(running.get("rolloutTimeoutSeconds") or "1800"),
@@ -394,16 +387,15 @@ def resolveManifestPath(running: dict[str, Any], output_dir: Path, network_backe
     return default_manifest
 
 
-def resolveImagesPath(output_dir: Path) -> Path:
-    """Return the generated image metadata file for the compile output.
-
-    Args:
-        output_dir: Compile output directory.
-    """
+def resolveImagesMetadataPath(output_dir: Path) -> Path:
+    """Return compiler image metadata, preferring images.yaml over images.txt."""
     images_yaml = output_dir / "images.yaml"
     if images_yaml.exists():
         return images_yaml
-    return output_dir / "images.txt"
+    images_txt = output_dir / "images.txt"
+    if images_txt.exists():
+        return images_txt
+    return images_yaml
 
 
 def config_value(args: argparse.Namespace) -> None:
@@ -455,49 +447,35 @@ def strip_prefix(image: str, prefix: str) -> str:
     return image.split("/", 1)[-1]
 
 
+def imageContextFromRef(image: str) -> str:
+    """Infer Docker build context directory from one images.txt image ref."""
+    tail = image.strip().rsplit("/", 1)[-1]
+    if "@" in tail:
+        tail = tail.split("@", 1)[0]
+    if ":" in tail:
+        tail = tail.rsplit(":", 1)[0]
+    return tail
+
+
 def load_images(path: str) -> list[dict[str, str]]:
-    """Load image metadata from images.yaml or legacy images.txt.
-
-    Args:
-        path: Compiler image metadata file.
-    """
-    image_path = Path(path)
-    text = image_path.read_text(encoding="utf-8")
-    if image_path.name == "images.txt":
-        return imagesFromText(text)
-    data = yaml.safe_load(text) or {}
-    if isinstance(data, dict):
-        images = data.get("images", [])
-        if isinstance(images, list):
-            return images
-    return imagesFromText(text)
-
-
-def imagesFromText(text: str) -> list[dict[str, str]]:
-    """Parse one-image-reference-per-line metadata from KubernetesCompiler.
-
-    Args:
-        text: Contents of images.txt.
-    """
-    images: list[dict[str, str]] = []
-    for line in text.splitlines():
-        image = line.strip()
-        if not image or image.startswith("#"):
-            continue
-        images.append({"name": image, "context": contextFromImage(image)})
+    """Load image build metadata from images.yaml or legacy images.txt."""
+    metadata_path = Path(path)
+    if metadata_path.suffix == ".txt":
+        records: list[dict[str, str]] = []
+        for line in metadata_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            parts = stripped.split()
+            image = parts[0]
+            context = parts[1] if len(parts) > 1 else imageContextFromRef(image)
+            records.append({"name": image, "context": context})
+        return records
+    data = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
+    images = data.get("images", [])
+    if not isinstance(images, list):
+        raise SystemExit(f"Invalid image metadata in {path}: images must be a list")
     return images
-
-
-def contextFromImage(image: str) -> str:
-    """Infer a Docker build context directory from an image reference.
-
-    Args:
-        image: Full image reference generated by the compiler.
-    """
-    repo = image.rsplit("/", 1)[-1]
-    if ":" in repo:
-        repo = repo.rsplit(":", 1)[0]
-    return repo
 
 
 def mapped_images(args: argparse.Namespace) -> None:
@@ -519,7 +497,6 @@ def render_kustomization(args: argparse.Namespace) -> None:
         args.registry_prefix: Real registry host:port.
         args.network_backend: "macvlan" or "kube-ovn".
         args.cni_master_interface: Optional macvlan parent interface override.
-        args.cni_mtu: Macvlan interface MTU selected by the deployment config.
         args.output: Destination kustomization.yaml.
     """
     registry = args.registry_prefix.rstrip("/")
@@ -532,7 +509,7 @@ def render_kustomization(args: argparse.Namespace) -> None:
         images.append({"name": logical_repo, "newName": f"{registry}/{repo}", "newTag": tag})
     output_path = Path(args.output)
     manifest_path = Path(args.manifest)
-    network_backend = str(args.network_backend or "macvlan").strip().lower()
+    network_backend = normalizeNetworkValue(args.network_backend or "macvlan")
     if network_backend in {"kube-ovn", "ovn"}:
         rendered_manifest = output_path.parent / "k8s.kube-ovn.yaml"
         if manifest_path.resolve() != rendered_manifest.resolve():
@@ -541,16 +518,12 @@ def render_kustomization(args: argparse.Namespace) -> None:
                 rendered_manifest,
                 attached_cni_type=args.attached_cni_type,
                 cni_master_interface=args.cni_master_interface,
-                cni_mtu=args.cni_mtu,
             )
         payload = {"resources": [rendered_manifest.name], "images": images}
     else:
-        payload = {"resources": namespaceResources(manifest_path, output_path.parent) + ["k8s.yaml"], "images": images}
-        patches = networkAttachmentPatches(
-            args.manifest,
-            args.cni_master_interface,
-            args.cni_mtu,
-        )
+        payload = {"resources": [manifest_path.name], "images": images}
+        patches = networkAttachmentPatches(args.manifest, args.cni_master_interface,
+                    args.cni_mtu, json.loads(args.cni_vlan_parents))
         if patches:
             payload["patches"] = patches
     output_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
@@ -561,7 +534,6 @@ def renderKubeOvnManifest(
     output_path: Path,
     attached_cni_type: str | None = None,
     cni_master_interface: str | None = None,
-    cni_mtu: int | None = None,
 ) -> None:
     """Render a SeedEMU manifest that uses Kube-OVN managed secondary networks.
 
@@ -572,7 +544,6 @@ def renderKubeOvnManifest(
             attached NICs; ``macvlan`` keeps macvlan dataplane and uses
             Kube-OVN only for IPAM.
         cni_master_interface: Optional macvlan master interface override.
-        cni_mtu: Optional macvlan interface MTU override.
 
     The compiler emits macvlan NADs plus Multus network-selection annotations
     with static `ips` values in CIDR form. The renderer creates matching
@@ -580,32 +551,33 @@ def renderKubeOvnManifest(
     output. In macvlan mode, Kube-OVN acts as the centralized IPAM plugin and
     avoids creating thousands of OVN logical switches/routes for scale tests.
     """
-    docs = loadManifestDocs(Path(manifest_path))
+    with open(manifest_path, "r", encoding="utf-8") as fh:
+        docs = [doc for doc in yaml.load_all(fh, Loader=YAML_LOADER) if isinstance(doc, dict)]
 
     namespace_name = findNamespaceName(docs)
     attached_cni = resolveAttachedCniType(attached_cni_type)
     use_ovn_attached = isKubeOvnAttachedCni(attached_cni)
-    vpc_name = kubeOvnResourceName("vpc", namespace_name)
+    # Macvlan mode still renders Kube-OVN Subnet resources for IPAM, but those
+    # Subnets do not attach to a Kube-OVN VPC. Keep one placeholder name so the
+    # shared NAD conversion path can run without requiring a shard list.
+    vpc_names = kubeOvnVpcNames(namespace_name) if use_ovn_attached else [kubeOvnResourceName("vpc", namespace_name)]
     rendered: list[dict[str, Any]] = []
     vpc_written = False
-    namespace_written = any(doc.get("kind") == "Namespace" for doc in docs)
-    if not namespace_written:
-        rendered.append(namespaceResource(namespace_name))
 
     for doc in docs:
         if use_ovn_attached and doc.get("kind") == "Namespace" and not vpc_written:
             rendered.append(doc)
-            rendered.append(kubeOvnVpc(namespace_name, vpc_name))
+            rendered.extend(kubeOvnVpc(namespace_name, item) for item in vpc_names)
             vpc_written = True
             continue
         if doc.get("kind") == "NetworkAttachmentDefinition":
+            vpc_name = selectKubeOvnVpcName(doc, namespace_name, vpc_names) if use_ovn_attached else vpc_names[0]
             converted = convertNetworkAttachmentToKubeOvn(
                 doc,
                 namespace_name,
                 vpc_name,
                 attached_cni,
                 cni_master_interface,
-                cni_mtu,
             )
             rendered.extend(converted)
             continue
@@ -613,31 +585,9 @@ def renderKubeOvnManifest(
         rendered.append(doc)
 
     if use_ovn_attached and not vpc_written:
-        insert_at = 1 if rendered and rendered[0].get("kind") == "Namespace" else 0
-        rendered.insert(insert_at, kubeOvnVpc(namespace_name, vpc_name))
+        rendered[0:0] = [kubeOvnVpc(namespace_name, item) for item in vpc_names]
 
-    output_path.write_text(yaml.safe_dump_all(rendered, sort_keys=False), encoding="utf-8")
-
-
-def namespaceResource(namespace_name: str) -> dict[str, Any]:
-    """Return a Kubernetes Namespace resource for compiler outputs without one."""
-    return {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": namespace_name}}
-
-
-def namespaceResources(manifest_path: Path, output_dir: Path) -> list[str]:
-    """Write namespace.yaml when the manifest lacks an explicit Namespace.
-
-    Args:
-        manifest_path: Source manifest path.
-        output_dir: Directory that will contain kustomization.yaml.
-    """
-    docs = loadManifestDocs(manifest_path)
-    if any(doc.get("kind") == "Namespace" for doc in docs):
-        return []
-    namespace_name = findNamespaceName(docs)
-    namespace_path = output_dir / "namespace.yaml"
-    namespace_path.write_text(yaml.safe_dump(namespaceResource(namespace_name), sort_keys=False), encoding="utf-8")
-    return [namespace_path.name]
+    output_path.write_text(yaml.dump_all(rendered, Dumper=YAML_DUMPER, sort_keys=False), encoding="utf-8")
 
 
 def resolveAttachedCniType(attached_cni_type: str | None = None) -> str:
@@ -649,16 +599,6 @@ def resolveAttachedCniType(attached_cni_type: str | None = None) -> str:
         or "kube-ovn"
     )
     return str(value).strip().lower().replace("_", "-")
-
-
-def loadManifestDocs(manifest_path: Path) -> list[dict[str, Any]]:
-    """Load Kubernetes documents from a manifest path.
-
-    Args:
-        manifest_path: YAML manifest path.
-    """
-    with open(manifest_path, "r", encoding="utf-8") as fh:
-        return [doc for doc in yaml.safe_load_all(fh) if isinstance(doc, dict)]
 
 
 def isKubeOvnAttachedCni(attached_cni_type: str) -> bool:
@@ -689,13 +629,55 @@ def kubeOvnResourceName(prefix: str, value: str) -> str:
     return base[:63].rstrip("-")
 
 
+def kubeOvnVpcShardCount() -> int:
+    """Return the configured number of VPC shards for Kube-OVN attached mode.
+
+    The renderer keeps one VPC by default. Setting
+    ``SEED_KUBE_OVN_VPC_SHARDS`` above 1 spreads Subnets across multiple VPCs
+    so one logical router does not receive every static route mutation.
+    """
+    raw = os.environ.get("SEED_KUBE_OVN_VPC_SHARDS", "1").strip() or "1"
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise SystemExit(f"SEED_KUBE_OVN_VPC_SHARDS must be an integer, got {raw!r}") from exc
+    if value < 1:
+        raise SystemExit("SEED_KUBE_OVN_VPC_SHARDS must be >= 1")
+    return value
+
+
+def kubeOvnVpcNames(namespace_name: str) -> list[str]:
+    """Return VPC names for this namespace and shard count."""
+    count = kubeOvnVpcShardCount()
+    if count == 1:
+        return [kubeOvnResourceName("vpc", namespace_name)]
+    return [kubeOvnResourceName("vpc", f"{namespace_name}-shard-{index}") for index in range(count)]
+
+
+def selectKubeOvnVpcName(doc: dict[str, Any], default_namespace: str, vpc_names: list[str]) -> str:
+    """Return the VPC shard for one NetworkAttachmentDefinition document."""
+    if not vpc_names:
+        raise SystemExit("internal error: Kube-OVN VPC shard list is empty")
+    if len(vpc_names) == 1:
+        return vpc_names[0]
+    metadata = doc.get("metadata") or {}
+    namespace_name = str(metadata.get("namespace") or default_namespace)
+    nad_name = str(metadata.get("name") or "")
+    key = f"{namespace_name}/{nad_name}"
+    digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
+    return vpc_names[int(digest[:8], 16) % len(vpc_names)]
+
+
 def kubeOvnVpc(namespace_name: str, vpc_name: str) -> dict[str, Any]:
     """Return a Kube-OVN Vpc that isolates one SeedEMU namespace."""
+    spec: dict[str, Any] = {}
+    if kubeOvnVpcShardCount() == 1:
+        spec["namespaces"] = [namespace_name]
     return {
         "apiVersion": "kubeovn.io/v1",
         "kind": "Vpc",
         "metadata": {"name": vpc_name},
-        "spec": {"namespaces": [namespace_name]},
+        "spec": spec,
     }
 
 
@@ -705,7 +687,6 @@ def convertNetworkAttachmentToKubeOvn(
     vpc_name: str,
     attached_cni_type: str,
     cni_master_interface: str | None,
-    cni_mtu: int | None,
 ) -> list[dict[str, Any]]:
     """Return [Subnet, NAD] for one compiler-generated macvlan NAD.
 
@@ -715,7 +696,6 @@ def convertNetworkAttachmentToKubeOvn(
         vpc_name: Namespace-scoped Kube-OVN VPC name.
         attached_cni_type: Secondary CNI type, for example kube-ovn or macvlan.
         cni_master_interface: Optional macvlan parent interface override.
-        cni_mtu: Optional macvlan interface MTU override.
     """
     metadata = doc.get("metadata") or {}
     nad_name = str(metadata.get("name") or "")
@@ -746,17 +726,11 @@ def convertNetworkAttachmentToKubeOvn(
     if use_ovn_attached:
         subnet["spec"]["vpc"] = vpc_name
         subnet["spec"]["gatewayType"] = "distributed"
+        subnet["spec"]["disableInterConnection"] = True
+        subnet["spec"]["disableGatewayCheck"] = True
 
     converted = dict(doc)
-    converted["spec"] = {
-        "config": renderConvertedNadConfig(
-            doc,
-            provider,
-            attached_cni_type,
-            cni_master_interface,
-            cni_mtu,
-        )
-    }
+    converted["spec"] = {"config": renderConvertedNadConfig(doc, provider, attached_cni_type, cni_master_interface)}
     return [subnet, converted]
 
 
@@ -765,7 +739,6 @@ def renderConvertedNadConfig(
     provider: str,
     attached_cni_type: str,
     cni_master_interface: str | None,
-    cni_mtu: int | None,
 ) -> str:
     """Return NetworkAttachmentDefinition spec.config for the selected CNI.
 
@@ -774,7 +747,6 @@ def renderConvertedNadConfig(
         provider: Kube-OVN provider string used to match the Subnet.
         attached_cni_type: Secondary CNI type, for example kube-ovn or macvlan.
         cni_master_interface: Optional macvlan parent interface override.
-        cni_mtu: Optional macvlan interface MTU override.
     """
     if isKubeOvnAttachedCni(attached_cni_type):
         config = {
@@ -797,23 +769,10 @@ def renderConvertedNadConfig(
     config.setdefault("cniVersion", "0.3.1")
     config["type"] = attached_cni_type
     if attached_cni_type == "macvlan":
-        annotations = (
-            metadata.get("annotations")
-            if isinstance(metadata.get("annotations"), dict)
-            else {}
-        )
-        # The deployment YAML describes the selected cluster and therefore
-        # overrides the compile-time placeholder stored in the manifest.
-        base_interface = str(
-            cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or ""
-        ).strip()
+        annotations = metadata.get("annotations") if isinstance(metadata.get("annotations"), dict) else {}
+        base_interface = str(annotations.get(VLAN_BASE_ANNOTATION) or cni_master_interface or "").strip()
         if base_interface:
-            config["master"] = macvlanMasterForVlan(
-                base_interface,
-                readNadVlanId(metadata),
-            )
-        if cni_mtu is not None:
-            config["mtu"] = cni_mtu
+            config["master"] = macvlanMasterForVlan(base_interface, readNadVlanId(metadata))
         config.setdefault("mode", "bridge")
     config["ipam"] = {
         "type": "kube-ovn",
@@ -949,27 +908,42 @@ def firstUsableIp(cidr: str) -> str:
         return str(network.network_address)
 
 
-def networkAttachmentPatches(
-    manifest_path: str,
-    cni_master_interface: str,
-    cni_mtu: int | None = None,
-) -> list[dict[str, Any]]:
-    """Return deployment-specific kustomize patches for macvlan NADs.
+def resolveMacvlanParent(metadata: dict[str, Any], defaultParent: str,
+                         vlanParents: dict[str, str] | None = None) -> str:
+    """Resolve metadata's VLAN trunk through setup's vlanParents or defaultParent.
+
+    Explicit trunk mappings preserve separate NICs in multi-trunk deployments;
+    a single-parent deployment overrides the compiler's placeholder interface.
+    """
+    annotations = metadata.get("annotations") or {}
+    trunk = annotations.get("org.seedsecuritylabs.seedemu.meta.vlan-trunk")
+    if vlanParents:
+        if trunk not in vlanParents:
+            raise ValueError(f"No deployment parent configured for VLAN trunk {trunk!r}")
+        return vlanParents[trunk]
+    return str(defaultParent or annotations.get(VLAN_BASE_ANNOTATION) or "").strip()
+
+
+def networkAttachmentPatches(manifest_path: str, cni_master_interface: str,
+                             cni_mtu: int | None = None,
+                             vlan_parents: dict[str, str] | None = None) -> list[dict[str, Any]]:
+    """Return deployment parent/MTU patches for NetworkAttachmentDefinitions.
 
     Args:
         manifest_path: Source k8s.yaml path.
         cni_master_interface: Physical parent interface for macvlan networks.
-        cni_mtu: Optional macvlan interface MTU override.
+        cni_mtu: Optional deployment MTU for the secondary interface.
+        vlan_parents: Optional deployment trunk-name to NIC mapping.
 
     Compile output is intentionally registry/fabric agnostic. The running
-    stage rewrites the macvlan parent and MTU, leaving the original k8s.yaml
-    untouched and making physical/KVM deployments selectable by YAML.
+    stage rewrites the macvlan parent interface and MTU, leaving the original
+    k8s.yaml untouched and making physical/KVM deployments selectable by YAML.
     """
-    if not cni_master_interface and cni_mtu is None:
+    if not cni_master_interface and cni_mtu is None and not vlan_parents:
         return []
     patches: list[dict[str, Any]] = []
     with open(manifest_path, "r", encoding="utf-8") as fh:
-        for doc in yaml.safe_load_all(fh):
+        for doc in yaml.load_all(fh, Loader=YAML_LOADER):
             if not isinstance(doc, dict) or doc.get("kind") != "NetworkAttachmentDefinition":
                 continue
             metadata = doc.get("metadata") or {}
@@ -986,21 +960,9 @@ def networkAttachmentPatches(
                 continue
             if not isinstance(cni_config, dict) or cni_config.get("type") != "macvlan":
                 continue
-            annotations = (
-                metadata.get("annotations")
-                if isinstance(metadata.get("annotations"), dict)
-                else {}
-            )
             vlan_id = readNadVlanId(metadata)
-            # Prefer the deployment-stage value selected by configK3s.yaml.
-            base_interface = str(
-                cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or ""
-            ).strip()
-            target_master = (
-                macvlanMasterForVlan(base_interface, vlan_id)
-                if vlan_id
-                else base_interface
-            )
+            base_interface = resolveMacvlanParent(metadata, cni_master_interface, vlan_parents)
+            target_master = macvlanMasterForVlan(base_interface, vlan_id) if vlan_id else base_interface
             changed = False
             if target_master and cni_config.get("master") != target_master:
                 cni_config["master"] = target_master
@@ -1061,7 +1023,7 @@ def macvlan_vlan_interfaces(args: argparse.Namespace) -> None:
     """Print VLAN subinterfaces required by macvlan NADs as TSV rows."""
     records: dict[tuple[str, int], dict[str, str]] = {}
     with open(args.manifest, "r", encoding="utf-8") as fh:
-        for doc in yaml.safe_load_all(fh):
+        for doc in yaml.load_all(fh, Loader=YAML_LOADER):
             if not isinstance(doc, dict) or doc.get("kind") != "NetworkAttachmentDefinition":
                 continue
             metadata = doc.get("metadata") or {}
@@ -1075,7 +1037,7 @@ def macvlan_vlan_interfaces(args: argparse.Namespace) -> None:
             except json.JSONDecodeError:
                 cni_config = {}
             annotations = metadata.get("annotations") if isinstance(metadata.get("annotations"), dict) else {}
-            base_interface = str(args.cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or "").strip()
+            base_interface = str(annotations.get(VLAN_BASE_ANNOTATION) or args.cni_master_interface or "").strip()
             if not base_interface:
                 master = str(cni_config.get("master") or annotations.get(VLAN_MASTER_ANNOTATION) or "")
                 suffix = f".{vlan_id}"
@@ -1106,7 +1068,7 @@ def _macvlan_vlan_record_for_nad(doc: dict[str, Any], cni_master_interface: str)
     except json.JSONDecodeError:
         cni_config = {}
     annotations = metadata.get("annotations") if isinstance(metadata.get("annotations"), dict) else {}
-    base_interface = str(cni_master_interface or annotations.get(VLAN_BASE_ANNOTATION) or "").strip()
+    base_interface = str(annotations.get(VLAN_BASE_ANNOTATION) or cni_master_interface or "").strip()
     if not base_interface:
         master = str(cni_config.get("master") or annotations.get(VLAN_MASTER_ANNOTATION) or "")
         suffix = f".{vlan_id}"
@@ -1127,7 +1089,7 @@ def _load_macvlan_vlan_nads(manifest: str, cni_master_interface: str) -> dict[tu
     """Return VLAN-backed NAD records keyed by (namespace, name) and ("", name)."""
     records: dict[tuple[str, str], dict[str, str]] = {}
     with open(manifest, "r", encoding="utf-8") as fh:
-        for doc in yaml.safe_load_all(fh):
+        for doc in yaml.load_all(fh, Loader=YAML_LOADER):
             if not isinstance(doc, dict) or doc.get("kind") != "NetworkAttachmentDefinition":
                 continue
             record = _macvlan_vlan_record_for_nad(doc, cni_master_interface)
@@ -1223,7 +1185,7 @@ def macvlan_vlan_interfaces_by_node(args: argparse.Namespace) -> None:
     by_node: dict[str, dict[tuple[str, int], dict[str, str]]] = {node: {} for node in nodes}
     saw_workload_network = False
     with open(args.manifest, "r", encoding="utf-8") as fh:
-        for doc in yaml.safe_load_all(fh):
+        for doc in yaml.load_all(fh, Loader=YAML_LOADER):
             if not isinstance(doc, dict):
                 continue
             template_metadata, pod_spec, workload_namespace = _workload_pod_template(doc)
@@ -1283,7 +1245,7 @@ def macvlan_vlan_interfaces_by_node(args: argparse.Namespace) -> None:
 
 def deployment_names(args: argparse.Namespace) -> None:
     with open(args.manifest, "r", encoding="utf-8") as fh:
-        for doc in yaml.safe_load_all(fh):
+        for doc in yaml.load_all(fh, Loader=YAML_LOADER):
             if isinstance(doc, dict) and doc.get("kind") == "Deployment":
                 name = (doc.get("metadata") or {}).get("name")
                 if name:
@@ -1291,14 +1253,34 @@ def deployment_names(args: argparse.Namespace) -> None:
 
 
 def namespace(args: argparse.Namespace) -> None:
-    print(findNamespaceName(loadManifestDocs(Path(args.manifest))))
+    resource_namespaces: set[str] = set()
+    with open(args.manifest, "r", encoding="utf-8") as fh:
+        for doc in yaml.load_all(fh, Loader=YAML_LOADER):
+            if not isinstance(doc, dict):
+                continue
+            metadata = doc.get("metadata") or {}
+            if doc.get("kind") == "Namespace":
+                name = metadata.get("name")
+                if name:
+                    print(name)
+                    return
+            namespace_name = metadata.get("namespace")
+            if namespace_name:
+                resource_namespaces.add(str(namespace_name))
+    if len(resource_namespaces) == 1:
+        print(next(iter(resource_namespaces)))
+        return
+    if resource_namespaces:
+        namespaces = ", ".join(sorted(resource_namespaces))
+        raise SystemExit(f"Multiple resource namespaces found in {args.manifest}: {namespaces}")
+    raise SystemExit(f"No Namespace object or resource namespace found in {args.manifest}")
 
 
 def validate_manifest(args: argparse.Namespace) -> None:
     seen = {}
     duplicate_errors = []
     with open(args.manifest, "r", encoding="utf-8") as fh:
-        for index, doc in enumerate(yaml.safe_load_all(fh), 1):
+        for index, doc in enumerate(yaml.load_all(fh, Loader=YAML_LOADER), 1):
             if not isinstance(doc, dict):
                 continue
             kind = doc.get("kind")
@@ -1369,6 +1351,7 @@ def main() -> int:
     kustomization.add_argument("--network-backend", default="macvlan")
     kustomization.add_argument("--cni-master-interface", default="")
     kustomization.add_argument("--cni-mtu", type=int, default=None)
+    kustomization.add_argument("--cni-vlan-parents", default="{}")
     kustomization.add_argument("--attached-cni-type", default=None)
     kustomization.add_argument("--output", required=True)
     kustomization.set_defaults(func=render_kustomization)

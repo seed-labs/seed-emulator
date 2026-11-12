@@ -18,7 +18,6 @@ fabric 和镜像操作接口。
 | `DestroyPhysicalCluster.py` | 按 `configK3s.yaml` 清理 K3s、registry、kubeconfig/inventory，并调用对应 fabric 清理入口。 |
 | `PreparePhysicalNodes.py` | 已有物理机预检查：验证 SSH、`sudo -n`、基础命令和可选 VXLAN underlay 接口。 |
 | `ManageK3sConfig.py` | K3s 阶段 YAML 解析器。负责生成 Ansible inventory、shell 变量、fabric 参数、node-name 和 running 阶段需要的 registry/kubeconfig 信息。 |
-| `NormalizeResources.py` | 共享资源单位转换库；把 `memoryGiB`/`memoryGb` 等输入规范化为内部使用的 MiB。 |
 | `ansible/k3s-install.yml` | K3s 安装 playbook 模板。它不是运行时生成文件，必须作为资源保留。 |
 | `kvm/PrepareHostAssets.py` | 准备 Ubuntu cloud image 和 Docker 镜像 tar 缓存。 |
 | `kvm/PrepareKvmNetworks.py` | 单宿主 KVM 前置准备：创建并启动专用管理 NAT 网络，以及 `extraNetworks` 声明的无 IP 二层 trunk 网络。 |
@@ -37,6 +36,16 @@ fabric 和镜像操作接口。
 | `vxlan/ConfigureLinuxVxlanFabric.py` | 为物理机 macvlan 模式创建 `br-seedemu` 和 VXLAN tunnel。 |
 | `vxlan/ValidateLinuxVxlanFabric.py` | 验证 Linux VXLAN bridge 与 macvlan 双向连通；失败时自动调用清理入口。 |
 | `vxlan/CleanLinuxVxlanFabric.py` | 删除 Linux VXLAN bridge、VXLAN 和测试 macvlan 接口。 |
+
+运行阶段还会从同级 `resources/running/` 复制并执行
+`partitionWorkload.py`。它读取编译器生成的 `k8s.yaml`（或
+`k8s.kube-ovn.yaml`）、Kubernetes 节点/Pod API 状态和 ASN 元数据，在镜像
+构建前生成 `nodeName` 绑定及 `partitionInput.json`、`partitionApplied.json`
+证据。默认算法是 `nodeByAs`；算法参数由 `K8sTools.py up --partition`
+传入，只接受 `--partition` 这一种拼写。参数可以是内置算法名，也可以
+直接是 `seedemu/k8sTools/` 内的 `.py` 分区脚本路径，脚本通过 `--input/--output` JSON 返回映射，无需
+修改框架或注册。接口见 [k8sTools README](../../README.md)。该文件是运行
+入口，不是用户输入或持久化配置。
 
 ## build 阶段调用关系
 
@@ -72,6 +81,13 @@ ApplyK3sCluster.py
 
 ## 关键输入和输出
 
+单宿主 KVM 支持可选 YAML 布尔项 `kvm.freezeGuestUpdates`，默认 `false`。
+当设为 `true` 时，`CreateKvmVms.py` 在新 VM 的 cloud-init `bootcmd` 中禁用
+APT 周期更新及自动重启，并 mask 自动更新相关 service/timer，避免基准实验中途
+升级 systemd 等组件。显式安装依赖仍可执行。该配置只在新 VM 初始化时应用；
+修改配置不会改变已经运行的 VM。实验验证器应检查 guest 的实际状态。
+
+
 VM 资源支持 `master.memoryGiB`、`workers.memoryGiB`，单宿主显式 `nodes[]`
 也支持该字段；允许 10.5 等小数，只要能精确转换为整数 MiB。`memoryGb` 是
 GiB 的兼容拼写，`memoryMb`/`memory_mb` 保持旧 MiB 语义。多个字段数值冲突、
@@ -99,3 +115,9 @@ python3 ./ovn/ValidateKubeOvnFabric.py ./configK3s.yaml
 ```
 
 正常用户流程不需要执行这些内部文件，直接使用例子目录中的 `K8sTools.py build/up/down/destroy`。
+
+单宿主 KVM 的 `kvm.extraNetworks[].workerQueues` 是可选正整数（1..256），
+仅用于 `model: virtio`。`ManageKvmConfig.py` 根据 VM 角色生成 vhost 队列参数，
+`CreateKvmVms.py` 在创建 worker 时应用；master 和未配置此字段的网络保持原行为。
+该值声明设备支持的队列数；实验仍须用 guest `ethtool -l/-L` 验证或选择实际活动队列，
+并记录逐队列流量。修改 YAML 不会改变已运行的 VM。

@@ -115,6 +115,13 @@ def kvm_extra_networks(data: dict[str, Any]) -> list[dict[str, str]]:
                 ).strip(),
             }
         )
+        if "workerQueues" in item:
+            queues = item["workerQueues"]
+            if type(queues) is not int or not 1 <= queues <= 256:
+                raise SystemExit("kvm.extraNetworks[].workerQueues must be an integer in 1..256")
+            if out[-1]["model"] != "virtio":
+                raise SystemExit("workerQueues requires model: virtio")
+            out[-1]["workerQueues"] = queues
     return out
 
 
@@ -183,6 +190,11 @@ def normalize_node(node: dict[str, Any], defaults: dict[str, Any] | None = None)
     node = dict(node)
     normalizeMemory(node)
     out.update(node)
+    # The public config adapter emits diskGb for explicit heterogeneous nodes.
+    if "diskGb" in out:
+        if "disk_gb" in out and int(out["diskGb"]) != int(out["disk_gb"]):
+            raise SystemExit("Conflicting diskGb and disk_gb in explicit node")
+        out["disk_gb"] = out["diskGb"]
     if "memoryMb" in out:
         out["memory_mb"] = out["memoryMb"]
     required = ["name", "role", "ip", "mac", "vcpus", "memory_mb", "disk_gb"]
@@ -452,6 +464,19 @@ def shell_env(args: argparse.Namespace) -> None:
 
 def kvm_env(args: argparse.Namespace) -> None:
     data = load_config(args.config)
+    freeze_updates = get_nested(data, "kvm.freezeGuestUpdates", False)
+    if type(freeze_updates) is not bool:
+        raise SystemExit("kvm.freezeGuestUpdates must be a YAML boolean")
+    guest_agent_version = get_nested(data, "kvm.qemuGuestAgentVersion", None)
+    if guest_agent_version is not None and (
+        not isinstance(guest_agent_version, str)
+        or not re.fullmatch(r"[A-Za-z0-9.+:~_-]+", guest_agent_version)
+    ):
+        raise SystemExit("kvm.qemuGuestAgentVersion must be a Debian version string")
+    guest_agent_package = (
+        f"['qemu-guest-agent', '{guest_agent_version}']"
+        if guest_agent_version is not None else "qemu-guest-agent"
+    )
     base_url, base_path = ubuntu_image_defaults(data)
     existing = read_existing_nodes(args.existing_tsv)
     master = optional_master_node(data, existing)
@@ -479,6 +504,8 @@ def kvm_env(args: argparse.Namespace) -> None:
         "kvmAllowExisting": str(get_nested(data, "kvm.allow_existing", False)).lower(),
         "kvmSkipK3sConfig": str(get_nested(data, "kvm.skip_k3s_config", False)).lower(),
         "kvmPrepareImageCache": str(get_nested(data, "kvm.prepare_image_cache", True)).lower(),
+        "kvmFreezeGuestUpdates": str(freeze_updates).lower(),
+        "kvmQemuGuestAgentPackage": guest_agent_package,
         "sshUser": get_nested(data, "ssh.user", "ubuntu"),
         "sshKey": expand_path(str(get_nested(data, "ssh.key", "~/.ssh/id_ed25519"))),
         "masterName": master["name"] if master else "",
@@ -510,7 +537,10 @@ def extra_networks_tsv(args: argparse.Namespace) -> None:
 def extra_network_args(args: argparse.Namespace) -> None:
     """Print virt-install --network argument values for extra KVM networks."""
     for item in kvm_extra_networks(load_config(args.config)):
-        print(f"network={item['name']},model={item['model']}")
+        value = f"network={item['name']},model={item['model']}"
+        if args.role == "worker" and "workerQueues" in item:
+            value += f",driver.name=vhost,driver.queues={item['workerQueues']}"
+        print(value)
 
 
 def nodes_tsv(args: argparse.Namespace) -> None:
@@ -901,6 +931,7 @@ def main() -> int:
     extra_networks = sub.add_parser("extra-networks-tsv")
     extra_networks.set_defaults(func=extra_networks_tsv)
     extra_network_args_parser = sub.add_parser("extra-network-args")
+    extra_network_args_parser.add_argument("--role", choices=["master", "worker"], default="master")
     extra_network_args_parser.set_defaults(func=extra_network_args)
     nodes_parser = sub.add_parser("nodes-tsv")
     nodes_parser.add_argument("--existing-tsv")

@@ -1,0 +1,53 @@
+# Isolated local KVM input for the B61 lifecycle and cross-worker ping check.
+# Creates one master and two workers; generated state drives clean/destroy.
+kind: kvm
+clusterName: seedemu-b61-verify
+
+defaults:
+  masterName: seedemu-b61-verify-master
+  workerNamePrefix: seedemu-b61-verify-worker
+  ipPrefix: 10.93.61
+  masterIpStart: 10
+  workerIpStart: 11
+  macPrefix: '52:54:00:61:93'
+  masterMacStart: 10
+  workerMacStart: 11
+
+master:
+  vcpus: 4
+  memoryGiB: 8
+  diskGb: 40
+workers:
+  count: 2
+  vcpus: 4
+  memoryGiB: 8
+  diskGb: 40
+
+kvm:
+  network: seedemu-b61-verify-net
+  networkBridge: virbrb61verify
+  networkCidr: 10.93.61.0/24
+  networkGateway: 10.93.61.1
+  dhcpStart: 10.93.61.10
+  dhcpEnd: 10.93.61.239
+  legacyBaseImagePath: ''
+  freezeGuestUpdates: true
+
+ssh:
+  user: ubuntu
+  key: ~/.ssh/id_ed25519
+fabric:
+  type: macvlan-vlan
+  mtu: 1400
+cni:
+  cniType: macvlan
+  localLinkCniType: macvlan
+  attachedCniType: macvlan
+  defaultMasterInterface: ens2
+k3s:
+  version: v1.29.15+k3s1
+  clusterCidr: 10.216.0.0/16
+  serviceCidr: 10.217.0.0/16
+  maxPods: 200
+registry:
+  port: 5061
