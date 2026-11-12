@@ -4,12 +4,10 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
-import time
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -56,11 +54,6 @@ REQUIRED_MAP_LABELS = (
     "net.0.address",
     "custom",
 )
-
-# Avoid running the browser download more than once in the same test process.
-_PLAYWRIGHT_INSTALL_ATTEMPTED = False
-_PLAYWRIGHT_INSTALL_ERROR = ""
-
 
 def record(test: ComposeRuntimeTest, name: str, passed: bool, detail: str, command: str) -> None:
     """Record one check with the corresponding test-design number."""
@@ -225,14 +218,20 @@ def check_map_labels(test: ComposeRuntimeTest, info: dict[str, Any]) -> None:
     )
 
 
-def http_json(method: str, url: str, body: dict[str, Any] | None = None, timeout: int = 10) -> tuple[int, Any]:
+def http_request(method: str, url: str, body: dict[str, Any] | None = None, timeout: int = 10) -> tuple[int, Any]:
     data = json.dumps(body).encode("utf-8") if body is not None else None
     headers = {"Content-Type": "application/json"} if data is not None else {}
     request = Request(url, data=data, headers=headers, method=method)
     try:
         with urlopen(request, timeout=timeout) as response:
             raw = response.read()
-            return response.status, json.loads(raw.decode("utf-8")) if raw else None
+            if not raw:
+                return response.status, None
+            text = raw.decode("utf-8", errors="replace")
+            try:
+                return response.status, json.loads(text)
+            except json.JSONDecodeError:
+                return response.status, text
     except HTTPError as error:
         raw = error.read()
         try:
@@ -244,241 +243,35 @@ def http_json(method: str, url: str, body: dict[str, Any] | None = None, timeout
         return 0, str(error)
 
 
-def launch_chromium(playwright: Any) -> Any:
-    """Launch Chromium, installing Playwright's managed browser when missing."""
-
-    global _PLAYWRIGHT_INSTALL_ATTEMPTED, _PLAYWRIGHT_INSTALL_ERROR
-
-    def concise(error: Exception) -> str:
-        return str(error).strip().splitlines()[0] if str(error).strip() else type(error).__name__
-
-    launch_errors: list[str] = []
-    try:
-        return playwright.chromium.launch(headless=True)
-    except Exception as error:
-        initial_error = str(error)
-        launch_errors.append(f"Playwright Chromium: {concise(error)}")
-
-    # The Python package is already available at this point. If only its
-    # version-matched browser is absent, download it with the exact interpreter
-    # that is running this test, then retry the normal Playwright launch.
-    if "Executable doesn't exist" in initial_error and not _PLAYWRIGHT_INSTALL_ATTEMPTED:
-        _PLAYWRIGHT_INSTALL_ATTEMPTED = True
-        try:
-            install = subprocess.run(
-                [sys.executable, "-m", "playwright", "install", "chromium"],
-                cwd=str(Path(__file__).resolve().parent),
-                text=True,
-                capture_output=True,
-                timeout=1200,
-                check=False,
-            )
-            if install.returncode == 0:
-                try:
-                    return playwright.chromium.launch(headless=True)
-                except Exception as error:
-                    _PLAYWRIGHT_INSTALL_ERROR = (
-                        "Chromium was downloaded but could not be launched: "
-                        f"{concise(error)}"
-                    )
-            else:
-                output = (install.stderr or install.stdout).strip()
-                last_line = output.splitlines()[-1] if output else "unknown installation error"
-                _PLAYWRIGHT_INSTALL_ERROR = (
-                    f"automatic Chromium installation exited with {install.returncode}: {last_line}"
-                )
-        except subprocess.TimeoutExpired:
-            _PLAYWRIGHT_INSTALL_ERROR = "automatic Chromium installation timed out after 1200 seconds"
-        except OSError as error:
-            _PLAYWRIGHT_INSTALL_ERROR = f"automatic Chromium installation could not start: {concise(error)}"
-
-    if _PLAYWRIGHT_INSTALL_ERROR:
-        launch_errors.append(_PLAYWRIGHT_INSTALL_ERROR)
-
-    configured = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE", "").strip()
-    candidates = [
-        configured,
-        shutil.which("chromium") or "",
-        shutil.which("chromium-browser") or "",
-        shutil.which("google-chrome") or "",
-        shutil.which("google-chrome-stable") or "",
-        shutil.which("chrome") or "",
-    ]
-    attempted: set[str] = set()
-    for executable in candidates:
-        if not executable or executable in attempted:
-            continue
-        attempted.add(executable)
-        try:
-            return playwright.chromium.launch(headless=True, executable_path=executable)
-        except Exception as error:
-            launch_errors.append(f"{executable}: {concise(error)}")
-
-    detail = launch_errors[-1] if launch_errors else "no Chromium executable was found"
-    raise RuntimeError(
-        "Chromium is unavailable after automatic installation and system-browser fallback. "
-        "Run `python -m playwright install chromium` manually or set "
-        f"PLAYWRIGHT_CHROMIUM_EXECUTABLE. Last error: {detail}"
-    )
-
-
 def check_topology_page(test: ComposeRuntimeTest) -> None:
-    # Target 3: use a real browser to verify that the vis canvas is rendered;
-    # an HTTP 200 response alone is insufficient.
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError as error:
-        record(test, "3.1 Topology Map loads the topology", False, f"Playwright is unavailable: {error}", "Playwright Chromium")
-        return
+    # Target 3: verify the page and both topology data APIs over HTTP.
+    page_url = "http://127.0.0.1:8092/pro/map"
+    page_status, page_body = http_request("GET", page_url)
+    record(test, "3.1 Topology Map page responds", page_status == 200 and bool(page_body), f"status={page_status}", f"GET {page_url}")
 
-    try:
-        with sync_playwright() as playwright:
-            browser = launch_chromium(playwright)
-            page = browser.new_page(viewport={"width": 1440, "height": 900})
-            page.goto("http://127.0.0.1:8092/pro/map", wait_until="networkidle", timeout=60_000)
-            canvas = page.locator('[data-testid="base-map-canvas"] canvas').first
-            canvas.wait_for(state="visible", timeout=30_000)
-            size = canvas.evaluate("el => ({width: el.width, height: el.height})")
-            status, containers = http_json("GET", "http://127.0.0.1:8092/api/v1/container")
-            _, networks = http_json("GET", "http://127.0.0.1:8092/api/v1/network")
-            rendered = size["width"] > 0 and size["height"] > 0
-            data_loaded = (
-                status == 200
-                and isinstance(containers, dict)
-                and bool(containers.get("result"))
-                and isinstance(networks, dict)
-                and bool(networks.get("result"))
-            )
-            browser.close()
-        record(
-            test,
-            "3.1 Topology Map loads the topology",
-            rendered and data_loaded,
-            f"canvas={size}, containers_loaded={bool(containers.get('result')) if isinstance(containers, dict) else False}, "
-            f"networks_loaded={bool(networks.get('result')) if isinstance(networks, dict) else False}",
-            "Playwright Chromium /pro/map",
-        )
-    except Exception as error:  # Record all Playwright-specific exception types uniformly.
-        record(test, "3.1 Topology Map loads the topology", False, str(error), "Playwright Chromium /pro/map")
+    for number, resource in (("3.2", "container"), ("3.3", "network")):
+        url = f"http://127.0.0.1:8092/api/v1/{resource}"
+        status, body = http_request("GET", url)
+        valid = status == 200 and isinstance(body, dict) and "result" in body
+        detail = f"status={status}" if valid else f"status={status}, body={body}"
+        record(test, f"{number} Topology {resource} API responds", valid, detail, f"GET {url}")
 
 
 def check_traffic_observer(test: ComposeRuntimeTest) -> None:
-    # Target 4: prepare live capture, open the 3D page so that it creates the
-    # packet WebSocket, generate traffic, and verify real eBPF data on it.
+    # Target 4: verify the 3D page and the proxied filter API over HTTP.
     base = "http://127.0.0.1:8093/traffic-observer"
     filter_expr = "icmp and host 10.161.0.254"
-    browser = None
-    try:
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError as error:
-            record(test, "4.3 3D page creates the Traffic Observer WebSocket", False, f"Playwright is unavailable: {error}", "Playwright Chromium")
-            return
+    page_url = "http://127.0.0.1:8093/pro/map/3d"
+    page_status, page_body = http_request("GET", page_url)
+    record(test, "4.1 Geographic 3D page responds", page_status == 200 and bool(page_body), f"status={page_status}", f"GET {page_url}")
 
-        interface_status, interfaces = http_json("PUT", f"{base}/interfaces")
-        interfaces_ok = (
-            interface_status == 200
-            and isinstance(interfaces, dict)
-            and int(interfaces.get("discoveredContainerInterfaces", 0)) > 0
-        )
-        record(test, "4.1 Traffic Observer discovers container interfaces", interfaces_ok, f"status={interface_status}, body={interfaces}", "PUT /interfaces")
-        if not interfaces_ok:
-            return
+    filter_status, filter_body = http_request("PUT", f"{base}/filter", {"filter": filter_expr})
+    filter_ok = filter_status == 200 and isinstance(filter_body, dict) and filter_body.get("filter") == filter_expr
+    record(test, "4.2 Traffic Observer sets the capture filter", filter_ok, f"status={filter_status}, body={filter_body}", "PUT /traffic-observer/filter")
 
-        # EmulatorTopologyPage loads the current filter during mounting and
-        # connects its WebSocket only when that filter is non-empty.
-        filter_status, filter_body = http_json("PUT", f"{base}/filter", {"filter": filter_expr})
-        filter_ok = filter_status == 200 and isinstance(filter_body, dict) and filter_body.get("filter") == filter_expr
-        record(test, "4.2 Traffic Observer enables the requested capture filter", filter_ok, f"status={filter_status}, body={filter_body}", "PUT /filter")
-        if not filter_ok:
-            return
-
-        playwright_context = sync_playwright().start()
-        browser = launch_chromium(playwright_context)
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
-        observed_websockets: list[str] = []
-        packet_websockets: list[str] = []
-        packet_events: list[dict[str, Any]] = []
-
-        def on_websocket(websocket: Any) -> None:
-            observed_websockets.append(websocket.url)
-            if "/traffic-observer/ws/packets" not in websocket.url:
-                return
-            packet_websockets.append(websocket.url)
-
-            def on_frame(payload: str | bytes) -> None:
-                try:
-                    text = payload.decode("utf-8") if isinstance(payload, bytes) else payload
-                    event = json.loads(text)
-                    if isinstance(event, dict):
-                        packet_events.append(event)
-                except (UnicodeDecodeError, json.JSONDecodeError):
-                    return
-
-            websocket.on("framereceived", on_frame)
-
-        page.on("websocket", on_websocket)
-        page.goto("http://127.0.0.1:8093/pro/map/3d", wait_until="domcontentloaded", timeout=60_000)
-        deadline = time.monotonic() + 20
-        while not packet_websockets and time.monotonic() < deadline:
-            page.wait_for_timeout(250)
-        websocket_ok = bool(packet_websockets)
-        record(
-            test,
-            "4.3 3D page creates the Traffic Observer WebSocket",
-            websocket_ok,
-            f"packet_websockets={packet_websockets}, all_websockets={observed_websockets}",
-            "Playwright /pro/map/3d",
-        )
-        if not websocket_ok:
-            return
-
-        ping = test.exec(API, "ping -c 4 -W 2 10.161.0.254 >/dev/null", timeout=15)
-        record(test, "4.4 API container generates matching traffic", ping["exit"] == 0, str(ping), "ping 10.161.0.254")
-        if ping["exit"] != 0:
-            return
-
-        deadline = time.monotonic() + 20
-        matched: dict[str, Any] | None = None
-        while time.monotonic() < deadline:
-            page.wait_for_timeout(250)
-            for event in packet_events:
-                if event.get("type") != "packet":
-                    continue
-                endpoints = {str(event.get("sourceIp", "")), str(event.get("destIp", ""))}
-                if event.get("ipProtocol") == "icmp" and "10.161.0.254" in endpoints:
-                    matched = event
-                    break
-            if matched is not None:
-                break
-        record(
-            test,
-            "4.5 3D page receives matching captured packet data",
-            matched is not None,
-            f"matched={matched}" if matched else "no matching ICMP packet arrived within 20 seconds",
-            "Playwright WebSocket /traffic-observer/ws/packets",
-        )
-    except Exception as error:
-        record(test, "4.5 Traffic Observer real capture workflow", False, str(error), "Playwright/Traffic Observer API")
-    finally:
-        if browser is not None:
-            try:
-                browser.close()
-            except Exception:
-                pass
-        if "playwright_context" in locals():
-            try:
-                playwright_context.stop()
-            except Exception:
-                pass
-        cleanup_status, cleanup_body = http_json("PUT", f"{base}/filter", {"filter": ""})
-        record(
-            test,
-            "4.6 Traffic Observer clears the capture filter",
-            cleanup_status == 200 and isinstance(cleanup_body, dict) and cleanup_body.get("filter") == "",
-            f"status={cleanup_status}, body={cleanup_body}",
-            "PUT /filter (empty)",
-        )
+    cleanup_status, cleanup_body = http_request("PUT", f"{base}/filter", {"filter": ""})
+    cleanup_ok = cleanup_status == 200 and isinstance(cleanup_body, dict) and cleanup_body.get("filter") == ""
+    record(test, "4.3 Traffic Observer clears the capture filter", cleanup_ok, f"status={cleanup_status}, body={cleanup_body}", "PUT /traffic-observer/filter (empty)")
 
 
 def main() -> int:

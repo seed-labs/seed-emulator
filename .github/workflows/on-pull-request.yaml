@@ -23,10 +23,12 @@ on:
           - A05
           - A06
           - A09
+          - A14
           - A62
           - A63
           - B00
           - B02
+          - B08
           - B31
       run-basic-examples:
         description: "Run selected basic examples"
@@ -100,6 +102,9 @@ jobs:
             examples/basic/A06_merge_emulation/test_runtime.py \
             examples/basic/A09_node_customization/node_customization.py \
             examples/basic/A09_node_customization/test_runtime.py \
+            examples/basic/A14_add_containerBundle/add_containerBundle.py \
+            examples/basic/A14_add_containerBundle/demoContainerBundle.py \
+            examples/basic/A14_add_containerBundle/test_runtime.py \
             examples/basic/A62_route_reflector/route_reflector.py \
             examples/basic/A62_route_reflector/test_runtime.py \
             examples/basic/A63_control_plane_regression/control_plane_regression.py \
@@ -108,6 +113,8 @@ jobs:
             examples/internet/B00_mini_internet/test_runtime.py \
             examples/internet/B02_mini_internet_with_dns/mini_internet_with_dns.py \
             examples/internet/B02_mini_internet_with_dns/test_runtime.py \
+            examples/internet/B08_internet_map_bundle/internet_map_bundle.py \
+            examples/internet/B08_internet_map_bundle/test_runtime.py \
             examples/internet/B31_mini_internet_mpls/mini_internet_mpls.py \
             examples/internet/B31_mini_internet_mpls/test_runtime.py
 
@@ -121,10 +128,12 @@ jobs:
           python seedemu/testing/cli.py clean examples/basic/A05_components/example.yaml
           python seedemu/testing/cli.py clean examples/basic/A06_merge_emulation/example.yaml
           python seedemu/testing/cli.py clean examples/basic/A09_node_customization/example.yaml
+          python seedemu/testing/cli.py clean examples/basic/A14_add_containerBundle/example.yaml
           python seedemu/testing/cli.py clean examples/basic/A62_route_reflector/example.yaml
           python seedemu/testing/cli.py clean examples/basic/A63_control_plane_regression/example.yaml
           python seedemu/testing/cli.py clean examples/internet/B00_mini_internet/example.yaml
           python seedemu/testing/cli.py clean examples/internet/B02_mini_internet_with_dns/example.yaml
+          python seedemu/testing/cli.py clean examples/internet/B08_internet_map_bundle/example.yaml
           python seedemu/testing/cli.py clean examples/internet/B31_mini_internet_mpls/example.yaml
 
   compile-selected-examples:
@@ -169,6 +178,10 @@ jobs:
             category: basic
             requires_mpls: false
             manifest: examples/basic/A09_node_customization/example.yaml
+          - code: A14
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A14_add_containerBundle/example.yaml
           - code: A62
             category: basic
             requires_mpls: false
@@ -185,6 +198,10 @@ jobs:
             category: internet
             requires_mpls: false
             manifest: examples/internet/B02_mini_internet_with_dns/example.yaml
+          - code: B08
+            category: internet
+            requires_mpls: false
+            manifest: examples/internet/B08_internet_map_bundle/example.yaml
           - code: B31
             category: internet
             requires_mpls: true
@@ -276,6 +293,10 @@ jobs:
             category: basic
             requires_mpls: false
             manifest: examples/basic/A09_node_customization/example.yaml
+          - code: A14
+            category: basic
+            requires_mpls: false
+            manifest: examples/basic/A14_add_containerBundle/example.yaml
           - code: A62
             category: basic
             requires_mpls: false
@@ -292,6 +313,10 @@ jobs:
             category: internet
             requires_mpls: false
             manifest: examples/internet/B02_mini_internet_with_dns/example.yaml
+          - code: B08
+            category: internet
+            requires_mpls: false
+            manifest: examples/internet/B08_internet_map_bundle/example.yaml
           - code: B31
             category: internet
             requires_mpls: true

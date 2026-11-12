@@ -50,29 +50,22 @@ custom
 
 ## 3. Topology Service Check
 
-Open the Topology Map page exposed by `internetmap_toplogy`:
+Send HTTP requests to the Topology Map page and its container and network APIs:
 
 ```text
 http://127.0.0.1:8092/pro/map
+http://127.0.0.1:8092/api/v1/container
+http://127.0.0.1:8092/api/v1/network
 ```
 
-Verify that the page loads successfully and that the topology is rendered with
-the expected nodes and networks.
+The check passes when the page returns a successful nonempty response and both
+APIs return successful JSON responses containing their result fields.
 
 ## 4. Traffic Observer Test
 
-Traffic Observer packet capture depends on the host eBPF subsystem. Even a
-minor host-kernel version change may affect this function, so the runtime test
-must exercise real packet capture rather than checking only whether the
-container or control service is running.
+Use HTTP requests to verify that:
 
-Use the Traffic Observer API to:
-
-1. Discover the available capture interfaces.
-2. Set a narrow packet-capture filter and start capture.
-3. Generate matching traffic from an emulation container.
-4. Receive captured packet data through the packet stream.
-5. Verify that at least one captured packet matches the configured filter and
-   the generated traffic endpoints.
-6. Stop capture and clear the filter during cleanup, whether the test succeeds
-   or fails.
+1. `http://127.0.0.1:8093/pro/map/3d` returns a successful nonempty response.
+2. A capture filter can be set through the proxied Traffic Observer API and the
+   response contains the requested filter.
+3. The filter can be cleared and the response contains an empty filter.

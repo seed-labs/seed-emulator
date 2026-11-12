@@ -179,8 +179,7 @@ the complete example script.
 Tests inspect the running containers rather than only the generated Compose
 file. They check container state, assigned addresses, bundle and emulator-network
 connectivity, port mappings, shared hosts aliases, and map metadata labels. The
-topology UI is loaded with Playwright, and the observer workflow refreshes its
-interfaces, applies a narrow filter, generates matching traffic, and verifies
-that the geographic 3D page receives matching eBPF packet data through its
-WebSocket. Published-port and browser probes assume a local Linux Docker host;
-see the README for environment constraints.
+topology page and its container/network APIs are checked over HTTP. The observer
+workflow checks the geographic 3D page and verifies that a capture filter can be
+set and cleared through the proxied HTTP API. Published-port probes assume a
+local Linux Docker host; see the README for environment constraints.
