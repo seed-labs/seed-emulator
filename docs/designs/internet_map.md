@@ -18,7 +18,7 @@ For implementing a custom bundle, see
 | emulator_api_server | handsonsecurity/seedemu-emulator-service:1.0 | Private bridge, Docker socket, optional emulator interface |
 | internetmap_toplogy | handsonsecurity/seedemu-internet-toplogy:1.0 | Private bridge; API proxy |
 | internetmap_geo | handsonsecurity/seedemu-internet-map-geographic:1.0 | Private bridge; API and observer proxies |
-| traffic_observer | handsonsecurity/seedemu-traffic-observer-service:1.0 | Host network/PID, kernel mounts, Docker socket |
+| traffic_observer | handsonsecurity/seedemu-traffic-observer-service:1.0 | Host network/PID, debugfs/BPF mounts, Docker socket |
 
 The current spelling toplogy is part of service and image identifiers. The
 constructor accepts an emulator and suffix=".map.seed", creates four containers
@@ -67,14 +67,23 @@ rendering the emulator. Checks use configured AS/network interfaces and do not
 allocate or reserve addresses. Supply ASN strings consistently with the registry.
 
 An empty internal list leaves the API bridge-only. Otherwise, only the API joins
-the first internal pool with its first IP. Additional internal entries and IPs
-are unused; UIs stay on the bridge and the observer on host networking.
-A nonempty selected gateway is applied at startup, replacing the API's Docker
-default route. Directly connected routes still use their respective interfaces.
+every configured internal network, using the first IP from each pool. Additional
+addresses in each pool are unused; UIs stay on the bridge and the observer on
+host networking. The first resolved nonempty gateway is applied at startup,
+replacing the API's Docker default route. Directly connected routes still use
+their respective interfaces.
 
 The internal attachment provides direct emulator-network connectivity. It is not
 required for Docker-socket access. This path uses explicit network pools, with
-no separate enable flag or automatic address allocator.
+no automatic address allocator.
+
+When the API joins its first internal network, `joinInternalNetwork()` adds SEED
+metadata labels if the service has no existing labels. The API is therefore
+returned as a role `Host` node by the emulator API and can be displayed on the
+topology map. Later internal attachments are retained in Compose, while the
+single `net.0` metadata entry continues to describe the first attachment. With
+no internal pool, the API remains bridge-only and receives no ContainerBundle
+map labels.
 
 ## Host ports and configuration flow
 
@@ -98,7 +107,8 @@ configure() followed by install(). Configuration:
 3. Assigns API/UI bridge addresses and service attributes.
 4. Sets UI dependencies using the generated API service name and stages Nginx
    configurations targeting the API bridge address.
-5. Optionally attaches the API to the first internal network and adds its alias.
+5. Optionally attaches the API to every configured internal network and adds
+   an alias for each selected address.
 
 The base sets _is_configured during port validation, before the concrete pass
 finishes. This does not prove that all configuration succeeded. Reconfiguration
@@ -107,7 +117,7 @@ appends records and attachment metadata, so use one pass per compilation workflo
 ## API and observer integration
 
 The API mounts /var/run/docker.sock:ro and sets BACKEND_ENV=production.
-The observer mounts the socket and host debugfs, BPF, BTF, and kernel modules;
+The observer mounts the socket, host debugfs, and BPF filesystem;
 it uses privileged mode and host network/PID namespaces. The pcap binding is
 ./traffic-observer-service/pcap to /data/pcap, relative to the Compose project.
 The configured traffic log timezone is Asia/Shanghai.
@@ -115,7 +125,7 @@ The configured traffic log timezone is Asia/Shanghai.
 Observer control is on the host network, not a Compose ports mapping. Multiple
 instances can use different control ports while observing the same Docker host.
 Runtime requires a Linux Docker host with the image's expected kernel facilities
-and mounts.
+and mounts. The bundle does not bind-mount host BTF or /lib/modules.
 
 ## Nginx routing
 
@@ -144,6 +154,7 @@ configure() registers shared records through bundle.addEtcHostsRecord:
 | `internetmap_toplogy<suffix>` | Topology bridge IP |
 | `internetmap_geo<suffix>` | Geographic bridge IP |
 | `emulator_api_server<suffix>` | First internal IP, only when attached |
+| `emulator_api_server-e<index><suffix>` | Internal IP for each later attachment, where index starts at 1 |
 
 The base appends shared pairs to every prepared container's local list, including
 the observer. Enabled startup processing deduplicates pairs, stages /tmp/etc-hosts,
@@ -165,8 +176,10 @@ platform selection, prerequisites, generated files, and test commands. It links
 the example.yaml manifest and test_runtime.py; this document does not duplicate
 the complete example script.
 
-Tests check default IPAM, attachments, host ports and UI HTTP responses, Nginx
-targets, API bridge/gateway reachability, shared aliases, observer configuration,
-and a TCP connection to its control port. They do not establish packet-capture
-or traffic-control correctness. Published-port probes assume a local Docker host;
-see the README for environment constraints.
+Tests inspect the running containers rather than only the generated Compose
+file. They check container state, assigned addresses, bundle and emulator-network
+connectivity, port mappings, shared hosts aliases, and map metadata labels. The
+topology page and its container/network APIs are checked over HTTP. The observer
+workflow checks the geographic 3D page and verifies that a capture filter can be
+set and cleared through the proxied HTTP API. Published-port probes assume a
+local Linux Docker host; see the README for environment constraints.

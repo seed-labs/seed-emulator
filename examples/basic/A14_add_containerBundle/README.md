@@ -12,6 +12,7 @@ run an HTTP server.
 | --- | --- |
 | [add_containerBundle.py](add_containerBundle.py) | Generate/load the topology, render it, supply bundle networks and ports, register, and compile |
 | [demoContainerBundle.py](demoContainerBundle.py) | Define `DemoContainerBundle`, create its containers, and configure their services |
+| [test_design.md](test_design.md) | Define checks against the containers and services after the generated system is started |
 
 The example walkthrough below describes these files as currently implemented.
 The [ContainerBundle design](../../../docs/designs/container_bundle.md) covers
@@ -82,6 +83,20 @@ the directly connected AS152 subnet remains reachable through its own interface.
 The subclass reads host port index 0; it does not remove it from the port list.
 It requires one host port and one internal address per supplied internal entry.
 
+## Map metadata
+
+`PreparedContainer.joinInternalNetwork()` automatically adds the SEED metadata
+labels used by InternetMap; no separate `show_on_map` switch is required. The
+helper has only a private bridge attachment and receives no such labels. The app
+joins two emulator networks, so both Compose attachments remain present.
+
+The current label format represents only one attachment as `net.0`, and each
+`joinInternalNetwork()` call replaces the service's complete `labels` mapping.
+Because `DemoContainerBundle.configure()` joins AS151 first and AS152 second,
+the generated app is displayed as a Host in AS152/net0 at `10.152.0.16`. This
+does not remove its AS151 Compose interface or change the first-gateway behavior
+described above.
+
 ## Shared hosts aliases
 
 `DemoContainerBundle.configure()` registers the following shared records:
@@ -141,6 +156,8 @@ apt, and the installer enables privileged mode.
 
 ## Automated verification
 
+[test_design.md](test_design.md) defines the expected checks against the running
+containers, interfaces, routes, ports, labels, and hosts records.
 [example.yaml](example.yaml) runs the standard TestRunner lifecycle;
 [test_runtime.py](test_runtime.py) uses `ComposeRuntimeTest` for configuration
 checks, retried container commands, and a JSON summary. From the repository root:

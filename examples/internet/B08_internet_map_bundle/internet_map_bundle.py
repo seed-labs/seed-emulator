@@ -58,6 +58,8 @@ internet_map = InternetMap(emu, ".map.seed.emu")
 # emulator-network attachment. Availability checks do not reserve this address.
 # Omitting default_route requests the gateway from the rendered registry.
 internet_map.addInternalNetwork(asn="151", network_name="net0", ip_addresses=["10.151.0.16"])
+# AS161
+internet_map.addInternalNetwork(asn="161", network_name="net0", ip_addresses=["10.161.0.16"])
 # Only the API uses the first address of the first internal pool. The UIs reach
 # the API over the private bridge; the observer remains on the host network.
 # Three host ports are required in this order: observer control, topology HTTP,
