@@ -1,0 +1,25 @@
+{
+  "interface": "any",
+  "capture_filter": "dst host 10.151.0.71 and udp dst port 9000",
+  "web_host": "0.0.0.0",
+  "web_port": 8080,
+  "frontend": {
+    "title": "Botnet Denial-of-Service Attack",
+    "subtitle": "Distributed UDP traffic arriving at the victim",
+    "accent_color": "#a78bfa",
+    "extension_js": "traffic_visualizer_extension.js",
+    "extension_css": "traffic_visualizer_extension.css",
+    "options": {
+      "bot_count": 8,
+      "bot_pps": 200,
+      "udp_payload_bytes": 1200,
+      "victim_address": "10.151.0.71:9000",
+      "health_api_port": 8082,
+      "botnet_api_port": 8083,
+      "impact_latency_warning_ms": 150,
+      "impact_stale_seconds": 4,
+      "impact_chart_max_ms": 500,
+      "impact_bandwidth_stale_seconds": 12
+    }
+  }
+}

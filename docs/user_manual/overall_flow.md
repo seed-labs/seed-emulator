@@ -5,7 +5,8 @@ We show how to build a simple Internet Emulator, consisting
 of three stub autonomous systems and one transit autonomous system. 
 We only cover the basic features. 
 The complete code and more detailed explanation 
-can be found in the example [A01-transit-as](../../examples/A01-transit-as).
+can be found in the example
+[A01_transit_as](../../examples/basic/A01_transit_as/README.md).
 
 - [Create stub autonomous systems](#create-stub-as)
 - [Create transit autonomous system](#create-transit-as)
@@ -95,7 +96,7 @@ will be automatically set up on them.
 We need to peer the autonomous systems, so they can be connected. 
 We first create the `Ebgp` layer, and then create the 
 peering relationships among the autonomous systems. More details on the 
-BGP peering can be found in the [bgp_peering.md](./bgp_peering.md)
+BGP peering can be found in the [BGP manual](./bgp.md)
 document. 
 
 
@@ -153,15 +154,21 @@ it already exists).
 
 
 ```python
-docker = Docker(internetMapEnabled=True, platform=Platform.AMD64)
+docker = Docker(platform=Platform.AMD64)
+
+# InternetMap is optional and must be registered explicitly.
+internet_map = InternetMap(emu, ".map.seed")
+internet_map.setPorts([8081, 8082, 8083])
+docker.addContainerBundle(internet_map)
+
 emu.compile(docker, './output', override = True)
 ```
 
-The `internetMapEnabled` flag indicates whether the 
-visualization app (the Internet Map app, running inside an independent container) 
-should be included in the generated 
-files (the default value is `True`, i.e., the map will
-be automatically included if this flag is not specified). 
+`Docker()` does not add visualization services automatically. The optional
+`InternetMap` bundle above creates the emulator API, topology UI, geographic
+UI, and traffic observer. The three ports are, in order, the observer control
+port, topology UI port, and geographic UI port. Import `InternetMap` from
+`seedemu.containerBundle`.
 The `platform` option indicates which platform
 we are generating the emulation for, AMD64 or ARM64 (for Apple Silicon
 Machines, i.e., M1/M2 chips). 
@@ -179,7 +186,6 @@ The emulator will start running. Give it a
 minute or two (or longer if your emulator is large) 
 to let the routers do their jobs.
 
-This example already include the visualization container (called Internet
-Map). Point your browser to `http://127.0.0.1:8080/map.html`, and you will
-see the visualization. More instructions on how to use the visualization app
-is given in [this manual](./internet_map.md). 
+With the optional bundle shown above, open `http://127.0.0.1:8082/` for the
+topology UI or `http://127.0.0.1:8083/` for the geographic UI. More
+instructions are given in [the visualization manual](./visualization.md).

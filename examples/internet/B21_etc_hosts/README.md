@@ -40,6 +40,23 @@ When the emulator is rendered, the layer creates `/etc/hosts` entries for the
 emulator hosts. Every generated container should then be able to resolve
 `database.com` to `10.152.0.4`.
 
+## Add A Custom Record
+
+Use `addRecord(hostname, ip_address)` before rendering to add a mapping without
+creating or changing a node:
+
+```python
+etchosts = EtcHosts()
+etchosts.addRecord("xyz.seed.net", "10.154.0.30")
+emu.addLayer(etchosts)
+```
+
+Custom records supplement the automatically generated entries. Both IPv4 and
+IPv6 addresses are accepted. Adding the same custom hostname again replaces
+its custom address. Records are written to hosts by default; use
+`EtcHosts(only_hosts=False)` to include routers and other supported node types.
+The mapping itself does not create the target host or make its address reachable.
+
 ## Standard Arguments
 
 ```sh

@@ -4,48 +4,18 @@ from .Ospf import Ospf
 from .Ibgp import Ibgp
 from seedemu.core import Node, ScopedRegistry, Graphable, Emulator, Layer, Router
 from seedemu.core.enums import NetworkType, NodeRole
-from typing import List, Tuple, Dict, Set
-from ._bgp_metadata import install_router_bgp_session
-
-MplsFileTemplates: Dict[str, str] = {}
+from typing import List, Tuple, Set
+from ._bgp_metadata import (
+    BGP_BACKEND_FRR,
+    get_bgp_backend,
+    install_router_bgp_session,
+    set_mpls_ldp_intent,
+)
 
 MPLS_PRESERVED_IBGP_MODES = {"route-reflector"}
 MPLS_DISABLED_IBGP_MODES = {"disabled"}
 MPLS_CORE_FORWARDING = "mpls"
 MPLS_EDGE_BGP_SCOPE = "edge-only"
-
-MplsFileTemplates['frr_start_script'] = """\
-#!/bin/bash
-mount -o remount rw /proc/sys 2> /dev/null
-echo '1048575' > /proc/sys/net/mpls/platform_labels
-while read -r iface; do echo '1' > "/proc/sys/net/mpls/conf/$iface/input"; done < mpls_ifaces.txt
-sed -i 's/ldpd=no/ldpd=yes/' /etc/frr/daemons
-sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
-service frr start
-"""
-
-MplsFileTemplates['frr_config'] = """\
-router-id {loopbackAddress}
-{ospfInterfaces}
-mpls ldp
- address-family ipv4
-  discovery transport-address {loopbackAddress}
-{ldpInterfaces}
- exit-address-family
-router ospf
- redistribute connected
-"""
-
-MplsFileTemplates['frr_config_ldp_iface'] = """\
-  interface {interface}
-"""
-
-# todo: make configurable hello/dead
-MplsFileTemplates['frr_config_ospf_iface'] = """\
-interface {interface}
- ip ospf area 0
- ip ospf dead-interval minimal hello-multiplier 2
-"""
 
 class Mpls(Layer, Graphable):
     """!
@@ -57,11 +27,12 @@ class Mpls(Layer, Graphable):
     hops to hold only the MPLS forwarding table, which negated the need for the
     full table.
 
-    MPLS layer will setup iBGP, LDP, and OSPF. FRRouting will do LDP and OSPF,
-    and BIRD will still do BGP. When installed, the MPLS layer will treat all
-    nodes with (1) no connection to IX and (2) no connection to a network with
-    at least one host node as non-edge nodes and will not put it as part of the
-    iBGP mesh network.
+    MPLS layer will setup iBGP, LDP, and OSPF. This path requires routers in
+    MPLS-enabled ASes to use the FRR routing backend because BIRD does not
+    provide the MPLS/LDP support used here. When installed, the MPLS layer will
+    treat all nodes with (1) no connection to IX and (2) no connection to a
+    network with at least one host node as non-edge nodes and will not put it
+    as part of the iBGP mesh network.
     
     The MPLS layer requires kernel modules support. Make sure you load the
     following modules:
@@ -240,41 +211,33 @@ class Mpls(Layer, Graphable):
                 names.add(nodename)
         return enodes
 
-    def __setUpLdpOspf(self, node: Router):
+    def __recordLdpOspfIntent(self, node: Router):
         """!
-        @brief Setup LDP and OSPF on router.
+        @brief Record LDP and OSPF intent on router.
 
         @param node node.
         """
-        self._log('Setting up LDP and OSPF on as{}/{}'.format(node.getAsn(), node.getName()))
+        backend = get_bgp_backend(node)
+        assert backend == BGP_BACKEND_FRR, (
+            "MPLS requires FRR routing backend; AS{}/{} uses {}. "
+            "BIRD does not support MPLS/LDP in this emulator path."
+        ).format(node.getAsn(), node.getName(), backend)
+
+        self._log('Recording LDP and OSPF intent on as{}/{}'.format(node.getAsn(), node.getName()))
 
         node.setPrivileged(True)
         node.addSoftware('frr')
 
-        ospf_ifaces = ''
-        ldp_ifaces = ''
         mpls_iface_list = []
 
-        # todo mask network from ospf?
         for iface in node.getInterfaces():
             net = iface.getNet()
             if net.getType() == NetworkType.InternetExchange: continue
             if not (True in (node.getRole() == NodeRole.Router or node.getRole() == NodeRole.OpenVpnRouter for node in net.getAssociations())): continue
-            ospf_ifaces += MplsFileTemplates['frr_config_ospf_iface'].format(interface = net.getName())
-            ldp_ifaces += MplsFileTemplates['frr_config_ldp_iface'].format(interface = net.getName())
             mpls_iface_list.append(net.getName())
             net.setMtu(9000)
 
-        node.setFile('/etc/frr/frr.conf', MplsFileTemplates['frr_config'].format(
-            loopbackAddress = node.getLoopbackAddress(),
-            ospfInterfaces = ospf_ifaces,
-            ldpInterfaces = ldp_ifaces
-        ))
-
-        node.setFile('/frr_start', MplsFileTemplates['frr_start_script'])
-        node.setFile('/mpls_ifaces.txt', '\n'.join(mpls_iface_list))
-        node.appendStartCommand('chmod +x /frr_start')
-        node.appendStartCommand('/frr_start')
+        set_mpls_ldp_intent(node, mpls_iface_list)
 
     def __setUpIbgpMesh(self, nodes: List[Router]):
         """!
@@ -318,22 +281,15 @@ class Mpls(Layer, Graphable):
         reg = emulator.getRegistry()
         for asn in enabled:
             scope = ScopedRegistry(str(asn), reg)
-            (enodes, _) = self.__getEdgeNodes(scope)
+            (enodes, nodes) = self.__getEdgeNodes(scope)
             enodes = self.__addAdditionalEdges(scope, asn, enodes)
             if install_mpls_ibgp[asn]:
                 self.__setUpIbgpMesh(enodes)
+            for n in enodes: self.__recordLdpOspfIntent(n)
+            for n in nodes: self.__recordLdpOspfIntent(n)
 
     def render(self, emulator: Emulator):
-        reg = emulator.getRegistry()
-        enabled = self.__syncAsLevelEnabled(emulator)
-        self.__maskExistingControlPlaneLayers(emulator)
-        for asn in enabled:
-            scope = ScopedRegistry(str(asn), reg)
-            (enodes, nodes) = self.__getEdgeNodes(scope)
-            enodes = self.__addAdditionalEdges(scope, asn, enodes)
-
-            for n in enodes: self.__setUpLdpOspf(n)
-            for n in nodes: self.__setUpLdpOspf(n)
+        pass
 
     def _doCreateGraphs(self, emulator: Emulator):
         base = emulator.getRegistry().get('seedemu', 'layer', 'Base')

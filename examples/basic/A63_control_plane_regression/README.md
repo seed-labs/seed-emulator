@@ -12,10 +12,10 @@ Covered slices:
 - AS3 uses an FRR route reflector and an FRR RR client.
 - AS180 installs ExaBGP through `ExaBgpService + Binding` and peers with an FRR
   router in AS4. ExaBGP is not a router backend.
-- AS20 enables MPLS/LDP readiness on a small transit chain. The default runtime
-  test checks generated MPLS interface and FRR LDP config. Full MPLS dataplane
-  validation remains host-gated because GitHub hosted runners may not provide
-  MPLS kernel modules.
+- AS20 enables MPLS/LDP readiness with AS-level `setCoreForwarding("mpls")` on
+  a small FRR transit chain. The default runtime test checks generated MPLS
+  interface and FRR LDP config. Full MPLS dataplane validation remains
+  host-gated because GitHub hosted runners may not provide MPLS kernel modules.
 
 Run it locally:
 

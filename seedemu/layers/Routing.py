@@ -10,7 +10,9 @@ from ._bgp_metadata import (
     BGP_BACKEND_FRR,
     get_bgp_backend,
     get_bgp_sessions,
+    get_mpls_ldp_intent,
     get_ospf_interface_intents,
+    get_ospf_timers,
     has_bgp_connected_export,
     ensure_bird_bgp_base,
     render_frr_community,
@@ -58,13 +60,14 @@ RoutingFileTemplates['bird_ospf_body'] = """
         import all;
         export all;
     }};
+    tick {tick};
     area 0 {{
 {interfaces}
     }};
 """
 
 RoutingFileTemplates['bird_ospf_interface'] = """\
-        interface "{interfaceName}" {{ hello 1; dead count 2; }};
+        interface "{interfaceName}" {{ hello {hello}; dead {dead}; }};
 """
 
 RoutingFileTemplates['bird_ospf_stub_interface'] = """\
@@ -86,11 +89,26 @@ hostname {hostname}
 FrrFileTemplates["start_script"] = """\
 #!/bin/bash
 set -e
-sed -i 's/bgpd=no/bgpd=yes/' /etc/frr/daemons
+{pre_start}\
 sed -i 's/zebra=no/zebra=yes/' /etc/frr/daemons
 sed -i 's/staticd=no/staticd=yes/' /etc/frr/daemons
-sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
+{daemons}\
 service frr start
+"""
+
+FrrFileTemplates["start_daemon"] = """\
+sed -i 's/{daemon}=no/{daemon}=yes/' /etc/frr/daemons
+"""
+
+FrrFileTemplates["mpls_start"] = """\
+mount -o remount rw /proc/sys 2> /dev/null || true
+if [ -d /proc/sys/net/mpls ]; then
+    echo '{platform_labels}' > /proc/sys/net/mpls/platform_labels || true
+    while read -r iface; do
+        [ -z "$iface" ] && continue
+        [ -e "/proc/sys/net/mpls/conf/$iface/input" ] && echo '1' > "/proc/sys/net/mpls/conf/$iface/input" || true
+    done < /mpls_ifaces.txt
+fi
 """
 
 FrrFileTemplates["connected_prefix_list"] = """\
@@ -136,8 +154,8 @@ route-map {name} permit 10
 FrrFileTemplates["ospf_interface_active"] = """\
 interface {interface}
  ip ospf area 0
- ip ospf hello-interval 1
- ip ospf dead-interval 2
+ ip ospf hello-interval {hello}
+ ip ospf dead-interval {dead}
 !
 """
 
@@ -152,6 +170,31 @@ FrrFileTemplates["ospf_router"] = """\
 router ospf
  ospf router-id {router_id}
 !
+"""
+
+FrrFileTemplates["mpls_config"] = """\
+router-id {router_id}
+{ospf_interfaces}
+mpls ldp
+ address-family ipv4
+  discovery transport-address {router_id}
+{ldp_interfaces}
+ exit-address-family
+!
+router ospf
+ redistribute connected
+!
+"""
+
+FrrFileTemplates["mpls_ospf_interface"] = """\
+interface {interface}
+ ip ospf area 0
+ ip ospf dead-interval minimal hello-multiplier 2
+!
+"""
+
+FrrFileTemplates["mpls_ldp_interface"] = """\
+  interface {interface}
 """
 
 
@@ -210,7 +253,10 @@ class Routing(Layer):
         @brief Ensure a routing backend keeps the router base system.
         """
         base = node.getBaseSystem()
-        if not BaseSystem.doesAContainB(base, BaseSystem.SEEDEMU_ROUTER):
+        if (
+            base != BaseSystem.SEEDEMU_ROUTER
+            and not base.contains(BaseSystem.SEEDEMU_ROUTER)
+        ):
             node.setBaseSystem(BaseSystem.SEEDEMU_ROUTER)
 
     def _installFrr(self, node: Node):
@@ -259,25 +305,46 @@ class Routing(Layer):
                               RoutingFileTemplates['rnode_bird_direct'].format(interfaces = ifaces))
 
     def _configure_frr_router(self, rnode: Router):
-        rnode.setFile("/frr_start", FrrFileTemplates["start_script"])
-        rnode.appendStartCommand("chmod +x /frr_start")
-        rnode.appendStartCommand("/frr_start")
+        rnode.setFile(
+            "/frr_start",
+            FrrFileTemplates["start_script"].format(
+                pre_start="",
+                daemons="".join(
+                    FrrFileTemplates["start_daemon"].format(daemon=daemon)
+                    for daemon in ["bgpd", "ospfd"]
+                ),
+            ),
+        )
+        self._ensure_frr_start_commands(rnode)
+
+    def _ensure_frr_start_commands(self, rnode: Router):
+        commands = [cmd for cmd, _ in rnode.getStartCommands()]
+        if "chmod +x /frr_start" not in commands:
+            rnode.appendStartCommand("chmod +x /frr_start")
+        if "/frr_start" not in commands:
+            rnode.appendStartCommand("/frr_start")
 
     def _render_bird_ospf(self, rnode: Router):
         intents = get_ospf_interface_intents(rnode)
         if not intents["active"] and not intents["passive"]:
             return
 
+        timers = get_ospf_timers(rnode)
         ospf_interfaces = ''
         for name in intents["passive"]:
             ospf_interfaces += RoutingFileTemplates['bird_ospf_stub_interface'].format(interfaceName=name)
         for name in intents["active"]:
-            ospf_interfaces += RoutingFileTemplates['bird_ospf_interface'].format(interfaceName=name)
+            ospf_interfaces += RoutingFileTemplates['bird_ospf_interface'].format(
+                interfaceName=name,
+                hello=timers["hello"],
+                dead=timers["dead"],
+            )
 
         if ospf_interfaces != '':
             rnode.addTable('t_ospf')
             rnode.addProtocol('ospf', 'ospf1', RoutingFileTemplates['bird_ospf_body'].format(
-                interfaces=ospf_interfaces
+                interfaces=ospf_interfaces,
+                tick=timers["tick"],
             ))
             rnode.addTablePipe('t_ospf')
 
@@ -380,6 +447,13 @@ class Routing(Layer):
             bgp.append(" neighbor {} remote-as {}".format(session["peer_address"], session["peer_asn"]))
             bgp.append(" neighbor {} update-source {}".format(session["peer_address"], session["local_address"]))
             bgp.append(" neighbor {} description {}".format(session["peer_address"], session["name"]))
+            bgp.append(
+                " neighbor {} timers {} {}".format(
+                    session["peer_address"],
+                    session["keepalive_time"],
+                    session["hold_time"],
+                )
+            )
             if session["passive"]:
                 bgp.append(" neighbor {} passive".format(session["peer_address"]))
         bgp.append(" !")
@@ -418,16 +492,77 @@ class Routing(Layer):
         if not intents["active"] and not intents["passive"]:
             return ""
 
+        timers = get_ospf_timers(router)
         body: List[str] = []
         for name in intents["passive"]:
             body.append(FrrFileTemplates["ospf_interface_passive"].format(interface=name))
         for name in intents["active"]:
-            body.append(FrrFileTemplates["ospf_interface_active"].format(interface=name))
+            body.append(
+                FrrFileTemplates["ospf_interface_active"].format(
+                    interface=name,
+                    hello=timers["hello"],
+                    dead=timers["dead"],
+                )
+            )
         body.append(FrrFileTemplates["ospf_router"].format(router_id=router.getLoopbackAddress()))
         return "".join(body)
 
-    def _render_frr_control_plane(self, router: Router):
-        body = self._render_frr_ospf(router) + self._render_frr_bgp(router)
+    def _render_frr_mpls(self, router: Router) -> Tuple[str, List[str], int]:
+        intent = get_mpls_ldp_intent(router)
+        interfaces = intent["interfaces"]
+        if not interfaces:
+            return "", [], int(intent["platform_labels"])
+
+        ospf_interfaces = "".join(
+            FrrFileTemplates["mpls_ospf_interface"].format(interface=interface)
+            for interface in interfaces
+        )
+        ldp_interfaces = "".join(
+            FrrFileTemplates["mpls_ldp_interface"].format(interface=interface)
+            for interface in interfaces
+        )
+        return (
+            FrrFileTemplates["mpls_config"].format(
+                router_id=router.getLoopbackAddress(),
+                ospf_interfaces=ospf_interfaces,
+                ldp_interfaces=ldp_interfaces,
+            ),
+            interfaces,
+            int(intent["platform_labels"]),
+        )
+
+    def _render_frr_start_script(
+        self,
+        *,
+        bgp: bool,
+        ospf: bool,
+        mpls_interfaces: List[str],
+        platform_labels: int,
+    ) -> str:
+        daemons: List[str] = []
+        if bgp:
+            daemons.append("bgpd")
+        if ospf or mpls_interfaces:
+            daemons.append("ospfd")
+        if mpls_interfaces:
+            daemons.append("ldpd")
+        return FrrFileTemplates["start_script"].format(
+            pre_start=(
+                FrrFileTemplates["mpls_start"].format(platform_labels=platform_labels)
+                if mpls_interfaces
+                else ""
+            ),
+            daemons="".join(
+                FrrFileTemplates["start_daemon"].format(daemon=daemon)
+                for daemon in daemons
+            ),
+        )
+
+    def _render_frr_control_plane(self, router: Router, *, include_ospf: bool = True, include_bgp: bool = True):
+        ospf_body = self._render_frr_ospf(router) if include_ospf else ""
+        bgp_body = self._render_frr_bgp(router) if include_bgp else ""
+        mpls_body, mpls_interfaces, platform_labels = self._render_frr_mpls(router)
+        body = ospf_body + bgp_body + mpls_body
         router.setFile(
             "/etc/frr/frr.conf",
             FrrFileTemplates["managed_block"].format(
@@ -435,6 +570,18 @@ class Routing(Layer):
                 body=body,
             ),
         )
+        router.setFile(
+            "/frr_start",
+            self._render_frr_start_script(
+                bgp=bool(bgp_body),
+                ospf=bool(ospf_body),
+                mpls_interfaces=mpls_interfaces,
+                platform_labels=platform_labels,
+            ),
+        )
+        self._ensure_frr_start_commands(router)
+        if mpls_interfaces:
+            router.setFile("/mpls_ifaces.txt", "\n".join(mpls_interfaces))
 
     def configure(self, emulator: Emulator):
         super().configure(emulator)
@@ -524,6 +671,10 @@ class Routing(Layer):
                 rnode: Router = obj
                 backend = get_bgp_backend(rnode)
                 if backend == BGP_BACKEND_BIRD:
+                    assert not get_mpls_ldp_intent(rnode)["interfaces"], (
+                        "MPLS requires FRR routing backend; AS{}/{} uses bird. "
+                        "BIRD does not support MPLS/LDP in this emulator path."
+                    ).format(rnode.getAsn(), rnode.getName())
                     self._render_bird_control_plane(rnode)
                 else:
                     self._render_frr_control_plane(rnode)

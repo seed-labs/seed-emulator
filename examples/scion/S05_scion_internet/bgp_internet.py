@@ -7,6 +7,7 @@ from seedemu.core import Emulator
 from seedemu.layers import ScionBase, ScionRouting, ScionIsd, Scion, Ebgp
 from seedemu.layers import PeerRelationship as PeerRel
 from seedemu.layers.Scion import LinkType as ScLinkType
+from seedemu.containerBundle import InternetMap
 
 
 def create_as(isd, asn, is_core=False, issuer=None):
@@ -175,4 +176,12 @@ emu.render()
 
 # Compilation
 os.makedirs('./output', exist_ok=True)
-emu.compile(Docker(), './output/bgp')
+docker = Docker()
+# Add Internet visualization services: topology, geographic map, and traffic observation.
+# The second argument is a container name suffix that distinguishes bundle instances.
+internet_map_bundle = InternetMap(emu, ".map.seed")
+# Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+internet_map_bundle.setPorts(list(range(8081, 8089)))
+# Register the bundle with the Docker compiler to generate its containers during emu.compile().
+docker.addContainerBundle(internet_map_bundle)
+emu.compile(docker, './output/bgp')

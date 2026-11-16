@@ -6,6 +6,7 @@ from seedemu.layers import Base
 from seedemu.compiler import Docker, Platform
 from examples.basic.A01_transit_as import transit_as
 import sys, os 
+from seedemu.containerBundle import InternetMap
 
 ###############################################################################
 # Set the platform information
@@ -55,4 +56,12 @@ ix101_lan.setDisplayName('New York')
 # Render and compile
 
 emu.render()
-emu.compile(Docker(platform=platform), './output', override=True)
+docker = Docker(platform=platform)
+# Add Internet visualization services: topology, geographic map, and traffic observation.
+# The second argument is a container name suffix that distinguishes bundle instances.
+internet_map_bundle = InternetMap(emu, ".map.seed")
+# Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+internet_map_bundle.setPorts(list(range(8081, 8089)))
+# Register the bundle with the Docker compiler to generate its containers during emu.compile().
+docker.addContainerBundle(internet_map_bundle)
+emu.compile(docker, './output', override=True)

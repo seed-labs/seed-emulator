@@ -7,7 +7,7 @@ from .enums import NetworkType, NodeRole
 from .Registry import Registrable
 from .AddressAssignmentConstraint import AddressAssignmentConstraint, Assigner
 from .Visualization import Vertex
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Union
 
 class Network(Printable, Registrable, Vertex):
     """!
@@ -172,6 +172,24 @@ class Network(Printable, Registrable, Vertex):
         """
         return self.__name
 
+    def getFullName(self) -> str:
+        """!
+        @brief Get the scoped network name used in Compose configurations.
+
+        For example, AS150's net0 is net_150_net0 and IX100's ix100 is
+        net_ix_ix100. Bridge networks retain their local name. This does
+        not include the project prefix added by Docker Compose.
+
+        @returns scoped network name.
+        @raises RuntimeError if a non-bridge network has not been registered.
+        """
+        if self.__type == NetworkType.Bridge:
+            return self.__name
+        scope = getattr(self, '_rscope', None)
+        if scope is None or scope == 'undefined':
+            raise RuntimeError("Network must be registered before getting its full name")
+        return 'net_{}_{}'.format(scope, self.__name)
+
     def getType(self) -> NetworkType:
         """!
         @brief Get type of this network.
@@ -262,6 +280,74 @@ class Network(Printable, Registrable, Vertex):
         @returns list of nodes.
         """
         return self.__connected_nodes
+
+    def getRouters(self) -> List['Node']:
+        """!
+        @brief Get router objects attached to this network.
+
+        Includes ordinary, border and OpenVPN routers, but not route servers.
+        Call after nodes have been configured, normally after emulator.render().
+
+        @returns a new list of router objects, without duplicates.
+        """
+        roles = (NodeRole.Router, NodeRole.BorderRouter, NodeRole.OpenVpnRouter)
+        routers = []
+        for node in self.__connected_nodes:
+            if node.getRole() in roles and node not in routers:
+                routers.append(node)
+        return routers
+
+    def isValidRouter(self, ip_address: Union[str, IPv4Address]) -> bool:
+        """!
+        @brief Check whether an address belongs to a router interface on this network.
+
+        Uses configured interfaces, normally available after emulator.render().
+        This checks the emulated configuration, not runtime reachability.
+
+        @param ip_address IPv4 address to check.
+        @returns true if a router has this address on this network; false for
+            invalid addresses or addresses on other networks.
+        """
+        try:
+            address = IPv4Address(ip_address)
+        except (ValueError, TypeError):
+            return False
+        if address not in self.__prefix:
+            return False
+        return any(
+            interface.getNet() is self and interface.getAddress() == address
+            for router in self.getRouters()
+            for interface in router.getInterfaces()
+        )
+
+    def isIpAddressAvailable(self, ip_address: Union[str, IPv4Address]) -> bool:
+        """!
+        @brief Check whether an IPv4 host address is unused on this network.
+
+        Uses configured interfaces, normally available after emulator.render().
+        Invalid, out-of-subnet and occupied addresses return false. Network and
+        broadcast addresses are excluded for subnets shorter than /31.
+        The query does not reserve an address or inspect runtime DHCP leases,
+        compiler-selected gateways, or pending network attachments.
+
+        @param ip_address IPv4 address to check.
+        @returns true if this is a usable address with no configured occupant.
+        """
+        try:
+            address = IPv4Address(ip_address)
+        except (ValueError, TypeError):
+            return False
+        if address not in self.__prefix:
+            return False
+        if self.__prefix.prefixlen < 31 and address in (
+            self.__prefix.network_address, self.__prefix.broadcast_address
+        ):
+            return False
+        return not any(
+            interface.getNet() is self and interface.getAddress() == address
+            for node in self.__connected_nodes
+            for interface in node.getInterfaces()
+        )
 
     def enableRemoteAccess(self, provider: RemoteAccessProvider) -> Network:
         """!

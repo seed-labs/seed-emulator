@@ -12,6 +12,13 @@ BGP_CONNECTED_EXPORT_ATTR = "__bgp_connected_export"
 BGP_CONNECTED_EXPORT_RENDERED_ATTR = "__bgp_connected_export_rendered"
 BGP_BOOTSTRAPPED_ATTR = "__bgp_bootstrapped"
 OSPF_INTERFACE_INTENTS_ATTR = "__ospf_interface_intents"
+MPLS_LDP_INTENT_ATTR = "__mpls_ldp_intent"
+
+DEFAULT_OSPF_TICK = 1
+DEFAULT_OSPF_HELLO = 1
+DEFAULT_OSPF_DEAD = 4
+DEFAULT_BGP_HOLD_TIME = 36000
+DEFAULT_BGP_KEEPALIVE_TIME = 60
 
 BGP_BACKEND_BIRD = "bird"
 BGP_BACKEND_FRR = "frr"
@@ -59,6 +66,8 @@ define PROVIDER_COMM = ({localAsn}, 3, 0);
 """
 
 BIRD_RS_PEER_TEMPLATE = """\
+    hold time {holdTime};
+    keepalive time {keepaliveTime};
     ipv4 {{
         import all;
         export all;
@@ -69,6 +78,8 @@ BIRD_RS_PEER_TEMPLATE = """\
 """
 
 BIRD_ROUTER_PEER_TEMPLATE = """\
+    hold time {holdTime};
+    keepalive time {keepaliveTime};
     ipv4 {{
         table t_bgp;
         import {importClause};
@@ -80,6 +91,8 @@ BIRD_ROUTER_PEER_TEMPLATE = """\
 
 BIRD_IBGP_PEER_TEMPLATE = """\
 {passive}\
+    hold time {holdTime};
+    keepalive time {keepaliveTime};
     ipv4 {{
         table t_bgp;
         import all;
@@ -123,6 +136,44 @@ def _normalize_community(community: Any) -> Optional[str]:
     if value not in BGP_COMMUNITY_ALIASES:
         raise ValueError("unsupported BGP community intent: {}".format(community))
     return BGP_COMMUNITY_ALIASES[value]
+
+
+def _positive_int(value: Any, field: str) -> int:
+    normalized = int(value)
+    if normalized <= 0:
+        raise ValueError("{} must be a positive integer".format(field))
+    return normalized
+
+
+def normalize_bgp_timers(
+    hold_time: Any = DEFAULT_BGP_HOLD_TIME,
+    keepalive_time: Any = DEFAULT_BGP_KEEPALIVE_TIME,
+) -> Dict[str, int]:
+    hold = _positive_int(hold_time, "BGP hold_time")
+    keepalive = _positive_int(keepalive_time, "BGP keepalive_time")
+    if keepalive >= hold:
+        raise ValueError("BGP keepalive_time must be smaller than hold_time")
+    return {
+        "hold_time": hold,
+        "keepalive_time": keepalive,
+    }
+
+
+def normalize_ospf_timers(
+    tick: Any = DEFAULT_OSPF_TICK,
+    hello: Any = DEFAULT_OSPF_HELLO,
+    dead: Any = DEFAULT_OSPF_DEAD,
+) -> Dict[str, int]:
+    normalized_tick = _positive_int(tick, "OSPF tick")
+    normalized_hello = _positive_int(hello, "OSPF hello")
+    normalized_dead = _positive_int(dead, "OSPF dead")
+    if normalized_dead <= normalized_hello:
+        raise ValueError("OSPF dead must be larger than hello")
+    return {
+        "tick": normalized_tick,
+        "hello": normalized_hello,
+        "dead": normalized_dead,
+    }
 
 
 def render_bird_community(community: str) -> str:
@@ -215,6 +266,10 @@ def normalize_bgp_session(session: Dict[str, Any]) -> Dict[str, Any]:
     import_community = _normalize_community(session.get("import_community"))
     local_pref_value = session.get("local_pref")
     local_pref = int(local_pref_value) if local_pref_value not in {None, ""} else None
+    timers = normalize_bgp_timers(
+        session.get("hold_time", DEFAULT_BGP_HOLD_TIME),
+        session.get("keepalive_time", DEFAULT_BGP_KEEPALIVE_TIME),
+    )
 
     return {
         "name": name,
@@ -232,6 +287,8 @@ def normalize_bgp_session(session: Dict[str, Any]) -> Dict[str, Any]:
         "route_reflector_cluster_id": route_reflector_cluster_id,
         "passive": bool(session.get("passive", False)),
         "igp_table": str(session.get("igp_table") or "t_ospf").strip() or "t_ospf",
+        "hold_time": timers["hold_time"],
+        "keepalive_time": timers["keepalive_time"],
     }
 
 
@@ -318,6 +375,8 @@ def render_bird_protocol_body(session: Dict[str, Any]) -> str:
             localAsn=normalized["local_asn"],
             peerAddress=normalized["peer_address"],
             peerAsn=normalized["peer_asn"],
+            holdTime=normalized["hold_time"],
+            keepaliveTime=normalized["keepalive_time"],
         )
     if normalized["kind"] == BGP_KIND_IBGP:
         return BIRD_IBGP_PEER_TEMPLATE.format(
@@ -325,6 +384,8 @@ def render_bird_protocol_body(session: Dict[str, Any]) -> str:
             localAsn=normalized["local_asn"],
             peerAddress=normalized["peer_address"],
             peerAsn=normalized["peer_asn"],
+            holdTime=normalized["hold_time"],
+            keepaliveTime=normalized["keepalive_time"],
             igpTable=normalized["igp_table"],
             nextHopSelf="        next hop self;\n" if normalized["next_hop_self"] else "",
             passive="    passive yes;\n" if normalized["passive"] else "",
@@ -340,6 +401,8 @@ def render_bird_protocol_body(session: Dict[str, Any]) -> str:
         localAsn=normalized["local_asn"],
         peerAddress=normalized["peer_address"],
         peerAsn=normalized["peer_asn"],
+        holdTime=normalized["hold_time"],
+        keepaliveTime=normalized["keepalive_time"],
         importClause=_bird_import_clause(normalized),
         exportClause=_bird_export_clause(normalized),
         nextHopSelf="        next hop self;\n" if normalized["next_hop_self"] else "",
@@ -375,12 +438,22 @@ def classify_ospf_interfaces(
     return active, passive
 
 
-def set_ospf_interface_intents(node: Router, active: Iterable[str], passive: Iterable[str]) -> None:
+def set_ospf_interface_intents(
+    node: Router,
+    active: Iterable[str],
+    passive: Iterable[str],
+    *,
+    tick: int = DEFAULT_OSPF_TICK,
+    hello: int = DEFAULT_OSPF_HELLO,
+    dead: int = DEFAULT_OSPF_DEAD,
+) -> None:
+    timers = normalize_ospf_timers(tick, hello, dead)
     node.setAttribute(
         OSPF_INTERFACE_INTENTS_ATTR,
         {
             "active": sorted({str(name) for name in active}),
             "passive": sorted({str(name) for name in passive}),
+            "timers": timers,
         },
     )
 
@@ -391,3 +464,65 @@ def get_ospf_interface_intents(node: Router) -> Dict[str, List[str]]:
         "active": [str(name) for name in list(raw.get("active", []) or [])],
         "passive": [str(name) for name in list(raw.get("passive", []) or [])],
     }
+
+
+def set_mpls_ldp_intent(
+    node: Router,
+    interfaces: Iterable[str],
+    *,
+    platform_labels: int = 1048575,
+) -> None:
+    node.setAttribute(
+        MPLS_LDP_INTENT_ATTR,
+        {
+            "interfaces": sorted({str(name) for name in interfaces}),
+            "platform_labels": int(platform_labels),
+        },
+    )
+
+
+def get_mpls_ldp_intent(node: Router) -> Dict[str, Any]:
+    raw = node.getAttribute(MPLS_LDP_INTENT_ATTR, {}) or {}
+    return {
+        "interfaces": [str(name) for name in list(raw.get("interfaces", []) or [])],
+        "platform_labels": int(raw.get("platform_labels", 1048575)),
+    }
+
+
+def has_mpls_ldp_intent(node: Router) -> bool:
+    return bool(get_mpls_ldp_intent(node)["interfaces"])
+def get_ospf_timers(node: Router) -> Dict[str, int]:
+    raw = node.getAttribute(OSPF_INTERFACE_INTENTS_ATTR, {}) or {}
+    timers = raw.get("timers", {}) if isinstance(raw, dict) else {}
+    return normalize_ospf_timers(
+        timers.get("tick", DEFAULT_OSPF_TICK),
+        timers.get("hello", DEFAULT_OSPF_HELLO),
+        timers.get("dead", DEFAULT_OSPF_DEAD),
+    )
+
+
+def set_mpls_ldp_intent(
+    node: Router,
+    interfaces: Iterable[str],
+    *,
+    platform_labels: int = 1048575,
+) -> None:
+    node.setAttribute(
+        MPLS_LDP_INTENT_ATTR,
+        {
+            "interfaces": sorted({str(name) for name in interfaces}),
+            "platform_labels": int(platform_labels),
+        },
+    )
+
+
+def get_mpls_ldp_intent(node: Router) -> Dict[str, Any]:
+    raw = node.getAttribute(MPLS_LDP_INTENT_ATTR, {}) or {}
+    return {
+        "interfaces": [str(name) for name in list(raw.get("interfaces", []) or [])],
+        "platform_labels": int(raw.get("platform_labels", 1048575)),
+    }
+
+
+def has_mpls_ldp_intent(node: Router) -> bool:
+    return bool(get_mpls_ldp_intent(node)["interfaces"])

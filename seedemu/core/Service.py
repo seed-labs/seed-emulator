@@ -7,6 +7,7 @@ from .enums import NodeRole
 from .Binding import Binding
 from typing import Dict, List, Set, Tuple
 from .BaseSystem import BaseSystem
+from .SystemProfile import SystemProfile
 
 class Server(Printable): #TODO: make Customizable
     """!
@@ -18,7 +19,7 @@ class Server(Printable): #TODO: make Customizable
     __display_name: str
     __host_names: list
 
-    _base_system: BaseSystem
+    _base_system: SystemProfile
     def __init__(self):
         super().__init__()
         self.__class_names = []
@@ -34,7 +35,7 @@ class Server(Printable): #TODO: make Customizable
         """
         raise NotImplementedError('install not implemented')
 
-    def setBaseSystem(self, base_system: BaseSystem) -> Server:
+    def setBaseSystem(self, base_system: SystemProfile) -> Server:
         """!
         @brief Set a base_system of a server.
 
@@ -42,9 +43,12 @@ class Server(Printable): #TODO: make Customizable
 
         @returns self, for chaining API calls.
         """
+        if not isinstance(base_system, SystemProfile):
+            raise TypeError("base_system must be a SystemProfile")
         self._base_system = base_system
+        return self
 
-    def getBaseSystem(self) -> BaseSystem:
+    def getBaseSystem(self) -> SystemProfile:
         """!
         @brief Get configured base system on this server.
 
@@ -166,7 +170,22 @@ class Service(Layer):#TODO: add availableOptions()
                 '__self': self
             }
 
-        node.setBaseSystem(server.getBaseSystem())
+        node_profile = node.getBaseSystem()
+        server_profile = server.getBaseSystem()
+        if node_profile == BaseSystem.DEFAULT and server_profile != BaseSystem.DEFAULT:
+            node.setBaseSystem(server_profile)
+        elif server_profile == BaseSystem.DEFAULT and node_profile != BaseSystem.DEFAULT:
+            server.setBaseSystem(node_profile)
+        elif server_profile.contains(node_profile):
+            node.setBaseSystem(server_profile)
+        elif node_profile.contains(server_profile):
+            server.setBaseSystem(node_profile)
+        else:
+            assert node_profile == server_profile, (
+                "node profile {} conflicts with server profile {}".format(
+                    node_profile, server_profile
+                )
+            )
 
         self._doConfigure(node, server)
         self.__targets.add((server, node))

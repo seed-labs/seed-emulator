@@ -145,11 +145,19 @@ webHost.appendStartCommand(f'python3 volumes/deployContract.py {getIP(emu.resolv
 webHost.appendStartCommand('cd /volumes/kubo-dapp/ && [ ! -d build ] && npm run build')
 webHost.appendStartCommand('serve -sC /volumes/kubo-dapp/build', fork=True)
 
-docker = Docker(internetMapEnabled=True, etherViewEnabled=True, platform=platform)
+docker = Docker(platform=platform)
 
 # Use the "kubo-webhost-image" custom image from local
 docker.addImage(DockerImage('kubo-webhost-image', [], local = True), priority=-1)
 docker.setImageOverride(webHost, 'kubo-webhost-image')
+
+# Add Internet visualization services: topology, geographic map, and traffic observation.
+# The second argument is a container name suffix that distinguishes bundle instances.
+internet_map_bundle = InternetMap(emu, ".map.seed")
+# Provide a host port pool (range excludes the stop value); InternetMap needs at least 3 ports.
+internet_map_bundle.setPorts([8078, 8079, 8080])
+# Register the bundle with the Docker compiler to generate its containers during emu.compile().
+docker.addContainerBundle(internet_map_bundle)
 
 emu.compile(docker, OUTPUTDIR, override = True)
 

@@ -1,0 +1,85 @@
+id: routing-r03-complex-generated-routing
+name: Complex Generated Routing Regression
+description: Uses a generated AS topology with mixed BIRD/FRR backends and configurable iBGP mode.
+runner: internet
+script: complex_generated_routing.py
+platform: amd
+features:
+  - routing-regression
+  - generated-topology
+  - mixed-backend
+  - bird
+  - frr
+  - ospf
+  - ibgp-full-mesh
+  - ibgp-route-reflector
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+  expected:
+    - output/docker-compose.yml
+    - output/topology.json
+    - output/topology.txt
+  timeout: 300
+
+build:
+  enabled: true
+  timeout: 1200
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: complex generated routing services are running
+      type: compose-ps
+      services:
+        - brdnode_10_r0
+        - brdnode_10_r1
+        - brdnode_10_r2
+        - brdnode_10_r3
+        - rnode_10_core0
+        - rnode_10_core1
+        - rnode_10_core2
+        - rnode_10_core3
+        - hnode_170_host_0
+        - hnode_171_host_0
+        - hnode_172_host_0
+        - hnode_173_host_0
+        - hnode_174_host_0
+        - hnode_175_host_0
+        - hnode_176_host_0
+        - hnode_177_host_0
+      retries: 40
+      interval: 3
+
+probes:
+  - name: AS170 reaches AS177 through generated AS10
+    type: ping
+    service: hnode_170_host_0
+    target: 10.177.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+  - name: AS171 reaches AS174 through generated AS10
+    type: ping
+    service: hnode_171_host_0
+    target: 10.174.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+  - name: AS176 reaches AS173 through generated AS10
+    type: ping
+    service: hnode_176_host_0
+    target: 10.173.0.71
+    count: 3
+    retries: 30
+    interval: 5
+
+test_programs:
+  - name: complex generated routing runtime validation
+    script: test_runtime.py
+    timeout: 420

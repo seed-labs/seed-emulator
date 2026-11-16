@@ -7,12 +7,10 @@ from typing import Optional
 
 try:
     from .base import TestRunner, TestRunnerError
-    from .blockchain import BlockchainTestRunner
     from .internet import InternetTestRunner
     from .satellite import SatelliteTestRunner
 except ImportError:
     from base import TestRunner, TestRunnerError
-    from blockchain import BlockchainTestRunner
     from internet import InternetTestRunner
     from satellite import SatelliteTestRunner
 
@@ -21,8 +19,7 @@ RUNNER_REGISTRY = {
     "generic": TestRunner,
     "test": TestRunner,
     "internet": InternetTestRunner,
-    "satellite": SatelliteTestRunner,
-    "blockchain": BlockchainTestRunner,
+    "satellite": SatelliteTestRunner
 }
 
 

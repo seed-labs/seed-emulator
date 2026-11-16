@@ -46,7 +46,7 @@ newhost = emu.getLayer('Base').getAutonomousSystem(150).createHost('new_host')
 newhost.joinNetwork('net0')
 
 # Create a Docker object
-docker = Docker(internetMapEnabled=True, platform=Platform.AMD64)
+docker = Docker(platform=Platform.AMD64)
 
 # Create an DockerImage object using the pre-built image 
 image  = DockerImage(name='my_image', dirName='./my_image', local=True, software=[])

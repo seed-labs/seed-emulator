@@ -533,6 +533,15 @@ class TestRunner:
 
     def test_env(self, extra: Dict[str, Any]) -> Dict[str, str]:
         env = self.docker_env()
+        repo_root = str(Path(__file__).resolve().parents[2])
+        pythonpath = [
+            item
+            for item in str(env.get("PYTHONPATH", "")).split(os.pathsep)
+            if item
+        ]
+        if repo_root not in pythonpath:
+            pythonpath.insert(0, repo_root)
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath)
         env.update(
             {
                 "TEST_RUNNER_NAME": self.runner_name,

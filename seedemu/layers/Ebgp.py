@@ -9,7 +9,10 @@ from ._bgp_metadata import (
     BGP_COMMUNITY_PROVIDER,
     BGP_EXPORT_ALL,
     BGP_EXPORT_LOCAL_AND_CUSTOMER,
+    DEFAULT_BGP_HOLD_TIME,
+    DEFAULT_BGP_KEEPALIVE_TIME,
     install_router_bgp_session,
+    normalize_bgp_timers,
 )
 
 EbgpFileTemplates: Dict[str, str] = {}
@@ -41,6 +44,8 @@ class Ebgp(Layer, Graphable):
     __rs_peers: List[Tuple[int, int]]
     __rs_peer_routers: Dict[Tuple[int, int], str]
     __xc_peerings: Dict[Tuple[int, int], PeerRelationship]
+    __hold_time: int
+    __keepalive_time: int
 
     def __init__(self):
         """!
@@ -52,7 +57,41 @@ class Ebgp(Layer, Graphable):
         self.__xc_peerings = {}
         self.__rs_peers = []
         self.__rs_peer_routers = {}
+        self.__hold_time = DEFAULT_BGP_HOLD_TIME
+        self.__keepalive_time = DEFAULT_BGP_KEEPALIVE_TIME
         self.addDependency('Routing', False, False)
+
+    def setTimers(
+        self,
+        holdTime: Optional[int] = None,
+        keepaliveTime: Optional[int] = None,
+    ) -> Ebgp:
+        """!
+        @brief Set default eBGP hold and keepalive timers.
+
+        @param holdTime BGP hold time, in seconds.
+        @param keepaliveTime BGP keepalive time, in seconds.
+
+        @returns self, for chaining API calls.
+        """
+        timers = normalize_bgp_timers(
+            self.__hold_time if holdTime is None else holdTime,
+            self.__keepalive_time if keepaliveTime is None else keepaliveTime,
+        )
+        self.__hold_time = timers["hold_time"]
+        self.__keepalive_time = timers["keepalive_time"]
+        return self
+
+    def getTimers(self) -> Dict[str, int]:
+        """!
+        @brief Get eBGP timer defaults used by this layer.
+
+        @returns dict with hold_time and keepalive_time.
+        """
+        return {
+            "hold_time": self.__hold_time,
+            "keepalive_time": self.__keepalive_time,
+        }
 
     def __recordPeer(
         self,
@@ -82,6 +121,8 @@ class Ebgp(Layer, Graphable):
                 "export_policy": exportPolicy,
                 "next_hop_self": nextHopSelf,
                 "route_server_client": routeServerClient,
+                "hold_time": self.__hold_time,
+                "keepalive_time": self.__keepalive_time,
             },
         )
 

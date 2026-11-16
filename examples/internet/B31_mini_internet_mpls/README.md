@@ -28,11 +28,11 @@ needed.
 
 ## Implementation
 
-The key difference from B00 is the `Mpls` layer:
+The key difference from B00 is the AS-level MPLS core-forwarding intent:
 
 ```python
 mpls = Mpls()
-mpls.enableOn(2)
+as2.setCoreForwarding("mpls")
 ```
 
 The emulator then adds `mpls` along with the usual routing layers:
@@ -46,9 +46,10 @@ emu.addLayer(Ibgp())
 emu.addLayer(Ospf())
 ```
 
-The MPLS layer masks AS2 from the regular `Ibgp` and `Ospf` layers and installs
-MPLS/LDP/OSPF configuration on AS2's border and core routers. Other ASes
-continue to use the normal B00 behavior.
+The MPLS layer reads AS2's core-forwarding intent, masks AS2 from the regular
+`Ibgp` and `Ospf` layers, and installs MPLS/LDP/OSPF configuration on AS2's
+FRR border and core routers. Other ASes continue to use the normal B00
+behavior.
 
 ## Standard Arguments
 

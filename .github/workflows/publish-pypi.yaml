@@ -1,0 +1,68 @@
+name: Publish SeedEmu to PyPI
+
+on:
+  pull_request:
+    branches: [master]
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seedemu-pypi-publish
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/package-validation.yaml
+
+  release-state:
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - name: Check whether this version is already published
+        id: check
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          python - <<'PYCODE'
+          import os
+          from urllib.error import HTTPError
+          from urllib.request import urlopen
+          version = os.environ["VERSION"]
+          try:
+              with urlopen("https://pypi.org/pypi/seedemu/" + version + "/json", timeout=30):
+                  publish = False
+          except HTTPError as error:
+              if error.code != 404:
+                  raise
+              publish = True
+          print("Publishing new version " + version if publish else
+                "Version " + version + " is already on PyPI; no files will be overwritten")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print("publish=" + str(publish).lower(), file=output)
+          PYCODE
+
+  publish:
+    needs: [validate, release-state]
+    if: needs.release-state.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/seedemu
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: seedemu-distributions
+          path: dist
+      - name: Publish validated distributions using Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1

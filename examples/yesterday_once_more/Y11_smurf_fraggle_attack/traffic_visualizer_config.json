@@ -1,0 +1,21 @@
+{
+  "interface": "any",
+  "capture_filter": "src net 10.152.0.0/24 and (icmp or udp)",
+  "web_host": "0.0.0.0",
+  "web_port": 8080,
+  "frontend": {
+    "title": "Smurf and Fraggle Attack",
+    "subtitle": "Replies arriving at the victim from the amplifier LAN",
+    "accent_color": "#22d3ee",
+    "extension_js": "traffic_visualizer_extension.js",
+    "extension_css": "traffic_visualizer_extension.css",
+    "options": {
+      "amplifier_network": "AS152 / 10.152.0.0/24",
+      "health_api_port": 8082,
+      "impact_latency_warning_ms": 150,
+      "impact_stale_seconds": 4,
+      "impact_chart_max_ms": 500,
+      "impact_bandwidth_stale_seconds": 12
+    }
+  }
+}

@@ -35,13 +35,15 @@ mpls = Mpls()
 
 ### Configure MPLS
 
-Unlike OSPF and IBGP, MPLS needs to be explicitly enabled for an autonomous system. This can be done by `Mpls::enableOn`:
+Unlike OSPF and IBGP, MPLS needs to be explicitly enabled for an autonomous system. This is done by setting the AS core forwarding mode:
 
 ```python
-mpls.enableOn(2)
+as2.setCoreForwarding("mpls")
 ```
 
-The `enableOn` call takes on parameter, the ASN to enable MPLS on.
+The `Mpls` layer reads this AS-level intent during configuration and records
+the MPLS/LDP/OSPF intent for the AS2 routers. MPLS-enabled AS routers use the
+FRR backend in this example.
 
 Here, only `r1` and `r4` are edge routers; thus, IBGP session will only be set up between them. `r2` and `r3` will only participate in OSPF and LDP. The topology looks like this:
 

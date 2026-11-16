@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEED Traffic Visualizer</title>
+  <link rel="stylesheet" href="/extension.css">
+  <style>
+    :root { --accent: #38bdf8; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 0; box-sizing: border-box; font-family: system-ui, sans-serif; color: #eaf2ff; background: #08111f; }
+    main { width: 760px; max-width: calc(100% - 32px); text-align: center; }
+    main.has-extension { width: 1400px; }
+    h1 { margin-bottom: 8px; font-size: 36px; }
+    .subtitle, #status, #scale { color: #91a4ba; }
+    .dashboard-layout { display: grid; grid-template-columns: minmax(0, 760px); justify-content: center; gap: 24px; align-items: start; }
+    main.has-extension .dashboard-layout { grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 760px)); }
+    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0; }
+    .card { padding: 30px 18px; border: 1px solid #293a50; border-radius: 14px; background: #111e30; }
+    .label { color: #91a4ba; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+    .value { display: block; margin-top: 8px; font-size: 46px; }
+    .activity { margin: 0 0 24px; padding: 18px; border: 1px solid #293a50; border-radius: 14px; background: #0d1929; }
+    .flow { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+    .endpoint { width: 68px; flex: none; color: #91a4ba; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .victim { padding: 10px 6px; border: 1px solid var(--accent); border-radius: 9px; color: #dff6ff; background: #0c4a6e; }
+    .packet-lane { position: relative; height: 78px; flex: 1; overflow: hidden; border-radius: 10px; background: linear-gradient(90deg, #0a1524, #10243a); }
+    .packet-lane::after { content: ""; position: absolute; top: 50%; right: 0; left: 0; border-top: 1px dashed #36506d; }
+    .packet { position: absolute; z-index: 1; left: -24px; width: 18px; height: 11px; border: 1px solid #bae6fd; border-radius: 3px; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: travel 800ms linear forwards; }
+    #scale { min-height: 20px; margin-top: 10px; font-size: 13px; }
+    @keyframes travel { to { left: calc(100% + 6px); } }
+    button { padding: 9px 14px; border: 1px solid #526a87; border-radius: 8px; color: #eaf2ff; background: #172a42; cursor: pointer; }
+    #status { margin-left: 12px; }
+    #error { margin-top: 18px; color: #fca5a5; }
+    #demo-extension { margin: 28px 0 24px; text-align: left; }
+    #demo-extension:empty { display: none; }
+    .extension-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .extension-card { padding: 18px; border: 1px solid #293a50; border-radius: 12px; background: #0d1929; }
+    .extension-value { display: block; margin-top: 7px; color: var(--accent); font-size: 24px; font-weight: 700; }
+    .extension-error { padding: 12px; border: 1px solid #7f1d1d; border-radius: 8px; color: #fca5a5; }
+    @media (max-width: 560px) { .counts { grid-template-columns: 1fr; } .endpoint { width: 54px; } }
+    @media (prefers-reduced-motion: reduce) { .packet { animation-duration: 1ms; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">Traffic Visualizer</h1>
+    <div class="subtitle" id="subtitle">Packets observed</div>
+    <div class="dashboard-layout">
+      <section class="base-dashboard" aria-label="Traffic summary">
+        <div class="counts">
+          <div class="card"><div class="label">Total packets</div><strong class="value" id="total">0</strong></div>
+          <div class="card"><div class="label">Packets last second</div><strong class="value" id="rate">0</strong></div>
+          <div class="card"><div class="label">Total IP bytes</div><strong class="value" id="totalBytes">0 B</strong></div>
+          <div class="card"><div class="label">IP bytes last second</div><strong class="value" id="byteRate">0 B</strong></div>
+        </div>
+        <div class="activity">
+          <div class="label">Live packet flow</div>
+          <div class="flow">
+            <div class="endpoint">Network</div>
+            <div class="packet-lane" id="packetLane"></div>
+            <div class="endpoint victim">Victim</div>
+          </div>
+          <div id="scale">Waiting for packets</div>
+        </div>
+      </section>
+      <section id="demo-extension" aria-label="Example-specific information"></section>
+    </div>
+    <button id="reset">Reset counter</button><span id="status">Connecting</span>
+    <div id="error"></div>
+  </main>
+  <script>
+    const number = new Intl.NumberFormat();
+    const maximumMarkers = 36;
+    let pendingMarkers = [];
+    let extension = null;
+    let extensionContext = null;
+    let healthApiUrl = '';
+    let healthResetUrl = '';
+
+    window.TrafficVisualizer = {
+      apiVersion: 1,
+      registerExtension(candidate) { extension = candidate; },
+    };
+
+    function formatBytes(value) {
+      if (value < 1024) return `${number.format(value)} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+      return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function animatePackets(packetCount, averageIpSize) {
+      pendingMarkers.forEach(clearTimeout);
+      pendingMarkers = [];
+      const lane = document.querySelector('#packetLane');
+      lane.replaceChildren();
+      if (packetCount === 0) {
+        document.querySelector('#scale').textContent = 'No packets observed during the last second';
+        return;
+      }
+
+      const markerCount = Math.min(packetCount, maximumMarkers);
+      const packetsPerMarker = Math.ceil(packetCount / markerCount);
+      const packetScale = packetsPerMarker === 1
+        ? `${number.format(markerCount)} packet marker${markerCount === 1 ? '' : 's'}`
+        : `Each marker represents about ${number.format(packetsPerMarker)} packets`;
+      document.querySelector('#scale').textContent = `${packetScale} · average IP size ${formatBytes(averageIpSize)}`;
+      const markerWidth = Math.min(38, 14 + Math.sqrt(averageIpSize) / 2);
+
+      for (let index = 0; index < markerCount; index += 1) {
+        pendingMarkers.push(setTimeout(() => {
+          const marker = document.createElement('i');
+          marker.className = 'packet';
+          marker.style.top = `${8 + (index * 23) % 58}px`;
+          marker.style.width = `${markerWidth}px`;
+          marker.style.animationDuration = `${650 + (index % 4) * 90}ms`;
+          lane.appendChild(marker);
+          marker.addEventListener('animationend', () => marker.remove());
+        }, index * 900 / markerCount));
+      }
+    }
+
+    function invokeExtension(hook, ...args) {
+      if (!extension || typeof extension[hook] !== 'function') return;
+      try {
+        extension[hook](...args);
+      } catch (error) {
+        const root = document.querySelector('#demo-extension');
+        root.replaceChildren();
+        const message = document.createElement('div');
+        message.className = 'extension-error';
+        message.textContent = `Extension error: ${error.message}`;
+        root.appendChild(message);
+      }
+    }
+
+    async function fetchHealth() {
+      if (!healthApiUrl) return null;
+      try {
+        const response = await fetch(healthApiUrl, {cache: 'no-store'});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        return {probe_api_error: error.message};
+      }
+    }
+
+    async function refresh() {
+      try {
+        const statsRequest = fetch('/api/stats');
+        const healthRequest = fetchHealth();
+        const response = await statsRequest;
+        const stats = await response.json();
+        stats.impact = await healthRequest;
+        document.querySelector('#total').textContent = number.format(stats.total_packets);
+        document.querySelector('#rate').textContent = number.format(stats.packets_last_second);
+        document.querySelector('#totalBytes').textContent = formatBytes(stats.total_ip_bytes);
+        document.querySelector('#byteRate').textContent = formatBytes(stats.ip_bytes_last_second);
+        document.querySelector('#status').textContent = stats.status;
+        document.querySelector('#error').textContent = stats.error || '';
+        animatePackets(stats.packets_last_second, stats.average_ip_packet_size_last_second);
+        invokeExtension('update', stats, extensionContext);
+      } catch (error) {
+        document.querySelector('#status').textContent = 'disconnected';
+        document.querySelector('#error').textContent = error.message;
+      }
+    }
+
+    function loadExtension() {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = '/extension.js';
+        script.onload = resolve;
+        script.onerror = resolve;
+        document.body.appendChild(script);
+      });
+    }
+
+    async function initialize() {
+      try {
+        const response = await fetch('/api/config');
+        const payload = await response.json();
+        const frontend = payload.frontend || {};
+        const healthApiPort = Number(frontend.options?.health_api_port);
+        healthApiUrl = frontend.options?.health_api_url || (
+          healthApiPort
+            ? `${window.location.protocol}//${window.location.hostname}:${healthApiPort}/api/health`
+            : ''
+        );
+        healthResetUrl = frontend.options?.health_reset_url || (
+          healthApiUrl ? new URL('/api/reset', healthApiUrl).href : ''
+        );
+        document.querySelector('#title').textContent = frontend.title || 'Traffic Visualizer';
+        document.querySelector('#subtitle').textContent = frontend.subtitle || 'Packets observed';
+        document.title = `${frontend.title || 'Traffic Visualizer'} | SEED`;
+        document.documentElement.style.setProperty('--accent', frontend.accent_color || '#38bdf8');
+        await loadExtension();
+        extensionContext = {
+          root: document.querySelector('#demo-extension'),
+          config: frontend.options || {},
+          frontend,
+          apiVersion: payload.api_version,
+          formatNumber: (value) => number.format(value),
+          formatBytes,
+        };
+        invokeExtension('mount', extensionContext);
+        document.querySelector('main').classList.toggle(
+          'has-extension',
+          extensionContext.root.childElementCount > 0,
+        );
+      } catch (error) {
+        document.querySelector('#error').textContent = error.message;
+      }
+      await refresh();
+      setInterval(refresh, 1000);
+    }
+
+    document.querySelector('#reset').addEventListener('click', async () => {
+      const resets = [fetch('/api/reset', {method: 'POST'})];
+      if (healthResetUrl) resets.push(fetch(healthResetUrl, {method: 'POST'}));
+      await Promise.allSettled(resets);
+      invokeExtension('reset', extensionContext);
+      await refresh();
+    });
+    initialize();
+  </script>
+</body>
+</html>

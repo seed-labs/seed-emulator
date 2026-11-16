@@ -2,8 +2,13 @@ from __future__ import annotations
 from seedemu.core.enums import NetworkType, NodeRole
 from .Base import Base
 from seedemu.core import ScopedRegistry, Node, Graphable, Emulator, Layer
-from typing import Dict, List, Set, Tuple
-from ._bgp_metadata import install_router_bgp_session
+from typing import Dict, List, Optional, Set, Tuple
+from ._bgp_metadata import (
+    DEFAULT_BGP_HOLD_TIME,
+    DEFAULT_BGP_KEEPALIVE_TIME,
+    install_router_bgp_session,
+    normalize_bgp_timers,
+)
 
 IBGP_MODE_FULL_MESH = "full-mesh"
 IBGP_MODE_ROUTE_REFLECTOR = "route-reflector"
@@ -24,6 +29,8 @@ class Ibgp(Layer, Graphable):
     iBGP sessions between routers within each AS.
     """
     __masked: Set[int]
+    __hold_time: int
+    __keepalive_time: int
 
     def __init__(self):
         """!
@@ -31,6 +38,8 @@ class Ibgp(Layer, Graphable):
         """
         super().__init__()
         self.__masked = set()
+        self.__hold_time = DEFAULT_BGP_HOLD_TIME
+        self.__keepalive_time = DEFAULT_BGP_KEEPALIVE_TIME
         self.addDependency('Ospf', False, False)
 
     def __dfs(self, start: Node, visited: List[Node], netname: str = 'self'):
@@ -65,6 +74,38 @@ class Ibgp(Layer, Graphable):
 
     def getName(self) -> str:
         return 'Ibgp'
+
+    def setTimers(
+        self,
+        holdTime: Optional[int] = None,
+        keepaliveTime: Optional[int] = None,
+    ) -> Ibgp:
+        """!
+        @brief Set default iBGP hold and keepalive timers.
+
+        @param holdTime BGP hold time, in seconds.
+        @param keepaliveTime BGP keepalive time, in seconds.
+
+        @returns self, for chaining API calls.
+        """
+        timers = normalize_bgp_timers(
+            self.__hold_time if holdTime is None else holdTime,
+            self.__keepalive_time if keepaliveTime is None else keepaliveTime,
+        )
+        self.__hold_time = timers["hold_time"]
+        self.__keepalive_time = timers["keepalive_time"]
+        return self
+
+    def getTimers(self) -> Dict[str, int]:
+        """!
+        @brief Get iBGP timer defaults used by this layer.
+
+        @returns dict with hold_time and keepalive_time.
+        """
+        return {
+            "hold_time": self.__hold_time,
+            "keepalive_time": self.__keepalive_time,
+        }
 
     def maskAsn(self, asn: int) -> Ibgp:
         """!
@@ -178,6 +219,8 @@ class Ibgp(Layer, Graphable):
                             "passive": True,
                             "route_reflector_client": True,
                             "route_reflector_cluster_id": cluster_id,
+                            "hold_time": self.__hold_time,
+                            "keepalive_time": self.__keepalive_time,
                         },
                     )
                     install_router_bgp_session(
@@ -192,6 +235,8 @@ class Ibgp(Layer, Graphable):
                             "export_policy": "all",
                             "next_hop_self": True,
                             "igp_table": igp_table,
+                            "hold_time": self.__hold_time,
+                            "keepalive_time": self.__keepalive_time,
                         },
                     )
 
@@ -223,6 +268,8 @@ class Ibgp(Layer, Graphable):
                         "export_policy": "all",
                         "next_hop_self": False,
                         "igp_table": igp_table,
+                        "hold_time": self.__hold_time,
+                        "keepalive_time": self.__keepalive_time,
                     },
                 )
                 install_router_bgp_session(
@@ -237,6 +284,8 @@ class Ibgp(Layer, Graphable):
                         "export_policy": "all",
                         "next_hop_self": False,
                         "igp_table": igp_table,
+                        "hold_time": self.__hold_time,
+                        "keepalive_time": self.__keepalive_time,
                     },
                 )
 
@@ -283,6 +332,8 @@ class Ibgp(Layer, Graphable):
                         "export_policy": "all",
                         "next_hop_self": False,
                         "igp_table": igp_table,
+                        "hold_time": self.__hold_time,
+                        "keepalive_time": self.__keepalive_time,
                     },
                 )
 

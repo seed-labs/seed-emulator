@@ -1,0 +1,24 @@
+{
+  "interface": "any",
+  "capture_filter": "udp and dst host 10.151.0.71 and dst port 9000",
+  "web_host": "0.0.0.0",
+  "web_port": 8080,
+  "frontend": {
+    "title": "NTP-Like Amplification",
+    "subtitle": "Amplified UDP responses arriving at the victim",
+    "accent_color": "#c084fc",
+    "extension_js": "traffic_visualizer_extension.js",
+    "extension_css": "traffic_visualizer_extension.css",
+    "options": {
+      "amplifiers": "AS152 / AS160 / AS171",
+      "request_payload_bytes": 36,
+      "request_ip_bytes": 64,
+      "gauge_max_amplification": 20,
+      "health_api_port": 8082,
+      "impact_latency_warning_ms": 150,
+      "impact_stale_seconds": 4,
+      "impact_chart_max_ms": 500,
+      "impact_bandwidth_stale_seconds": 12
+    }
+  }
+}

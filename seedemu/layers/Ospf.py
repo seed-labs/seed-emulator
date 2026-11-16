@@ -1,9 +1,16 @@
 from __future__ import annotations
 from seedemu.core import Node, Emulator, Layer
 from seedemu.core.enums import NetworkType, NodeRole
-from typing import Set, Dict, List, Tuple
+from typing import Set, Dict, List, Tuple, Optional
 from .Base import Base
-from ._bgp_metadata import classify_ospf_interfaces, set_ospf_interface_intents
+from ._bgp_metadata import (
+    DEFAULT_OSPF_DEAD,
+    DEFAULT_OSPF_HELLO,
+    DEFAULT_OSPF_TICK,
+    classify_ospf_interfaces,
+    normalize_ospf_timers,
+    set_ospf_interface_intents,
+)
 
 OspfFileTemplates: Dict[str, str] = {}
 
@@ -26,6 +33,9 @@ class Ospf(Layer):
     __stubs: Set[Tuple[int, str]]
     __masked: Set[Tuple[int, str]]
     __masked_asn: Set[int]
+    __tick: int
+    __hello: int
+    __dead: int
 
     def __init__(self):
         """!
@@ -35,11 +45,51 @@ class Ospf(Layer):
         self.__stubs = set()
         self.__masked = set()
         self.__masked_asn = set()
+        self.__tick = DEFAULT_OSPF_TICK
+        self.__hello = DEFAULT_OSPF_HELLO
+        self.__dead = DEFAULT_OSPF_DEAD
 
         self.addDependency('Routing', False, False)
 
     def getName(self) -> str:
         return 'Ospf'
+
+    def setTimers(
+        self,
+        tick: Optional[int] = None,
+        hello: Optional[int] = None,
+        dead: Optional[int] = None,
+    ) -> Ospf:
+        """!
+        @brief Set default OSPF timers for generated OSPF sessions.
+
+        @param tick BIRD OSPF scheduler tick interval, in seconds.
+        @param hello OSPF hello interval, in seconds.
+        @param dead OSPF dead interval, in seconds.
+
+        @returns self, for chaining API calls.
+        """
+        timers = normalize_ospf_timers(
+            self.__tick if tick is None else tick,
+            self.__hello if hello is None else hello,
+            self.__dead if dead is None else dead,
+        )
+        self.__tick = timers["tick"]
+        self.__hello = timers["hello"]
+        self.__dead = timers["dead"]
+        return self
+
+    def getTimers(self) -> Dict[str, int]:
+        """!
+        @brief Get OSPF timer defaults used by this layer.
+
+        @returns dict with tick, hello, and dead timer values.
+        """
+        return {
+            "tick": self.__tick,
+            "hello": self.__hello,
+            "dead": self.__dead,
+        }
 
     def markAsStub(self, asn: int, netname: str) -> Ospf:
         """!
@@ -193,7 +243,14 @@ class Ospf(Layer):
                     stubs=stub_networks,
                     masked=masked_networks,
                 )
-            set_ospf_interface_intents(router, active, stubs)
+            set_ospf_interface_intents(
+                router,
+                active,
+                stubs,
+                tick=self.__tick,
+                hello=self.__hello,
+                dead=self.__dead,
+            )
 
     def render(self, emulator: Emulator):
         pass

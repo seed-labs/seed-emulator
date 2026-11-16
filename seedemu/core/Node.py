@@ -17,6 +17,7 @@ from typing import List, Dict, Set, Tuple, Optional
 from string import ascii_letters
 from random import choice
 from .BaseSystem import BaseSystem
+from .SystemProfile import SystemProfile
 
 DEFAULT_SOFTWARE: List[str] = ['zsh', 'curl', 'nano', 'vim-nox', 'mtr-tiny', 'iproute2', 'iputils-ping', 'tcpdump', 'termshark', 'dnsutils', 'jq', 'ipcalc', 'netcat-openbsd']
 
@@ -214,7 +215,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
     """
 
     __name: str
-    __base_system: BaseSystem
+    __base_system: SystemProfile
     __asn: int
     __scope: str
     __role: NodeRole
@@ -492,7 +493,7 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
         """
         return self.__privileged
 
-    def setBaseSystem(self, base_system: BaseSystem) -> Node:
+    def setBaseSystem(self, base_system: SystemProfile) -> Node:
         """!
         @brief Set a base_system of a node.
 
@@ -500,9 +501,12 @@ class Node(Printable, Registrable, Configurable, Vertex, Customizable):
 
         @returns self, for chaining API calls.
         """
+        if not isinstance(base_system, SystemProfile):
+            raise TypeError("base_system must be a SystemProfile")
         self.__base_system = base_system
+        return self
 
-    def getBaseSystem(self) -> BaseSystem:
+    def getBaseSystem(self) -> SystemProfile:
         """!
         @brief Get configured base system on this node.
 

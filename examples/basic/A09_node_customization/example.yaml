@@ -1,0 +1,64 @@
+id: basic-a09-node-customization
+name: Node Customization
+description: Customize a host runtime profile, software, files, build commands, and start commands.
+runner: internet
+script: node_customization.py
+platform: amd
+features:
+  - node-customization
+  - system-profile
+  - base-system-subset
+
+compile:
+  enabled: true
+  output: output
+  clean:
+    - output
+    - base_component.bin
+  expected:
+    - output/docker-compose.yml
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: A09 customized host is running
+      type: compose-ps
+      services:
+        - hnode_152_host0
+      retries: 30
+      interval: 2
+
+probes:
+  - name: A09 imported program is installed
+    type: exec
+    service: hnode_152_host0
+    command: test -f /myprog.py
+    expect_exit: 0
+    retries: 10
+    interval: 2
+
+  - name: A09 generated file has expected content
+    type: exec
+    service: hnode_152_host0
+    command: grep -qx hello.world /file.txt
+    expect_exit: 0
+    retries: 10
+    interval: 2
+
+  - name: A09 installed Python runs imported program
+    type: exec
+    service: hnode_152_host0
+    command: python3 /myprog.py | grep -qx Hello.World!
+    expect_exit: 0
+    retries: 10
+    interval: 2
+
+test_programs:
+  - name: A09 node customization validation
+    script: test_runtime.py
+    timeout: 180

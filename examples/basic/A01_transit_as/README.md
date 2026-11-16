@@ -69,7 +69,7 @@ the behaviors):
 We use private peering to peer the transit `AS2` with the three stub 
 ASes. The peering relationship is `Provider`, i.e.,
 `AS2` is the Internet service provider. 
-See [this manual](/docs/user_manual/bgp_peering.md) for the 
+See [this manual](/docs/user_manual/bgp.md) for the
 detailed explanation of BGP peering.
 
 ```python
@@ -90,6 +90,13 @@ emu.dump('base_component.bin')
 ```
 
 It should be noted that `dump()` must be called before the `render()`.  
+
+## InternetMap visualization
+
+When this example compiles directly instead of writing a component dump, it
+registers an `InternetMap` bundle explicitly. Port `8081` is the traffic
+observer control endpoint, `8082` is the topology UI, and `8083` is the
+geographic UI. The Docker compiler does not add these services automatically.
 
 ## TestRunner lifecycle
 

@@ -1,0 +1,61 @@
+id: basic-a14-container-bundle
+name: Custom ContainerBundle
+description: Two custom containers with explicit bridge and emulator networks, hosts aliases, staged files, and startup wrappers.
+runner: internet
+script: add_containerBundle.py
+platform: amd
+features:
+  - container-bundle
+  - static-addresses
+  - etc-hosts
+  - entrypoint-wrapper
+
+compile:
+  enabled: true
+  # This script accepts a positional platform, rather than --platform/--output.
+  standard_args: false
+  args: [amd]
+  env:
+    PYTHONDONTWRITEBYTECODE: "1"
+  output: output
+  clean:
+    - output
+    - base_internet.bin
+  expected:
+    - output/docker-compose.yml
+    - output/demo-app.demo.seed/Dockerfile
+    - output/demo-helper.demo.seed/Dockerfile
+  timeout: 600
+
+build:
+  enabled: true
+  timeout: 1800
+
+runtime:
+  compose: output/docker-compose.yml
+  readiness:
+    - name: custom bundle and emulator gateways are running
+      type: compose-ps
+      services:
+        - demo-app.demo.seed
+        - demo-helper.demo.seed
+        - brdnode_151_router0
+        - brdnode_152_router0
+      retries: 40
+      interval: 3
+
+probes:
+  - name: app reaches helper through its bridge hosts alias
+    type: ping
+    service: demo-app.demo.seed
+    target: demo-helper-demo_bundle_network
+    count: 2
+    retries: 15
+    interval: 2
+
+test_programs:
+  - name: A14 custom bundle runtime checks
+    script: test_runtime.py
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    timeout: 360

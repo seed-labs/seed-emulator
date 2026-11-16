@@ -1,10 +1,11 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.core import Node, Network, Compiler, BaseSystem, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.containerBundle import ContainerBundle
+from seedemu.core import Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
-from typing import Dict, Generator, List, Set, Tuple
+from typing import Any, Dict, Generator, List, Mapping, Set, Tuple
 from hashlib import md5
 from functools import cmp_to_key
 from os import mkdir, chdir
@@ -12,15 +13,7 @@ from re import sub
 from ipaddress import IPv4Network, IPv4Address
 from shutil import copyfile
 import json
-from yaml import dump
-
-SEEDEMU_INTERNET_MAP_IMAGE='handsonsecurity/seedemu-internetmap:2.0'
-
-# The Etherview is updated on 2025/11, we name the new version 2.0
-#SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:buildx-latest'
-# SEEDEMU_ETHER_VIEW_IMAGE='handsonsecurity/seedemu-multiarch-etherview:2.0'
-SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE='handsonsecurity/seedemu-ethexplorer-backend:1.0'
-SEEDEMU_ETH_EXPLORER_WEB_IMAGE='handsonsecurity/seedemu-ethexplorer-web:1.0'
+from yaml import dump, safe_dump
 
 DockerCompilerFileTemplates: Dict[str, str] = {}
 
@@ -186,15 +179,6 @@ DockerCompilerFileTemplates['compose_network'] = """\
 {labelList}
 """
 
-DockerCompilerFileTemplates['seedemu_internet_map'] = """\
-    {serviceName}:
-        image: {clientImage}
-        container_name: {containerName}
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        privileged: true
-"""
-
 DockerCompilerFileTemplates['port_forwarding_entry'] = """\
         ports:
             - {port_forwarding_field}
@@ -213,162 +197,6 @@ DockerCompilerFileTemplates['network_entry'] = """\
 DockerCompilerFileTemplates['custom_compose_label_meta'] = """\
         labels:
 {labelList}
-"""
-
-DockerCompilerFileTemplates['seedemu_eth_explorer'] = """\
-    clickhouse:
-        image: clickhouse/clickhouse-server:latest
-        container_name: clickhouse
-        restart: unless-stopped
-        environment:
-            - CLICKHOUSE_DB=beaconchain
-            - CLICKHOUSE_USER=beacon
-            - CLICKHOUSE_PASSWORD=pass
-        healthcheck:
-            test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-        networks:
-          - beacon-network
-
-    postgres:
-        image: postgres:15.2-alpine
-        container_name: postgres
-        restart: unless-stopped
-        environment:
-          POSTGRES_PASSWORD: pass
-          POSTGRES_DB: db
-          POSTGRES_USER: postgres
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 30s
-            timeout: 10s
-            retries: 5
-        networks:
-          - beacon-network
-
-    alloy:
-        image: postgres:15.2-alpine
-        container_name: alloy
-        restart: unless-stopped
-        environment:
-            POSTGRES_PASSWORD: pass
-            POSTGRES_DB: db
-            POSTGRES_USER: postgres
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 30s
-            timeout: 10s
-            retries: 5
-        networks:
-          - beacon-network
-
-    redis:
-        image: redis:7-alpine
-        container_name: redis
-        restart: unless-stopped
-        command: redis-server --appendonly yes
-        healthcheck:
-            test: ["CMD", "redis-cli", "ping"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-        networks:
-          - beacon-network
-
-    littlebigtable:
-        image: gobitfly/little_bigtable:latest
-        container_name: littlebigtable
-        restart: unless-stopped
-        depends_on:
-            - postgres
-        networks:
-          - beacon-network
-
-    rawbigtable:
-        image: gobitfly/little_bigtable:latest
-        container_name: rawbigtable
-        restart: unless-stopped
-        depends_on:
-          - alloy
-        networks:
-          - beacon-network
-
-    seedemu-ethexplorer-backend:
-        image: {clientBackendImage}
-        container_name: seedemu_ethexplorer_backend
-        cap_add:
-            - ALL
-        pid: host
-        privileged: true
-        healthcheck:
-            test:
-                [
-                  "CMD-SHELL",
-                  "PGPASSWORD=pass psql -h postgres -U postgres -d db -tAc \\"SELECT 1 FROM information_schema.tables WHERE table_name='blocks';\\" | grep -q 1"
-                ]
-            interval: 5s
-            timeout: 3s
-            retries: 60
-            start_period: 10s
-        depends_on:
-            clickhouse:
-              condition: service_healthy
-            postgres:
-              condition: service_healthy
-            alloy:
-              condition: service_healthy
-            redis:
-              condition: service_healthy
-            littlebigtable:
-              condition: service_started
-            rawbigtable:
-              condition: service_started
-        environment:
-            - EL_HOST={el_host}
-            - CL_HOST={cl_host}
-        networks:
-            - beacon-network
-            - {beaconNetwork}
-            - {gEthNetwork}
-
-    seedemu-ethexplorer-web:
-        image: {clientWebImage}
-        container_name: seedemu_ethexplorer_web
-        cap_add:
-            - ALL
-        pid: host
-        privileged: true
-        depends_on:
-            clickhouse:
-              condition: service_healthy
-            postgres:
-              condition: service_healthy
-            alloy:
-              condition: service_healthy
-            redis:
-              condition: service_healthy
-            littlebigtable:
-              condition: service_started
-            rawbigtable:
-              condition: service_started
-            seedemu-ethexplorer-backend:
-              condition: service_healthy
-        environment:
-            - EL_HOST={el_host}
-            - CL_HOST={cl_host}
-        ports:
-            - {clientPort}:5000/tcp
-        networks:
-            - beacon-network
-            - {beaconNetwork}
-            - {gEthNetwork}
-"""
-
-DockerCompilerFileTemplates['seedemu_eth_explorer_net'] = """\
-    beacon-network:
-        driver: bridge
 """
 
 DockerCompilerFileTemplates['zshrc_pre'] = """\
@@ -477,10 +305,6 @@ class Docker(Compiler):
     __internet_map_enabled: bool
     __internet_map_port: int
 
-
-    __ether_view_enabled: bool
-    __ether_view_port: int
-
     __client_hide_svcnet: bool
 
     __images: Dict[str, Tuple[DockerImage, int]]
@@ -492,6 +316,8 @@ class Docker(Compiler):
     __option_handling: OptionHandling # strategy how to deal with Options
     __basesystem_dockerimage_mapping: dict
 
+    __containerBundles: List[ContainerBundle]
+
     def __init__(
         self,
         platform:Platform = Platform.AMD64,
@@ -499,10 +325,6 @@ class Docker(Compiler):
         selfManagedNetwork: bool = False,
         dummyNetworksPool: str = '10.128.0.0/9',
         dummyNetworksMask: int = 24,
-        internetMapEnabled: bool = True,
-        internetMapPort: int = 8080,
-        etherViewEnabled: bool = False,
-        etherViewPort: int = 5000,
         clientHideServiceNet: bool = True,
         option_handling: OptionHandling = OptionHandling.CREATE_SEPARATE_ENV_FILE
     ):
@@ -528,14 +350,6 @@ class Docker(Compiler):
         loopback IP addresses. Default to 10.128.0.0/9.
         @param dummyNetworksMask (optional) mask of dummy networks. Default to
         24.
-        @param internetMapEnabled (optional) set if seedemu internetMap should be enabled.
-        Default to False. Note that the seedemu internetMap allows unauthenticated
-        access to all nodes, which can potentially allow root access to the
-        emulator host. Only enable seedemu in a trusted network.
-        @param internetMapPort (optional) set seedemu internetMap port. Default to 8080.
-        @param etherViewEnabled (optional) set if seedemu EtherView should be enabled.
-        Default to False.
-        @param etherViewPort (optional) set seedemu EtherView port. Default to 5000.
         @param clientHideServiceNet (optional) hide service network for the
         client map by not adding metadata on the net. Default to True.
         """
@@ -547,11 +361,7 @@ class Docker(Compiler):
         self.__self_managed_network = selfManagedNetwork
         self.__dummy_network_pool = IPv4Network(dummyNetworksPool).subnets(new_prefix = dummyNetworksMask)
 
-        self.__internet_map_enabled = internetMapEnabled
-        self.__internet_map_port = internetMapPort
-
-        self.__ether_view_enabled = etherViewEnabled
-        self.__ether_view_port = etherViewPort
+        self.__containerBundles = []
 
         self.__client_hide_svcnet = clientHideServiceNet
 
@@ -570,13 +380,25 @@ class Docker(Compiler):
 
         self.__platform = platform
 
-        self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
+        self.__basesystem_dockerimage_mapping = self._getSystemImageCatalog(self.__platform)
 
-        for name, image in self.__basesystem_dockerimage_mapping.items():
+        registered_images = {}
+        for profile, image in self.__basesystem_dockerimage_mapping.items():
+            image_name = image.getName()
+            if image_name in registered_images:
+                self.__basesystem_dockerimage_mapping[profile] = registered_images[image_name]
+                continue
+            registered_images[image_name] = image
             priority = 0
-            if name == BaseSystem.DEFAULT:
+            if profile == BaseSystem.DEFAULT:
                 priority = 1
             self.addImage(image, priority=priority)
+
+    def _getSystemImageCatalog(
+        self, platform: Platform
+    ) -> Dict[SystemProfile, DockerImage]:
+        """Return the system-profile image catalog for a target platform."""
+        return dict(BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[platform])
 
     def _addVolume(self, vol: BaseVolume):
         """! @brief add a docker volume/bind mount/or tmpfs
@@ -776,8 +598,15 @@ class Docker(Compiler):
 
             return (image, nodeSoft - image.getSoftware())
 
-        #Maintain a table : Virtual Image Name - Actual Image Name
-        image = self.__basesystem_dockerimage_mapping[node.getBaseSystem()]
+        # Maintain a table: system profile - Docker image.
+        profile = node.getBaseSystem()
+        if profile not in self.__basesystem_dockerimage_mapping:
+            raise KeyError(
+                "{} does not support system profile {} on platform {}".format(
+                    self.getName(), profile, self.__platform.value
+                )
+            )
+        image = self.__basesystem_dockerimage_mapping[profile]
 
         return (image, nodeSoft - image.getSoftware())
 
@@ -1009,7 +838,6 @@ class Docker(Compiler):
         staged_path = md5(path.encode('utf-8')).hexdigest()
         copyfile(hostpath, staged_path)
         return 'COPY {} {}\n'.format(staged_path, path)
-
 
     def _getComposeNodeName(self, node: Node) -> str:
         """!
@@ -1464,9 +1292,6 @@ class Docker(Compiler):
 
         self._groupSoftware(emulator)
 
-        el_host = cl_host = ''
-        beaconNetwork = gEthNetwork = ''
-
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
@@ -1485,19 +1310,6 @@ class Docker(Compiler):
                 self._log('compiling host node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
 
-                if el_host and cl_host:
-                    continue
-
-                ip = str(obj.getInterfaces()[0].getAddress())
-                name = obj.getDisplayName() if obj.getDisplayName() is not None else obj.getName()
-                net = self._getRealNetName(obj.getInterfaces()[0].getNet())
-                if "-Beacon-" in name and cl_host == "":
-                    cl_host = ip
-                    gEthNetwork = net
-                elif "-Geth-" in name and el_host == "":
-                    el_host = ip
-                    beaconNetwork = net
-
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
                 self.__services += self._compileNode(obj)
@@ -1506,31 +1318,14 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
-        # Add the Internet Map contaienr to the emulator
-        if self.__internet_map_enabled:
-            self._log('enabling seedemu-internet-map...')
-
-            # Attach the Map container to the default network
-            self.attachInternetMap(port_forwarding="{}:8080/tcp".format(self.__internet_map_port))
-
-        # Add the Ether View contaienr to docker's default network
-        if self.__ether_view_enabled:
-            self._log('enabling seedemu-eth-explorer...')
-
-            self.__services += DockerCompilerFileTemplates['seedemu_eth_explorer'].format(
-                clientWebImage=SEEDEMU_ETH_EXPLORER_WEB_IMAGE,
-                clientBackendImage=SEEDEMU_ETH_EXPLORER_BACKEND_IMAGE,
-                cl_host=cl_host,
-                el_host=el_host,
-                beaconNetwork=beaconNetwork,
-                gEthNetwork=gEthNetwork,
-                clientPort=self.__ether_view_port
-            )
-            self.__services += '\n'
-            self.__networks += DockerCompilerFileTemplates['seedemu_eth_explorer_net']
+        for containerBundle in self.__containerBundles:
+            bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
+            self.__services += bundle_services
+            self.__networks += bundle_networks
 
         # Add custom entries (typically added through Docker::attachCustomContainer APIs)
         self.__services += self.__custom_services
+        self.__services += self._renderAdditionalComposeServices(emulator)
 
         local_images = ''
         for (image, _) in self.__images.values():
@@ -1551,6 +1346,39 @@ class Docker(Compiler):
         ), file=open('docker-compose.yml', 'w'))
 
         self.generateEnvFile(Scope(ScopeTier.Global),'')
+
+    def _getAdditionalComposeServices(
+        self, emulator: Emulator
+    ) -> Mapping[str, Mapping[str, Any]]:
+        """Return auxiliary Compose services supplied by a compiler subclass."""
+        return {}
+
+    def _renderAdditionalComposeServices(self, emulator: Emulator) -> str:
+        services = self._getAdditionalComposeServices(emulator)
+        if not isinstance(services, Mapping):
+            raise TypeError("additional Compose services must be a mapping")
+        if not services:
+            return ""
+
+        for name, service in services.items():
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or name != name.strip()
+            ):
+                raise ValueError(
+                    "Compose service names must be non-empty strings "
+                    "without surrounding whitespace"
+                )
+            if not isinstance(service, Mapping):
+                raise TypeError("Compose service definitions must be mappings")
+
+        rendered = safe_dump(
+            dict(services),
+            sort_keys=False,
+            default_flow_style=False,
+        ).rstrip()
+        return "".join("    {}\n".format(line) for line in rendered.splitlines())
 
     def _computeComposeTopLvlVolumes(self) -> str:
         """!@brief render the 'volumes:' section of the docker-compose.yml file
@@ -1578,44 +1406,6 @@ class Docker(Compiler):
 
             if hit: toplevelvolumes = 'volumes:\n' + toplevelvolumes
         return toplevelvolumes
-
-    def attachInternetMap(self, asn: int = -1, net: str = '', ip_address: str = '',
-                      port_forwarding: str = '', env: list = [],
-                      show_on_map=False, node_name='seedemu_internet_map') -> Docker:
-        """!
-        @brief add the pre-built Map container to the emulator (the entry should not
-            include any network entry, as the network entry will be added here)
-
-        @param asn the autonomous system number of the network. -1 means no network
-            information is provided, so the container will be attached to the default
-            network provided by the docker
-        @param net the name of the network that this container is attached to.
-        @param ip_address the IP address set for this container. If no IP address is provided,
-            docker will provide one when building the image.
-        @param port_forwarding the port forwarding field.
-        @param env the list of the environment variables.
-        @param show_on_map it is show on the map.
-        @param node_name.
-
-        @returns self, for chaining API calls.
-        """
-
-        self._log('attaching the Internet Map container to {}:{}'.format(asn, net))
-
-        # If this is not set to False, Docker compiler will attach another copy of the MAP
-        # container to the default network. This is to avoid that.
-        self.__internet_map_enabled = False
-
-        self.attachCustomContainer(
-            DockerCompilerFileTemplates['seedemu_internet_map'].format(
-                serviceName=node_name,
-                clientImage=SEEDEMU_INTERNET_MAP_IMAGE,
-                containerName=node_name,
-            ),
-            asn=asn, net=net, ip_address=ip_address, port_forwarding=port_forwarding, env=env, show_on_map=show_on_map,
-            node_name=node_name
-        )
-        return self
 
     def attachCustomContainer(self, compose_entry: str, asn: int = -1, net: str = '',
                               ip_address: str = '', port_forwarding: str = '', env: list = [],
@@ -1683,6 +1473,15 @@ class Docker(Compiler):
             self.__custom_services += '\n'
 
         return self
+
+    def addContainerBundle(self, containerBundle: ContainerBundle):
+        self.__containerBundles.append(containerBundle)
+
+    def _compileContainerBundle(self, containerBundle: ContainerBundle ) -> tuple[str, str]:
+        containerBundle.configure()
+        compose_services_txt, compose_networks_txt = containerBundle.install()
+
+        return compose_services_txt, compose_networks_txt
 
     def _getCustomNodeMeta(self, asn: int = -1, node_name: str = '', net: str = '', ip_address: str = '', ) -> str:
         """!
