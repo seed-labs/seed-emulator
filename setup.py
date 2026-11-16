@@ -8,8 +8,8 @@ with open(Path(__file__).parent / "README.md", "r", encoding="utf-8") as readme:
 setuptools.setup(
     name = "seedemu",
     version = "2.0.0",
-    author = "Honghao Zeng",
-    author_email = "hozeng@syr.edu",
+    author = "Wenliang Du",
+    author_email = "wenliangdu@zju.edu.cn",
     description = "SEED Internet Emulator",
     long_description = long_description,
     long_description_content_type = "text/markdown",
