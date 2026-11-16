@@ -1,0 +1,91 @@
+name: Validate SeedEmu packages
+
+on:
+  pull_request:
+    branches: [development, master]
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      version:
+        description: Version of the validated distribution
+        value: ${{ jobs.build.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - name: Build wheel and source distribution
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Read package version
+        id: metadata
+        run: |
+          python - <<'PYCODE'
+          from email.parser import Parser
+          from pathlib import Path
+          from zipfile import ZipFile
+          import os
+          wheel, = Path("dist").glob("*.whl")
+          with ZipFile(wheel) as archive:
+              path, = [p for p in archive.namelist() if p.endswith(".dist-info/METADATA")]
+              package = Parser().parsestr(archive.read(path).decode())
+          assert package["Name"] == "seedemu"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print("version=" + package["Version"], file=output)
+          PYCODE
+      - uses: actions/upload-artifact@v6
+        with:
+          name: seedemu-distributions
+          path: dist/*
+          if-no-files-found: error
+
+  installed-package:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+        distribution: [wheel, sdist]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: seedemu-distributions
+          path: dist
+      - name: Install only the distribution and its runtime dependencies
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+        run: |
+          python -m venv "$RUNNER_TEMP/seedemu-package-env"
+          if [ "$DISTRIBUTION" = wheel ]; then
+            "$RUNNER_TEMP/seedemu-package-env/bin/python" -m pip install dist/*.whl
+          else
+            "$RUNNER_TEMP/seedemu-package-env/bin/python" -m pip install dist/*.tar.gz
+          fi
+          "$RUNNER_TEMP/seedemu-package-env/bin/python" -m pip check
+      - name: Check installed imports, resources and all CI example compilations
+        env:
+          EXPECTED_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          "$RUNNER_TEMP/seedemu-package-env/bin/python" -I tests/installed_package_smoke.py \
+            --expected-version "$EXPECTED_VERSION" --examples examples \
+            --workflow .github/workflows/on-pull-request.yaml
