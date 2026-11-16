@@ -25,6 +25,7 @@ from deployWorkerQueues import dispatchQueues
 
 
 LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+DUMPER = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
 CONTROLLERS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "ReplicaSet", "Pod"}
 DEFAULT_DEPLOY = dict(controllerApplyMode="worker-queue", workerConcurrencyMode="resource",
     workerMaxInFlight=4, workerCpuPerStartup=0.5, workerMemoryGiBPerStartup=1,
@@ -42,9 +43,10 @@ def loadDocuments(path):
 
 
 def writeDocuments(path, docs):
-    """Write docs as JSON documents separated by YAML markers for kubectl."""
+    """Write docs as a YAML stream accepted by kubectl's format detection."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text("\n---\n".join(json.dumps(doc) for doc in docs) + "\n")
+    with Path(path).open("w", encoding="utf-8") as stream:
+        yaml.dump_all(docs, stream, Dumper=DUMPER, explicit_start=True, sort_keys=False)
 
 
 def readOptions(config):

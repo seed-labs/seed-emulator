@@ -103,6 +103,7 @@ fi
 TARGET_USER="$(id -un)"
 TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
 [ -n "${TARGET_HOME}" ] || die "cannot determine home directory for ${TARGET_USER}"
+export PATH="${TARGET_HOME}/.local/bin:${PATH}"
 
 requireCommand() {
     command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
@@ -114,7 +115,9 @@ installPackages() {
 
     echo ">> Installing KVM/libvirt, SSH, rsync, networking, and Python YAML support"
     sudo apt-get update
+    sudo apt-get check || die "host APT has broken dependencies; review 'sudo apt-get -s --fix-broken install' before retrying"
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        acl \
         python3-yaml \
         qemu-kvm \
         qemu-utils \
@@ -173,7 +176,8 @@ installKubectl() (
 
     checksum="$(cat "${temporary_dir}/kubectl.sha256")"
     printf '%s  %s\n' "${checksum}" "${temporary_dir}/kubectl" | sha256sum --check
-    sudo install -o root -g root -m 0755 "${temporary_dir}/kubectl" /usr/local/bin/kubectl
+    install -d -m 0755 "${TARGET_HOME}/.local/bin"
+    install -m 0755 "${temporary_dir}/kubectl" "${TARGET_HOME}/.local/bin/kubectl"
 )
 
 enableServicesAndPermissions() {

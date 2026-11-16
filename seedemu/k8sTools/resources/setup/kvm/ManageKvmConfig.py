@@ -16,7 +16,6 @@ from NormalizeResources import normalizeMemory
 
 
 SETUP_DIR = Path(__file__).resolve().parent
-REPO_ROOT = Path.home() / "k8s"
 SETUP_DATA_DIR = SETUP_DIR
 
 
@@ -27,7 +26,7 @@ def expand_path(value: str) -> str:
 def expand_path_list(value: Any) -> str:
     """Expand a YAML scalar/list into the shell path-list used by KVM scripts."""
     if value is None:
-        return str((Path.home() / "k8s/output").resolve())
+        return ""
     if isinstance(value, list):
         return " ".join(expand_path(str(item)) for item in value if str(item).strip())
     text = str(value).strip()
@@ -65,6 +64,7 @@ def normalize_config(data: dict[str, Any]) -> None:
             "cloudInitDir": "cloud_init_dir",
             "baseImagePath": "base_image_path",
             "legacyBaseImagePath": "legacy_base_image_path",
+            "baseImageSearchDirs": "base_image_search_dirs",
             "baseImageUrl": "base_image_url",
             "ubuntuSeries": "ubuntu_series",
             "bootTimeoutSeconds": "boot_timeout_seconds",
@@ -170,13 +170,6 @@ def default_seedemu_docker_dir() -> str:
     candidates = []
     for base in (SETUP_DIR, *SETUP_DIR.parents):
         candidates.append(base / "docker_images/multiarch")
-    candidates.extend(
-        [
-            Path.home() / "seed-emulator/docker_images/multiarch",
-            Path.home() / "seed-emulator-k8s-new/docker_images/multiarch",
-            Path.home() / "k8s/seed-emulator/docker_images/multiarch",
-        ]
-    )
     for candidate in candidates:
         if (candidate / "seedemu-base").is_dir() and (candidate / "seedemu-router").is_dir():
             return str(candidate.resolve())
@@ -484,7 +477,7 @@ def kvm_env(args: argparse.Namespace) -> None:
     legacy_base_image = get_nested(
         data,
         "kvm.legacy_base_image_path",
-        REPO_ROOT / f"output/kvm_lab/base/{Path(base_path).name}",
+        "",
     )
     storage_dir = expand_path(str(get_nested(data, "kvm.storage_dir", SETUP_DIR)))
     disk_dir = expand_path(str(get_nested(data, "kvm.disk_dir", SETUP_DATA_DIR / "disks")))
@@ -880,6 +873,7 @@ def write_ansible_inventory(args: argparse.Namespace) -> None:
                 "ansible_ssh_private_key_file": expand_path(str(get_nested(data, "ssh.key", "~/.ssh/id_ed25519"))),
                 "k3s_version": get_nested(data, "k3s.version", "v1.28.5+k3s1"),
                 "k3s_install_version": install_version(data),
+                "seed_k3s_staged_binary": str(Path(args.output).resolve().with_suffix(".k3s")),
                 "seed_registry_host": get_nested(data, "registry.host", master["ip"]),
                 "seed_registry_port": get_nested(data, "registry.port", 5000),
                 "seed_docker_io_mirror_endpoint": get_nested(data, "registry.docker_io_mirror_endpoint", "https://docker.m.daocloud.io"),

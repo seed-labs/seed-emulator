@@ -18,7 +18,6 @@ SCRIPT_DIR="$(cd "$(dirname "${SEED_K8S_ENTRYPOINT}")" && pwd)"
 SETUP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CONFIG_PATH="${1:-${SETUP_DIR}/kvm.yaml}"
 HELPER="${SCRIPT_DIR}/ManageKvmConfig.py"
-kvmBaseImageSearchDirs="${HOME}/k8s/output"
 kvmBaseImageReuseMode="copy"
 baseImageLowSpeedSeconds=60
 baseImageLowSpeedLimit=1024
@@ -152,7 +151,19 @@ collectExistingVms() {
         return
     fi
 
-    virsh list --all --name 2>/dev/null | awk 'NF {print $1 "\t\t"}' >> "${EXISTING_VMS_TSV}"
+    # virt-install requires NIC MACs to be unique across libvirt domains,
+    # including networks unrelated to the new management network.
+    local domains name
+    domains="$(virsh list --all --name)"
+    while IFS= read -r name; do
+        [ -n "${name}" ] || continue
+        printf '%s\t\t\n' "${name}" >> "${EXISTING_VMS_TSV}"
+        virsh domiflist "${name}" | awk -v name="${name}" '
+            length($NF) == 17 && $NF ~ /^[[:xdigit:]:]+$/ {
+                print name "\t\t" tolower($NF)
+            }
+        ' >> "${EXISTING_VMS_TSV}"
+    done <<< "${domains}"
 
     virsh net-dumpxml "${kvmNetwork}" 2>/dev/null | python3 -c '
 import sys
@@ -490,10 +501,18 @@ main() {
         checkCreateConflicts "${name}" "${ip}" "${mac}"
     done < "${PLANNED_NODES_TSV}"
 
+    # Preserve the checked plan for cleanup even if a guest fails to boot.
+    writeKvmState
+
+    # libvirt can change ownership of a backing image after starting the
+    # first guest. Create every overlay while the caller can read the base.
     while IFS=$'\t' read -r name role ip mac vcpus memory_mb disk_gb; do
-        updateDhcpHost "${name}" "${ip}" "${mac}"
         createVmCloudInit "${name}"
         createVmDisk "${name}" "${disk_gb}"
+    done < "${PLANNED_NODES_TSV}"
+
+    while IFS=$'\t' read -r name role ip mac vcpus memory_mb disk_gb; do
+        updateDhcpHost "${name}" "${ip}" "${mac}"
         createOrStartVm "${name}" "${ip}" "${mac}" "${vcpus}" "${memory_mb}" "${disk_gb}" "${role}"
     done < "${PLANNED_NODES_TSV}"
 
@@ -506,7 +525,6 @@ main() {
     else
         writeK3sConfig
     fi
-    writeKvmState
     echo "KVM VMs are ready."
     echo "Next step: ${SCRIPT_DIR}/TuneVmLimits.py ${outputK3sConfig}"
 }

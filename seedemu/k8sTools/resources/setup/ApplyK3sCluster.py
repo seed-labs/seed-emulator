@@ -37,7 +37,6 @@ K3S_SYSTEM_BOOTSTRAP_IMAGES=(
     "rancher/mirrored-metrics-server:v0.6.3"
     "rancher/local-path-provisioner:v0.0.24"
 )
-seedEmulatorDockerDir="${HOME}/seed-emulator/docker_images/multiarch"
 seedBaseSourceImage="handsonsecurity/seedemu-multiarch-base:buildx-latest"
 seedRouterSourceImage="handsonsecurity/seedemu-multiarch-router:buildx-latest"
 seedBaseHashImage="98a2693c996c2294358552f48373498d:latest"
@@ -139,33 +138,6 @@ loadNodeSshContext() {
         -o ServerAliveInterval=30
         -o ServerAliveCountMax=3
     )
-}
-
-resolveSeedEmulatorDockerDir() {
-    # Resolve the host path containing seedemu-base and seedemu-router
-    # Dockerfiles. Existing YAML value wins; common source-tree locations are
-    # tried as fallbacks for physical-server workflows.
-    local cursor="${SCRIPT_DIR}"
-    while [ "${cursor}" != "/" ]; do
-        if [ -d "${cursor}/docker_images/multiarch/seedemu-base" ] &&
-            [ -d "${cursor}/docker_images/multiarch/seedemu-router" ]; then
-            seedEmulatorDockerDir="${cursor}/docker_images/multiarch"
-            return 0
-        fi
-        cursor="$(dirname "${cursor}")"
-    done
-
-    local candidate
-    for candidate in \
-        "${seedEmulatorDockerDir}" \
-        "${HOME}/seed-emulator-k8s-new/docker_images/multiarch" \
-        "${HOME}/k8s/seed-emulator/docker_images/multiarch" \
-        "${REPO_ROOT}/../seed-emulator/docker_images/multiarch"; do
-        if [ -d "${candidate}/seedemu-base" ] && [ -d "${candidate}/seedemu-router" ]; then
-            seedEmulatorDockerDir="$(cd "${candidate}" && pwd)"
-            return 0
-        fi
-    done
 }
 
 runMasterCommand() {
@@ -283,7 +255,7 @@ runAnsibleInstall() {
         --extra-vars "seed_multus_bootstrap_tar=${multus_tar_path}" \
         --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none" \
         < /dev/null
-    rm -f "${inventory_tmp}" "${playbook_tmp}"
+    rm -f "${inventory_tmp}" "${inventory_tmp%.yml}.k3s" "${playbook_tmp}"
 }
 
 imageTarName() {
@@ -403,32 +375,28 @@ ensureSeedemuHostBuildImages() {
     ensureHostDockerImage "${ubuntuBuildImage}"
 
     if ! docker image inspect "${seedBaseSourceImage}" >/dev/null 2>&1; then
-        echo "  host docker build ${seedBaseSourceImage}" >&2
-        DOCKER_BUILDKIT=1 docker build -t "${seedBaseSourceImage}" \
-            "${seedEmulatorDockerDir}/seedemu-base" >/dev/null
+        if [ -d "${seedEmulatorDockerDir}/seedemu-base" ]; then
+            echo "  host docker build ${seedBaseSourceImage}" >&2
+            DOCKER_BUILDKIT=1 docker build -t "${seedBaseSourceImage}" \
+                "${seedEmulatorDockerDir}/seedemu-base" >/dev/null
+        else
+            ensureHostDockerImage "${seedBaseSourceImage}"
+        fi
     fi
 
     if ! docker image inspect "${seedRouterSourceImage}" >/dev/null 2>&1; then
-        echo "  host docker build ${seedRouterSourceImage}" >&2
-        DOCKER_BUILDKIT=1 docker build -t "${seedRouterSourceImage}" \
-            "${seedEmulatorDockerDir}/seedemu-router" >/dev/null
+        if [ -d "${seedEmulatorDockerDir}/seedemu-router" ]; then
+            echo "  host docker build ${seedRouterSourceImage}" >&2
+            DOCKER_BUILDKIT=1 docker build -t "${seedRouterSourceImage}" \
+                "${seedEmulatorDockerDir}/seedemu-router" >/dev/null
+        else
+            ensureHostDockerImage "${seedRouterSourceImage}"
+        fi
     fi
-
-    docker tag "${seedBaseSourceImage}" "${seedBaseHashImage}" >/dev/null
-    docker tag "${seedRouterSourceImage}" "${seedRouterHashImage}" >/dev/null
 }
 
 prepareMasterWorkloadBuildImages() {
     echo "[4/10] Preparing workload build base images on master Docker"
-    [ -d "${seedEmulatorDockerDir}/seedemu-base" ] || {
-        echo "Missing host seedemu base image directory: ${seedEmulatorDockerDir}/seedemu-base" >&2
-        exit 1
-    }
-    [ -d "${seedEmulatorDockerDir}/seedemu-router" ] || {
-        echo "Missing host seedemu router image directory: ${seedEmulatorDockerDir}/seedemu-router" >&2
-        exit 1
-    }
-
     ensureSeedemuHostBuildImages
     loadDockerImageToMaster "${ubuntuBuildImage}"
     loadDockerImageToMaster "${seedBaseSourceImage}"
@@ -625,7 +593,6 @@ main() {
 
     resolveInput
     loadConfigVars
-    resolveSeedEmulatorDockerDir
 
     if [ "${MASTER_IS_LOCAL}" != "true" ] && [ ! -f "${k3sSshKey}" ]; then
         echo "SSH key not found: ${k3sSshKey}" >&2

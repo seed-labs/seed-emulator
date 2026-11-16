@@ -70,13 +70,6 @@ def defaultSeedEmulatorDockerDir() -> str:
     candidates = []
     for base in (SETUP_DIR, *SETUP_DIR.parents):
         candidates.append(base / "docker_images/multiarch")
-    candidates.extend(
-        [
-            Path.home() / "seed-emulator/docker_images/multiarch",
-            Path.home() / "seed-emulator-k8s-new/docker_images/multiarch",
-            Path.home() / "k8s/seed-emulator/docker_images/multiarch",
-        ]
-    )
     for candidate in candidates:
         if (candidate / "seedemu-base").is_dir() and (candidate / "seedemu-router").is_dir():
             return str(candidate.resolve())
@@ -646,6 +639,8 @@ def commandWriteAnsibleInventory(args: argparse.Namespace) -> None:
             "vars": {
                 "k3s_version": vals["k3sVersion"],
                 "k3s_install_version": vals["k3sInstallVersion"],
+                # Store the fetched worker binary beside this build's inventory.
+                "seed_k3s_staged_binary": str(Path(args.output).resolve().with_suffix(".k3s")),
                 "seed_registry_host": vals["registryHost"],
                 "seed_registry_port": int(vals["registryPort"]),
                 "seed_docker_io_mirror_endpoint": vals["dockerIoMirrorEndpoint"],

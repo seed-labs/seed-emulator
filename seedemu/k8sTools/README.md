@@ -139,13 +139,28 @@ kind names.
 `build` copies bundled `resources/setup/` into a temporary directory and invokes
 Python entrypoints there:
 
-- `kvm`: `kvm/PrepareHostAssets.py`, `kvm/CreateKvmVms.py`,
+- `kvm`: `kvm/PrepareHostAssets.py`, `kvm/PrepareKvmNetworks.py`, `kvm/CreateKvmVms.py`,
   `kvm/TuneVmLimits.py`, then `ApplyK3sCluster.py`.
 - `physical`: `PreparePhysicalNodes.py`, then `ApplyK3sCluster.py`.
 - `multiHostKvm`: `multiHostKvm/PrepareKvmHypervisors.py`,
   `multiHostKvm/CreateMultiHostKvmVms.py`,
   `multiHostKvm/ValidateMultiHostKvmFabric.py`, `kvm/TuneVmLimits.py`, then
   `ApplyK3sCluster.py`.
+
+The single-host KVM build defaults to a separate directory for each run under
+`~/.local/share/seedemu/kvm/`. Optional `kvm.baseImagePath`, `kvm.diskDir`, and
+`kvm.cloudInitDir` override the Ubuntu image file, qcow2 directory, and
+cloud-init input directory. `PrepareHostAssets.py` prepares the base image;
+`CreateKvmVms.py` consumes it and writes the guest disks and cloud-init input.
+The caller and system QEMU account need access to any explicitly configured
+paths. The workflow grants QEMU search access when required on default home
+storage paths; install `acl` when the home directory is private.
+
+When no management network or VM addresses are configured,
+`PrepareKvmNetworks.py` picks an unused private IPv4 subnet and creates a NAT
+network. `destroy` removes only networks whose UUIDs were saved when this build
+defined them. Existing networks, and networks from older build states without
+recorded UUIDs, are left for their owners to manage.
 
 For VLAN-backed multi-host fabrics, `PrepareKvmHypervisors.py` also creates
 unnumbered libvirt bridges and VXLAN flood domains for the configured

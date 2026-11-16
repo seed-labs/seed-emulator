@@ -160,7 +160,7 @@
     - name: Fetch K3s binary for offline worker installs
       fetch:
         src: /usr/local/bin/k3s
-        dest: "/tmp/seedemu-k3s-binary-{{ k3s_install_version }}/k3s"
+        dest: "{{ seed_k3s_staged_binary }}"
         flat: yes
 
     - name: Install CNI plugins required by Multus (macvlan/ipvlan/static)
@@ -586,7 +586,7 @@
 
     - name: Copy K3s binary prepared on master to worker
       copy:
-        src: "/tmp/seedemu-k3s-binary-{{ k3s_install_version }}/k3s"
+        src: "{{ seed_k3s_staged_binary }}"
         dest: /usr/local/bin/k3s
         mode: "0755"
       when: not k3s_agent_dir.stat.exists or seed_k3s_force_reinstall | bool

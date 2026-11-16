@@ -103,6 +103,17 @@ GiB 的兼容拼写，`memoryMb`/`memory_mb` 保持旧 MiB 语义。多个字段
 | `multiHostKvmState.yaml` | 临时多物理机 KVM 清理状态，会嵌入最终 `configK3s.yaml`。 |
 | `inventory.yaml` | 可选持久集群 inventory；通过 `K8sTools.py build --inventory inventory.yaml` 写出，包含节点角色、管理 IP 和 CPU/memory/disk 容量。 |
 
+单宿主 KVM 的基础镜像、虚拟磁盘和 cloud-init 文件默认位于
+`~/.local/share/seedemu/kvm/` 下的独立构建目录。可分别用
+`kvm.baseImagePath`、`kvm.diskDir` 和 `kvm.cloudInitDir` 覆盖。
+`PrepareHostAssets.py` 可通过可选的 `kvm.baseImageSearchDirs` 查找已有镜像；
+缺省时直接下载。SeedEMU 镜像构建目录默认从当前源码树解析，可用
+`seedemu.dockerImagesDir` 覆盖。
+
+未指定管理网络或 VM 地址时，`PrepareKvmNetworks.py` 从未占用的私有子网中
+选择一个创建 NAT 网络。`destroy` 按状态记录的 UUID 清理本次定义的网络，
+并清理默认构建存储目录；已有 libvirt 网络会保留。
+
 ## 手动调试提示
 
 如果需要调试内部资源，优先在 `K8sTools.py build --keep-temp` 失败后进入保留的

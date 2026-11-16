@@ -222,9 +222,21 @@ The helper can prepare or verify the control host and hypervisors:
 
 The non-verify commands install packages, enable services, change group
 membership, and may configure passwordless sudo. Review `./prepare.sh --help`
-before using it on a shared host. The supplied YAMLs pin K3s
-`v1.29.15+k3s1`; use a compatible kubectl when strict version verification
-reports a mismatch.
+before using it on a shared host. If the script reports broken APT dependencies,
+review `sudo apt-get -s --fix-broken install` before attempting a repair. Log in
+again after the script adds the account to the libvirt, kvm, or docker group.
+The control role installs the version of kubectl matching the supplied K3s
+`v1.29.15+k3s1` under `~/.local/bin`. Add that directory to your shell's
+`PATH` if it is not already there.
+
+For local KVM, check that the filesystem containing your home directory has
+space for the downloaded image and growing VM disks. By default, the image,
+VM disks, and cloud-init input are stored per build under
+`~/.local/share/seedemu/kvm/`. The build grants the system QEMU account search
+permission on directories it needs to traverse when access is missing; this
+requires the `acl` package installed by `prepare.sh`. No separate storage mount
+or YAML edit is required. The sample also gets its own libvirt NAT network,
+and `destroy` removes that network and its build directory.
 
 Example SSH checks, with values replaced by those in your YAML:
 

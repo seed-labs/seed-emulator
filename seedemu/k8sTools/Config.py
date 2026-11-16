@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import getpass
 import hashlib
 import os
 from pathlib import Path
@@ -266,14 +265,15 @@ def makeKvmConfig(
     _fillMissing(registry_cfg, {"port": registry_port})
 
     if setup_path is not None:
-        kvm_data_dir = _defaultKvmDataDir(setup_path)
+        kvm_data_dir = defaultKvmDataDir(setup_path)
+        setDefaultDockerImagesDir(data)
         kvm_defaults = {
             "storageDir": _portablePath(setup_path, setup_path),
             "diskDir": str(Path(disk_dir).expanduser().resolve()) if disk_dir is not None else str(kvm_data_dir / "disks"),
             "cloudInitDir": (
                 str(Path(cloud_init_dir).expanduser().resolve())
                 if cloud_init_dir is not None
-                else _portablePath(setup_path / "cloud-init", setup_path)
+                else str(kvm_data_dir / "cloud-init")
             ),
             "baseImagePath": str(Path(base_image_path).expanduser().resolve()) if base_image_path is not None else str(kvm_data_dir / "base" / "jammy-server-cloudimg-amd64.img"),
         }
@@ -351,6 +351,7 @@ def makeMultiHostKvmConfig(
     _fillMissing(registry_cfg, {"port": registry_port})
 
     if setup_path is not None:
+        setDefaultDockerImagesDir(data)
         outputs_cfg = _mapping(data, "outputs")
         _normalizeLegacyOutputKeys(outputs_cfg)
         _fillMissing(
@@ -468,13 +469,26 @@ def _mapping(data: dict[str, Any], key: str) -> dict[str, Any]:
     return value
 
 
-def _defaultKvmDataDir(setup_path: Path) -> Path:
-    # KVM disks are placed under /data so libvirt does not depend on access to
-    # a user's home directory.
-    root = Path(f"/data/{getpass.getuser()}/k8sTools").expanduser()
+def defaultKvmDataDir(setup_path: Path) -> Path:
+    """Return the per-build directory derived from the transient setup path."""
     base = setup_path.parent
     digest = hashlib.sha1(str(base).encode("utf-8")).hexdigest()[:8]
-    return root / f"{base.name}-{digest}"
+    return kvmDataRoot() / f"{base.name}-{digest}"
+
+
+def kvmDataRoot() -> Path:
+    """Return the managed local KVM storage root under the caller's home."""
+    return Path.home() / ".local" / "share" / "seedemu" / "kvm"
+
+
+def setDefaultDockerImagesDir(config: dict[str, Any]) -> None:
+    """Use Docker contexts from this source checkout when config omits a path."""
+    contexts = Path(__file__).resolve().parents[2] / "docker_images" / "multiarch"
+    if not contexts.is_dir():
+        return
+    seedemu = _mapping(config, "seedemu")
+    if "docker_images_dir" not in seedemu:
+        seedemu.setdefault("dockerImagesDir", str(contexts))
 
 
 def _portablePath(path: Path, base_dir: Path) -> str:

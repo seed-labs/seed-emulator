@@ -5,7 +5,8 @@ Inputs:
 - kvm.yaml with a dedicated management network and optional extraNetworks.
 
 Outputs:
-- Started, autostarted libvirt networks matching the requested bridges.
+- Active libvirt networks matching the requested bridges.
+- Optional YAML mapping of names to UUIDs for networks defined in this build.
 
 Side effects:
 - Defines a NAT management network when it does not already exist.
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import json
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -176,13 +178,21 @@ def actualBridge(name: str) -> str:
     return str(bridge.get("name") or "") if bridge is not None else ""
 
 
-def ensureNetwork(spec: dict[str, str], *, management: bool) -> None:
-    """Define, start, and validate one requested network."""
+def ensureNetwork(
+    spec: dict[str, str], *, management: bool, created: dict[str, str], ownership: Path | None
+) -> None:
+    """Start spec, using a NAT bridge if management is true.
+
+    Record this build's new network UUID in created and the optional ownership file.
+    """
     exists = virsh("net-info", spec["name"], check=False).returncode == 0
     if not exists:
         xml = managementNetworkXml(spec) if management else layer2NetworkXml(spec)
         print(f"Defining libvirt network {spec['name']} bridge={spec['bridge']}")
         defineNetwork(xml)
+        created[spec["name"]] = virsh("net-uuid", spec["name"]).stdout.strip()
+        if ownership is not None:
+            ownership.write_text(yaml.safe_dump(created), encoding="utf-8")
 
     expected_bridge = spec.get("bridge", "")
     observed_bridge = actualBridge(spec["name"])
@@ -193,7 +203,8 @@ def ensureNetwork(spec: dict[str, str], *, management: bool) -> None:
         )
 
     virsh("net-start", spec["name"], check=False)
-    virsh("net-autostart", spec["name"])
+    if not exists:
+        virsh("net-autostart", spec["name"])
     info = virsh("net-info", spec["name"]).stdout.lower()
     if "active:" not in info or "active:           yes" not in info:
         # Locale-independent fallback for variable spacing in virsh output.
@@ -214,16 +225,53 @@ def parseArgs() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config", type=Path)
+    parser.add_argument("--ownership", type=Path, help="write UUIDs of networks defined by this invocation")
+    parser.add_argument("--auto-name", help="choose a private management network for this build")
     return parser.parse_args()
+
+
+def configurePrivateNetwork(config: dict[str, Any], name: str) -> None:
+    """Set a free NAT subnet and generated VM IP prefix in the transient config."""
+    routes = subprocess.check_output(["ip", "-j", "-4", "route", "show", "table", "all"], text=True)
+    used = [
+        ipaddress.ip_network(route["dst"], strict=False)
+        for route in json.loads(routes) if route.get("dst") not in (None, "default")
+    ]
+    for network in virsh("net-list", "--all", "--name").stdout.split():
+        root = ET.fromstring(virsh("net-dumpxml", network).stdout)
+        for ip in root.findall("ip"):
+            address = ip.get("address", "")
+            if address and ":" not in address:
+                mask = ip.get("prefix") or ip.get("netmask") or "32"
+                used.append(ipaddress.ip_network(f"{address}/{mask}", strict=False))
+    for block in ("192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8"):
+        for candidate in ipaddress.ip_network(block).subnets(new_prefix=24):
+            if any(candidate.overlaps(other) for other in used):
+                continue
+            prefix = str(candidate.network_address).rsplit(".", 1)[0]
+            config["kvm"].update(
+                network=name, networkBridge=f"sv{name.rsplit('-', 1)[-1]}",
+                networkCidr=str(candidate), networkGateway=f"{prefix}.1",
+                dhcpStart=f"{prefix}.2", dhcpEnd=f"{prefix}.254",
+            )
+            config.setdefault("defaults", {})["ip_prefix"] = prefix
+            return
+    raise SystemExit("No free private /24 was found for KVM; configure an existing kvm.network.")
 
 
 def main() -> int:
     """Prepare every network needed before VM creation."""
     args = parseArgs()
     config = loadConfig(args.config)
-    ensureNetwork(managementNetworkSpec(config), management=True)
+    if args.auto_name:
+        configurePrivateNetwork(config, args.auto_name)
+        args.config.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    created: dict[str, str] = {}
+    if args.ownership is not None:
+        args.ownership.write_text("{}\n", encoding="utf-8")
+    ensureNetwork(managementNetworkSpec(config), management=True, created=created, ownership=args.ownership)
     for spec in extraNetworkSpecs(config):
-        ensureNetwork(spec, management=False)
+        ensureNetwork(spec, management=False, created=created, ownership=args.ownership)
     return 0
 
 

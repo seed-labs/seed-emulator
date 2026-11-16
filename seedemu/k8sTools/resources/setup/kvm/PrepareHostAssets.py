@@ -33,12 +33,8 @@ K3S_SYSTEM_BOOTSTRAP_IMAGES=(
     "rancher/mirrored-metrics-server:v0.6.3"
     "rancher/local-path-provisioner:v0.0.24"
 )
-seedEmulatorDockerDir="${HOME}/seed-emulator/docker_images/multiarch"
-kvmBaseImageSearchDirs="${HOME}/k8s/output"
 seedBaseSourceImage="handsonsecurity/seedemu-multiarch-base:buildx-latest"
 seedRouterSourceImage="handsonsecurity/seedemu-multiarch-router:buildx-latest"
-seedBaseHashImage="98a2693c996c2294358552f48373498d:latest"
-seedRouterHashImage="39e016aa9e819f203ebc1809245a5818:latest"
 ubuntuBuildImage="ubuntu:20.04"
 
 usage() {
@@ -71,31 +67,6 @@ runWithTimeout() {
     else
         "$@"
     fi
-}
-
-resolveSeedEmulatorDockerDir() {
-    # Resolve the source-tree path containing seedemu-base and seedemu-router.
-    # kvm.yaml seedemu.dockerImagesDir wins through ManageKvmConfig.py; the
-    # ancestor scan keeps examples runnable directly from this repository.
-    local cursor="${SETUP_DIR}"
-    while [ "${cursor}" != "/" ]; do
-        if [ -d "${cursor}/docker_images/multiarch/seedemu-base" ] &&
-            [ -d "${cursor}/docker_images/multiarch/seedemu-router" ]; then
-            seedEmulatorDockerDir="${cursor}/docker_images/multiarch"
-            return 0
-        fi
-        cursor="$(dirname "${cursor}")"
-    done
-    local candidate
-    for candidate in \
-        "${seedEmulatorDockerDir}" \
-        "${HOME}/seed-emulator-k8s-new/docker_images/multiarch" \
-        "${HOME}/k8s/seed-emulator/docker_images/multiarch"; do
-        if [ -d "${candidate}/seedemu-base" ] && [ -d "${candidate}/seedemu-router" ]; then
-            seedEmulatorDockerDir="$(cd "${candidate}" && pwd)"
-            return 0
-        fi
-    done
 }
 
 imageTarName() {
@@ -258,9 +229,6 @@ prepareSeedemuBuildImages() {
             ensureHostDockerImage "${seedRouterSourceImage}"
         fi
     fi
-
-    docker tag "${seedBaseSourceImage}" "${seedBaseHashImage}" >/dev/null
-    docker tag "${seedRouterSourceImage}" "${seedRouterHashImage}" >/dev/null
 }
 
 prepareImageCache() {
@@ -275,10 +243,6 @@ prepareImageCache() {
     saveHostImageTarball "${ubuntuBuildImage}"
     saveHostImageTarball "${seedBaseSourceImage}"
     saveHostImageTarball "${seedRouterSourceImage}"
-
-    echo "  hash tags prepared locally, not saved into image-cache:"
-    echo "    ${seedBaseHashImage}"
-    echo "    ${seedRouterHashImage}"
 }
 
 main() {
@@ -294,7 +258,6 @@ main() {
     requireCommand qemu-img
 
     eval "$(python3 "${HELPER}" "${CONFIG_PATH}" kvm-vars)"
-    resolveSeedEmulatorDockerDir
 
     echo "Preparing setup assets using config: ${CONFIG_PATH}"
     echo "base_image_path=${kvmBaseImagePath}"

@@ -2,23 +2,28 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import os
+import re
+import shutil
 import signal
 import shlex
 import subprocess
 import sys
 import tempfile
-import shutil
 from pathlib import Path
 from typing import Any, Iterator
+import xml.etree.ElementTree as ET
 
 from .Config import (
     addK8sToolsMetadata,
+    defaultKvmDataDir,
     detectKind,
+    kvmDataRoot,
     loadYaml,
     makeKvmConfig,
     makeMultiHostKvmConfig,
     normalizeKind,
     resolvePath,
+    setDefaultDockerImagesDir,
     setOutputPaths,
     writeYaml,
 )
@@ -386,7 +391,7 @@ def destroyCluster(config_k3s: str | Path, *, keep_temp: bool = False) -> None:
                 raise ValueError("kvm destroy requires embedded KVM state and config")
             writeYaml(setup_dir / "kvm.yaml", setup_config)
             writeYaml(setup_dir / "kvmState.yaml", state)
-            runCommand(["python3", str(setup_dir / "kvm" / "DestroyKvmVms.py"), str(setup_dir / "kvmState.yaml")], cwd=setup_dir)
+            runCommand(["python3", str(setup_dir / "kvm" / "DestroyKvmVms.py"), str(setup_dir / "kvmState.yaml")], cwd=setup_dir, env=_systemLibvirtEnv())
             _removeManagedKvmDataDir(state)
         elif destroy_type == "multiHostKvm":
             state = destroy.get("state")
@@ -424,10 +429,42 @@ def _buildKvm(
         tmp_dir=setup_dir / "tmp",
     )
     _applyOvnK3sDefaults(kvm_config)
+    env = _systemLibvirtEnv()
+    capabilities = subprocess.run(
+        ["virsh", "capabilities"], env=env, text=True, capture_output=True, check=False,
+    )
+    if capabilities.returncode:
+        raise RuntimeError(
+            "Cannot access system libvirt. Run the host preparation step and log in again "
+            f"after joining the libvirt/kvm groups.\n{capabilities.stderr.strip()}"
+        )
+    ssh_key = Path(str(kvm_config["ssh"]["key"])).expanduser()
+    if not ssh_key.is_file():
+        raise RuntimeError(f"KVM SSH key is missing: {ssh_key}. Run the host preparation step.")
+    for command in ("kubectl", "ansible-playbook"):
+        if not shutil.which(command):
+            raise RuntimeError(f"Missing host command: {command}. Run the host preparation step.")
+    storage = defaultKvmDataDir(setup_dir)
+    owns_storage = _prepareManagedKvmStorage(storage, kvm_config["kvm"], capabilities.stdout)
     writeYaml(setup_dir / "kvm.yaml", kvm_config)
-    runCommand(["python3", str(setup_dir / "kvm" / "PrepareHostAssets.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
-    runCommand(["python3", str(setup_dir / "kvm" / "PrepareKvmNetworks.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
-    runCommand(["python3", str(setup_dir / "kvm" / "CreateKvmVms.py"), str(setup_dir / "kvm.yaml")], cwd=setup_dir)
+    kvm_path = setup_dir / "kvm.yaml"
+    ownership = setup_dir / "createdNetworks.yaml"
+    kvm_arg = str(kvm_path)
+    runCommand(["python3", str(setup_dir / "kvm" / "PrepareHostAssets.py"), kvm_arg], cwd=setup_dir)
+    network_command = [
+        "python3", str(setup_dir / "kvm" / "PrepareKvmNetworks.py"), kvm_arg,
+        "--ownership", str(ownership),
+    ]
+    if _usesAutomaticKvmNetwork(kvm_config):
+        network_command += ["--auto-name", f"seedemu-kvm-{storage.name.rsplit('-', 1)[-1]}"]
+    runCommand(network_command, cwd=setup_dir, env=env)
+    kvm_config = loadYaml(kvm_path)
+    runCommand(["python3", str(setup_dir / "kvm" / "CreateKvmVms.py"), kvm_arg], cwd=setup_dir, env=env)
+    state = loadYaml(setup_dir / "kvmState.yaml")
+    state["kvm"]["createdNetworks"] = loadYaml(ownership)
+    if owns_storage:
+        state["kvm"]["managedDataDir"] = str(storage)
+    writeYaml(setup_dir / "kvmState.yaml", state)
     runCommand(["python3", str(setup_dir / "kvm" / "TuneVmLimits.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     runCommand(["python3", str(setup_dir / "ApplyK3sCluster.py"), str(setup_dir / "configK3s.yaml")], cwd=setup_dir)
     final_config = loadYaml(setup_dir / "configK3s.yaml")
@@ -437,7 +474,7 @@ def _buildKvm(
         source_config=input_path,
         kubeconfig=kubeconfig_path,
         destroy_type="kvm",
-        destroy_state=loadYaml(setup_dir / "kvmState.yaml"),
+        destroy_state=state,
         destroy_config=kvm_config,
     )
     writeYaml(config_path, final_config)
@@ -502,6 +539,7 @@ def _buildPhysical(
     config = loadYaml(input_path)
     config["kind"] = "physical"
     _applyOvnK3sDefaults(config)
+    setDefaultDockerImagesDir(config)
     setOutputPaths(
         config,
         kubeconfig=kubeconfig_path,
@@ -537,7 +575,7 @@ def _applyOvnK3sDefaults(config: dict[str, Any]) -> None:
 
 
 def _removeManagedKvmDataDir(state: dict[str, Any]) -> None:
-    """Remove the k8sTools-managed /data work directory after VM destruction.
+    """Remove the recorded per-build home directory after VM destruction.
 
     Args:
         state: Embedded kvmState.yaml mapping produced by CreateKvmVms.py.
@@ -545,13 +583,82 @@ def _removeManagedKvmDataDir(state: dict[str, Any]) -> None:
     Only directories created from the k8sTools temporary-build naming pattern
     are removed. User-provided KVM storage paths are intentionally preserved.
     """
-    kvm = state.get("kvm") if isinstance(state.get("kvm"), dict) else {}
-    disk_dir = kvm.get("diskDir")
-    if not disk_dir:
+    recorded = state.get("kvm", {}).get("managedDataDir")
+    if not recorded:
         return
-    data_dir = Path(str(disk_dir)).expanduser().resolve().parent
-    parts = data_dir.parts
-    if len(parts) < 4 or parts[1] != "data" or parts[-1].startswith("seedemu-k8s-tools-build-") is False:
+    data_dir = Path(recorded)
+    if (
+        data_dir.parent != kvmDataRoot()
+        or data_dir.is_symlink()
+        or not re.fullmatch(r"seedemu-k8s-tools-build-[A-Za-z0-9_]+-[0-9a-f]{8}", data_dir.name)
+    ):
+        raise ValueError(f"Invalid managed KVM storage path: {data_dir}")
+    if not data_dir.exists():
         return
     print(f"[k8sTools] removing managed KVM data dir: {data_dir}")
-    shutil.rmtree(data_dir, ignore_errors=True)
+    shutil.rmtree(data_dir)
+    try:
+        data_dir.parent.rmdir()
+    except OSError:
+        pass  # Other builds may still use the storage root.
+
+
+def _systemLibvirtEnv() -> dict[str, str]:
+    """Use the same system libvirt connection for network and domain commands."""
+    return {**os.environ, "LIBVIRT_DEFAULT_URI": "qemu:///system"}
+
+
+def _usesAutomaticKvmNetwork(config: dict[str, Any]) -> bool:
+    """Keep configured networks and IPs; allocate a private subnet otherwise."""
+    kvm = config["kvm"]
+    if config.get("nodes") or any(key.startswith("network") for key in kvm):
+        return False
+    return not any(
+        key in config.get(section, {}) for section in ("defaults", "master", "workers")
+        for key in ("ip", "ip_prefix", "ipPrefix")
+    )
+
+
+def _prepareManagedKvmStorage(storage: Path, config: dict[str, Any], capabilities: str) -> bool:
+    """Prepare default paths in config using the system QEMU UID from capabilities.
+
+    Return whether this invocation created the per-build storage directory.
+    """
+    directories = {
+        Path(config["diskDir"]).expanduser(),
+        Path(config["cloudInitDir"]).expanduser(),
+        Path(config["baseImagePath"]).expanduser().parent,
+    }
+    managed = {path for path in directories if path.is_relative_to(storage)}
+    if not managed:
+        return False
+    storage.parent.mkdir(parents=True, exist_ok=True)
+    storage.mkdir()
+    for path in managed:
+        path.mkdir(parents=True, exist_ok=True)
+    label = ET.fromstring(capabilities).findtext("./host/secmodel[model='dac']/baselabel[@type='kvm']")
+    if not label or int(label.split(":", 1)[0]) in (0, os.getuid()):
+        return True
+    qemu_uid = int(label.split(":", 1)[0])
+    home = Path.home()
+    ancestors = {parent for path in managed for parent in (path, *path.parents) if parent.is_relative_to(home)}
+    for path in sorted(ancestors, key=lambda item: (len(item.parts), str(item))):
+        if path.stat().st_uid == qemu_uid:
+            continue
+        if not shutil.which("getfacl"):
+            if path.stat().st_mode & 0o001:
+                continue
+            raise RuntimeError(f"QEMU cannot traverse {path}; install the acl package using host preparation.")
+        acl = subprocess.check_output(["getfacl", "-cpn", str(path)], text=True).splitlines()
+        qemu_entry = next((line for line in acl if line.startswith(f"user:{qemu_uid}:")), None)
+        effective = (qemu_entry or next(line for line in acl if line.startswith("other::"))).split(":")[-1]
+        if "x" in effective:
+            continue
+        permissions = qemu_entry.split(":")[2].split()[0] if qemu_entry else "---"
+        entries = f"u:{qemu_uid}:{permissions[:2]}x"
+        acl_mask = next((line.split(":")[-1] for line in acl if line.startswith("mask::")), None)
+        if acl_mask is not None:
+            # Preserve read/write restrictions applied by a pre-existing mask.
+            entries += f",m::{acl_mask[:2]}x"
+        runCommand(["setfacl", "-m", entries, str(path)])
+    return True

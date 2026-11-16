@@ -24,6 +24,7 @@ HELPER="${SCRIPT_DIR}/ManageKvmConfig.py"
 NODES_TSV=""
 VERIFY_NODES_TSV=""
 EXTRA_NETWORKS_TSV=""
+MANAGED_NETWORKS_TSV=""
 dnsmasqStatus="/var/lib/libvirt/dnsmasq/virbr0.status"
 setupOutputGlob="${SETUP_DIR}/seedemu-k3s.*"
 
@@ -48,6 +49,7 @@ cleanupTmp() {
     [ -n "${NODES_TSV}" ] && rm -f "${NODES_TSV}" || true
     [ -n "${VERIFY_NODES_TSV}" ] && rm -f "${VERIFY_NODES_TSV}" || true
     [ -n "${EXTRA_NETWORKS_TSV}" ] && rm -f "${EXTRA_NETWORKS_TSV}" || true
+    [ -n "${MANAGED_NETWORKS_TSV}" ] && rm -f "${MANAGED_NETWORKS_TSV}" || true
 }
 
 loadConfig() {
@@ -66,8 +68,18 @@ loadConfig() {
     NODES_TSV="$(mktemp "${SCRIPT_DIR}/destroy-nodes.XXXXXX.tsv")"
     VERIFY_NODES_TSV="$(mktemp "${SCRIPT_DIR}/destroy-verify-nodes.XXXXXX.tsv")"
     EXTRA_NETWORKS_TSV="$(mktemp "${SCRIPT_DIR}/destroy-extra-networks.XXXXXX.tsv")"
+    MANAGED_NETWORKS_TSV="$(mktemp "${SCRIPT_DIR}/destroy-managed-networks.XXXXXX.tsv")"
     python3 "${HELPER}" "${SETUP_DIR}/kvm.yaml" state-nodes-tsv --state "${CONFIG_PATH}" > "${NODES_TSV}"
     python3 "${HELPER}" "${SETUP_DIR}/kvm.yaml" state-extra-networks-tsv --state "${CONFIG_PATH}" > "${EXTRA_NETWORKS_TSV}"
+    python3 - "${CONFIG_PATH}" > "${MANAGED_NETWORKS_TSV}" <<'PY'
+from pathlib import Path
+import sys
+import yaml
+
+state = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8"))
+for name, uuid in state["kvm"].get("createdNetworks", {}).items():
+    print(f"{name}\t{uuid}")
+PY
     cp "${NODES_TSV}" "${VERIFY_NODES_TSV}"
 }
 
@@ -134,6 +146,11 @@ validateDestroyTargetBelongsToSetup() {
 }
 
 cleanupDnsmasqStaleLeases() {
+    # Removing an owned active network removes its leases; don't edit its
+    # dnsmasq files or require host sudo for the default isolated workflow.
+    if awk -F '\t' -v name="${kvmNetwork}" '$1 == name { found=1 } END { exit !found }' "${MANAGED_NETWORKS_TSV}"; then
+        return 0
+    fi
     [ -f "${dnsmasqStatus}" ] || return 0
 
     local tmp_nodes
@@ -183,23 +200,17 @@ PY
 }
 
 cleanupNetwork() {
-    # Destroy and undefine the libvirt network that belongs to this KVM state.
-    # Leaving it active keeps the NAT bridge and DHCP leases around, which can
-    # block the next experiment because all B62 worker-count variants reuse the
-    # same management CIDR.
-    if virsh net-info "${kvmNetwork}" >/dev/null 2>&1; then
-        echo "Cleaning KVM network ${kvmNetwork}"
-        virsh net-destroy "${kvmNetwork}" >/dev/null 2>&1 || true
-        virsh net-undefine "${kvmNetwork}" >/dev/null 2>&1 || true
-    fi
-    while IFS=$'\t' read -r network bridge model trunk master_interface; do
-        [ -n "${network}" ] || continue
-        if virsh net-info "${network}" >/dev/null 2>&1; then
-            echo "Cleaning extra KVM network ${network}"
-            virsh net-destroy "${network}" >/dev/null 2>&1 || true
-            virsh net-undefine "${network}" >/dev/null 2>&1 || true
-        fi
-    done < "${EXTRA_NETWORKS_TSV}"
+    # A name alone does not prove ownership: a reused or replaced network
+    # can carry other VMs. Operate only on UUIDs recorded during definition.
+    local network uuid current
+    while IFS=$'\t' read -r network uuid; do
+        [ -n "${uuid}" ] || continue
+        current="$(virsh net-uuid "${network}" 2>/dev/null || true)"
+        [ "${current}" = "${uuid}" ] || continue
+        echo "Cleaning KVM network ${network}"
+        virsh net-destroy "${uuid}" >/dev/null 2>&1 || true
+        virsh net-undefine "${uuid}" >/dev/null
+    done < "${MANAGED_NETWORKS_TSV}"
 }
 
 cleanupSetupOutputs() {
@@ -250,17 +261,13 @@ verifyClean() {
         fi
     done < "${VERIFY_NODES_TSV}"
 
-    if virsh net-info "${kvmNetwork}" >/dev/null 2>&1; then
-        echo "Residual KVM network: ${kvmNetwork}" >&2
-        failed=1
-    fi
-    while IFS=$'\t' read -r network bridge model trunk master_interface; do
-        [ -n "${network}" ] || continue
-        if virsh net-info "${network}" >/dev/null 2>&1; then
-            echo "Residual extra KVM network: ${network}" >&2
+    while IFS=$'\t' read -r network uuid; do
+        [ -n "${uuid}" ] || continue
+        if virsh net-info "${uuid}" >/dev/null 2>&1; then
+            echo "Residual KVM network: ${network} (${uuid})" >&2
             failed=1
         fi
-    done < "${EXTRA_NETWORKS_TSV}"
+    done < "${MANAGED_NETWORKS_TSV}"
 
     if [ -e "${CONFIG_PATH}" ]; then
         echo "Residual KVM state: ${CONFIG_PATH}" >&2
