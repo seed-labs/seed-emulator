@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterable, Optional
 
 
 @dataclass(frozen=True, eq=False)
@@ -34,6 +34,31 @@ class SystemProfile:
 
     def __hash__(self) -> int:
         return hash(self.name)
+
+    @staticmethod
+    def validateProfiles(profiles: Iterable["SystemProfile"]) -> None:
+        """Require one consistent definition per alias, including its ancestors.
+
+        Equal definitions can be referenced repeatedly. Validation is scoped to
+        the supplied profiles, without a process-wide registration table.
+        """
+        definitions = {}
+        for profile in profiles:
+            if not isinstance(profile, SystemProfile):
+                raise TypeError("profiles must contain SystemProfile objects")
+            visited = set()
+            current = profile
+            while current is not None:
+                if current.name in visited:
+                    raise ValueError("system profile inheritance contains a cycle at {}".format(current.name))
+                visited.add(current.name)
+                parent = current.subset.name if current.subset is not None else None
+                if current.name in definitions and definitions[current.name] != parent:
+                    raise ValueError(
+                        "Conflicting system profile definitions for {}: subset {} versus {}".format(
+                            current.name, definitions[current.name], parent))
+                definitions[current.name] = parent
+                current = current.subset
 
     def contains(self, other: "SystemProfile") -> bool:
         """Return whether this profile transitively contains another profile."""
