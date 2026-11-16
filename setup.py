@@ -1,22 +1,27 @@
+from pathlib import Path
+
 import setuptools
 
-with open("README.md", "r") as readme:
+with open(Path(__file__).parent / "README.md", "r", encoding="utf-8") as readme:
     long_description = readme.read()
 
 setuptools.setup(
     name = "seedemu",
-    version = "0.0.7",
+    version = "2.0.0",
     author = "Honghao Zeng",
     author_email = "hozeng@syr.edu",
     description = "SEED Internet Emulator",
     long_description = long_description,
     long_description_content_type = "text/markdown",
     url = "https://github.com/seed-labs/seed-emulator",
-    packages = setuptools.find_packages(),
+    packages = setuptools.find_namespace_packages(
+        include=["seedemu", "seedemu.*"],
+        exclude=["*.__pycache__", "*.__pycache__.*"],
+    ),
     include_package_data = True,
     classifiers = [
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GPL-3.0",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
     install_requires = [
