@@ -1,0 +1,77 @@
+{
+  "preamble": {
+    "title": "field-project/sensor-validation",
+    "description": "Aiken contracts for project 'field-project/sensor-validation'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.24+bacbeb3"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "sensor_validator.sensor_validator.spend",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/sensor_validator~1SensorDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/sensor_validator~1SensorRedeemer"
+        }
+      },
+      "compiledCode": "58af01010029800aba2aba1aab9faab9eaab9dab9a48888896600264653001300700198039804000cc01c0092225980099b8748008c01cdd500144c8cc896600266e1d2000300a375400d13232598009808001456600266e1d2000300c375400713371e6eb8c03cc034dd5180798069baa003375c601e601a6ea80222c805a2c8070dd7180700098059baa0068b2012300b001300b300c0013008375400516401830070013003375400f149a26cac80081",
+      "hash": "16f6b8ccfeb9173cb8c5fcfe4cfba48c685ed231636e92d316bf2c83"
+    },
+    {
+      "title": "sensor_validator.sensor_validator.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "58af01010029800aba2aba1aab9faab9eaab9dab9a48888896600264653001300700198039804000cc01c0092225980099b8748008c01cdd500144c8cc896600266e1d2000300a375400d13232598009808001456600266e1d2000300c375400713371e6eb8c03cc034dd5180798069baa003375c601e601a6ea80222c805a2c8070dd7180700098059baa0068b2012300b001300b300c0013008375400516401830070013003375400f149a26cac80081",
+      "hash": "16f6b8ccfeb9173cb8c5fcfe4cfba48c685ed231636e92d316bf2c83"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "sensor_validator/SensorDatum": {
+      "title": "SensorDatum",
+      "anyOf": [
+        {
+          "title": "SensorDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "sensor_id",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "sensor_validator/SensorRedeemer": {
+      "title": "SensorRedeemer",
+      "anyOf": [
+        {
+          "title": "SensorRedeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "sensor_id",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

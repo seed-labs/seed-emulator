@@ -1,0 +1,70 @@
+# Cardano blockchain databases
+cardano-data/
+**/db/
+
+# Downloaded Cardano binaries
+resources/cardano-static/
+
+# Cardano private credentials
+*.skey
+*.key
+kes.skey
+vrf.skey
+cold.skey
+
+# Node certificates / operational certificates
+opcert.cert
+
+# Sockets
+*.socket
+node.socket
+
+# Generated transaction files
+data/transaction-test/runs/
+
+# Packet captures
+*.pcap
+*.pcapng
+
+# Generated SEED output
+output/
+output_backup*/
+output_before*/
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Editor / OS files
+.DS_Store
+*~
+
+# Cardano downloaded archives
+cardano-node-*.tar.gz
+resources/cardano-release.tar.gz
+
+# Cardano standalone executables
+/resources/cardano-node
+/resources/cardano-cli
+
+
+# Generated Cardano transaction artifacts
+*.signed
+*.body
+
+# Generated Cardano testnet key directories
+config/generated/**/delegate-keys/
+config/generated/**/genesis-keys/
+config/generated/**/pools-keys/
+config/generated/**/stake-delegators/
+config/generated/**/utxo-keys/
+
+# Historical configuration backups
+config_backup*/
