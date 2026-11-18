@@ -1,13 +1,12 @@
 from .ContainerBundle import ContainerBundle
+from seedemu.compiler import TRAFFIC_OBSERVER_PORT
 
 EMULATOR_API_SERVER = "emulator_api_server"
 INTERNET_MAP_TOPLOGY = "internetmap_toplogy"
 INTERNET_MAP_GEOGRAPHIC = "internetmap_geo"
-TRAFFIC_OBSERVER = "traffic_observer"
 EMULATOR_API_SERVER_IMAGE = "handsonsecurity/seedemu-emulator-service:1.0"
 INTERNET_MAP_TOPLOGY_IMAGE = "handsonsecurity/seedemu-internet-toplogy:1.0"
 INTERNET_MAP_GEOGRAPHIC_IMAGE = "handsonsecurity/seedemu-internet-map-geographic:1.0"
-TRAFFIC_OBSERVER_IMAGE = "handsonsecurity/seedemu-traffic-observer-service:1.0"
 
 DEFAULT_EXTERNAL_NETWORK = {
     "network_name": "internetMap_network",
@@ -31,7 +30,6 @@ DEFAULT_EXTERNAL_NETWORK = {
 NGINX_CONF_PATH = "/etc/nginx/conf.d/default.conf"
 EMULATOR_API_SERVER_INTERNAL_PORT = 7071
 START_SCRIPT_NAME = "/entrypoint.sh"
-TRAFFIC_OBSERVER_START_SCRIPT_NAME = "/usr/local/bin/traffic-observer-entrypoint"
 INTERNET_MAP_TOPLOGY_NGINX_CONF = """
 upstream seedemu_emulator_service_backend {{
     server {}:{};
@@ -143,12 +141,12 @@ class InternetMap(ContainerBundle):
     """!
     @brief Bundle for topology, geographic map, and traffic views.
 
-    Three containers share the first configured external network (or the default
-    network); the traffic observer uses host networking. Host ports are read
-    from indexes 0, 1, and 2 for observer control, topology HTTP, and geographic
-    HTTP, respectively; the port list is not consumed. Only the API backend joins
-    the first explicitly supplied internal network, using its first address;
-    that attachment also adds the metadata labels used to display it on the map.
+    The three containers share the first configured external network (or the
+    default network). The traffic observer uses host networking and its fixed
+    ``TRAFFIC_OBSERVER_PORT``; the two configured host ports are used for the
+    topology and geographic HTTP services. Only the API backend joins the first
+    explicitly supplied internal network, using its first address; that
+    attachment also adds the metadata labels used to display it on the map.
     Use unique suffixes, networks, and port pools for multiple instances.
     """
 
@@ -165,18 +163,17 @@ class InternetMap(ContainerBundle):
             EMULATOR_API_SERVER,
             INTERNET_MAP_TOPLOGY,
             INTERNET_MAP_GEOGRAPHIC,
-            TRAFFIC_OBSERVER,
         ]
         for service_name in service_names:
             self._createContainer(service_name, suffix)
-        self._required_port_count = 3
+        self._required_port_count = 2
         self._required_internal_address_count = 1
 
     def configure(self) -> None:
         """!
         @brief Validate ports and configure all InternetMap services.
 
-        @raises AssertionError when fewer than three host ports are configured.
+        @raises AssertionError when fewer than two host ports are configured.
         """
         super().configure()
 
@@ -185,29 +182,6 @@ class InternetMap(ContainerBundle):
         external_network = self._external_networks[0]
         external_network_name = external_network["network_name"]
         ip_addresses = external_network["ip_addresses"]
-
-        traffic_observer = self._containers[TRAFFIC_OBSERVER]
-        traffic_observer_port = self._ports[0]
-        traffic_observer.updateServiceConfig(
-            {
-                "image": TRAFFIC_OBSERVER_IMAGE,
-                "privileged": True,
-                "pid": "host",
-                "network_mode": "host",
-                "environment": {
-                    "TRAFFIC_CONTROL_ADDR": f":{traffic_observer_port}",
-                    "TRAFFIC_LOG_TIMEZONE": "Asia/Shanghai",
-                },
-                "volumes": [
-                    "/sys/kernel/debug:/sys/kernel/debug",
-                    "/sys/fs/bpf:/sys/fs/bpf",
-                    "/var/run/docker.sock:/var/run/docker.sock:ro",
-                    "./traffic-observer-service/pcap:/data/pcap",
-                ],
-            }
-        )
-        traffic_observer._service_ports = [traffic_observer_port]
-        traffic_observer._start_script_name = TRAFFIC_OBSERVER_START_SCRIPT_NAME
 
         emulator_api_server = self._containers[EMULATOR_API_SERVER]
         emulator_api_server.joinExternalNetwork(network_name=external_network_name,hostname=emulator_api_server.getHostname(),ip_address=ip_addresses[0])
@@ -232,7 +206,7 @@ class InternetMap(ContainerBundle):
                 "privileged": True,
                 "image": INTERNET_MAP_TOPLOGY_IMAGE,
                 "depends_on": [emulator_api_server.getHostname()],
-                "ports": [f"{self._ports[1]}:80"],
+                "ports": [f"{self._ports[0]}:80"],
             }
         )
         internet_map_toplogy.setFile(
@@ -253,7 +227,7 @@ class InternetMap(ContainerBundle):
                 "image": INTERNET_MAP_GEOGRAPHIC_IMAGE,
                 "depends_on": [emulator_api_server.getHostname()],
                 "extra_hosts": {"host.docker.internal": "host-gateway"},
-                "ports": [f"{self._ports[2]}:80"],
+                "ports": [f"{self._ports[1]}:80"],
             }
         )
         internet_map_geographic.setFile(
@@ -261,9 +235,7 @@ class InternetMap(ContainerBundle):
             INTERNET_MAP_GEOGRAPHIC_NGINX_CONF.format(
                 emulator_server_ip,
                 EMULATOR_API_SERVER_INTERNAL_PORT,
-                traffic_observer._service.get("environment", {}).get(
-                    "TRAFFIC_CONTROL_ADDR"
-                )[1:],
+                TRAFFIC_OBSERVER_PORT,
             ),
         )
         internet_map_geographic._start_script_name = START_SCRIPT_NAME

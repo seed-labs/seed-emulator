@@ -23,7 +23,7 @@ from seedemu.testing.compose import docker_compose_command
 API = "emulator_api_server.map.seed.emu"
 TOPOLOGY = "internetmap_toplogy.map.seed.emu"
 GEOGRAPHIC = "internetmap_geo.map.seed.emu"
-OBSERVER = "traffic_observer.map.seed.emu"
+OBSERVER = "traffic_observer.map.seed"
 SERVICES = (API, TOPOLOGY, GEOGRAPHIC, OBSERVER)
 LABEL_PREFIX = "org.seedsecuritylabs.seedemu.meta."
 
@@ -37,7 +37,7 @@ EXPECTED_PORTS = {
     API: {},
     TOPOLOGY: {"80/tcp": "8092"},
     GEOGRAPHIC: {"80/tcp": "8093"},
-    OBSERVER: {},  # Observer uses host networking; 8091 is not a Docker port mapping.
+    OBSERVER: {},  # Observer uses host networking; 19090 is not a Docker port mapping.
 }
 EXPECTED_HOSTS = {
     "emulator_api_server.map.seed.emu": "10.151.0.16",
@@ -280,6 +280,8 @@ def main() -> int:
 
     for service in SERVICES:
         check_container(test, service, inspected[service])
+        if service == OBSERVER:
+            continue
         check_etc_hosts(test, service)
     check_bundle_connectivity(test)
     check_map_labels(test, inspected[API])

@@ -1,6 +1,7 @@
 from __future__ import annotations
+from seedemu.compiler import TRAFFIC_OBSERVER_PORT
 from seedemu.core.Emulator import Emulator
-from seedemu.containerBundle import ContainerBundle
+from seedemu.containerBundle import ContainerBundle, TrafficObserver
 from seedemu.core import Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
@@ -300,10 +301,6 @@ class Docker(Compiler):
     __naming_scheme: str
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
-
-
-    __internet_map_enabled: bool
-    __internet_map_port: int
 
     __client_hide_svcnet: bool
 
@@ -1292,32 +1289,43 @@ class Docker(Compiler):
 
         self._groupSoftware(emulator)
 
+        traffic_observer_interface_count = 0
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'net':
                 self._log('creating network: {}/{}...'.format(scope, name))
                 self.__networks += self._compileNet(obj)
+                traffic_observer_interface_count += 1
 
         for ((scope, type, name), obj) in registry.getAll().items():
             if type == 'rnode':
                 self._log('compiling router node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
+                traffic_observer_interface_count += 1
 
             if type == 'csnode':
                 self._log('compiling control service node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
+                traffic_observer_interface_count += 1
 
             if type == 'hnode':
                 self._log('compiling host node {} for as{}...'.format(name, scope))
                 self.__services += self._compileNode(obj)
+                traffic_observer_interface_count += 1
 
             if type == 'rs':
                 self._log('compiling rs node for {}...'.format(name))
                 self.__services += self._compileNode(obj)
+                traffic_observer_interface_count += 1
 
             if type == 'snode':
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
-
+                traffic_observer_interface_count += 1
+        # eBPF
+        traffic_observer = TrafficObserver(emulator)
+        traffic_observer.setPorts([TRAFFIC_OBSERVER_PORT])
+        traffic_observer.set_interface_count(traffic_observer_interface_count)
+        self.__containerBundles.append(traffic_observer)
         for containerBundle in self.__containerBundles:
             bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
             self.__services += bundle_services

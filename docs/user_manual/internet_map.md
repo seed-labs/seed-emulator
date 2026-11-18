@@ -1,7 +1,7 @@
 # User Manual: InternetMap
 
 InternetMap is provided as a container bundle consisting of an emulator API,
-topology UI, geographic UI, and traffic observer. It is no longer enabled by a
+topology UI, and geographic UI. It is no longer enabled by a
 `Docker` constructor flag.
 
 See the [visualization manual](visualization.md) for setup, port ordering, and

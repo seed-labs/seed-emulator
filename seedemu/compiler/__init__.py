@@ -1,3 +1,5 @@
+TRAFFIC_OBSERVER_PORT = 19090
+
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
 from .Docker import Docker

@@ -20,7 +20,7 @@ The script constructs one `InternetMap(emu, ".map.seed.emu")` deployment.
 | `emulator_api_server` | `emulator_api_server.map.seed.emu` | `172.30.0.10` | AS151/net0 at `10.151.0.16`; Docker socket | No published API port; bridge port 7071 |
 | `internetmap_toplogy` | `internetmap_toplogy.map.seed.emu` | `172.30.0.11` | Nginx proxies to API | `http://localhost:8092` |
 | `internetmap_geo` | `internetmap_geo.map.seed.emu` | `172.30.0.12` | Nginx proxies to API and host observer | `http://localhost:8093` |
-| `traffic_observer` | `traffic_observer.map.seed.emu` | none | Host network/PID, debugfs/BPF mounts, and Docker socket | Control port 8091 |
+| `traffic_observer` | `traffic_observer.map.seed.emu` | none | Host network/PID, debugfs/BPF mounts, and Docker socket | Control port 19090 |
 
 `toplogy` is the current spelling in the service key and image name. Use it
 verbatim in Compose commands. Logical lookup keys omit the suffix, whereas
@@ -35,13 +35,13 @@ The current images are `handsonsecurity/seedemu-emulator-service:1.0`,
 Ports are configured explicitly:
 
 ```python
-internet_map.setPorts([8091, 8092, 8093])
+internet_map.setPorts([8092, 8093])
 ```
 
-The implementation reads indexes 0, 1, and 2 as observer control, topology HTTP,
-and geographic HTTP. It does not pop entries; only the first three are used.
-The observer's port is conveyed by TRAFFIC_CONTROL_ADDR with host networking,
-not by a Compose ports mapping. If Docker runs remotely, replace localhost in
+The implementation reads indexes 0 and 1 as topology HTTP and geographic HTTP.
+It does not pop entries; only the first two are used. The observer listens on the
+fixed TRAFFIC_OBSERVER_PORT (19090) with host networking, not by a Compose
+ports mapping. If Docker runs remotely, replace localhost in
 the UI URLs with the Docker host address.
 
 ## Default bridge and explicit emulator attachment
@@ -92,7 +92,7 @@ internet_map.addExternalNetwork(
 ```
 
 The first supplied external pool is used. Validation requires four addresses,
-including a slot for the host-network observer. If adding a second instance,
+for the three bridge-connected services. If adding a second instance,
 choose distinct suffixes, bridge names/subnets, internal IPs, and host ports;
 the observers still access the same Docker host.
 
@@ -119,7 +119,7 @@ Both UIs proxy `/api/v1` and `/emulator/` requests to the API's **bridge** IP on
 7071, even though it also has an emulator-facing interface. Nginx supports
 WebSocket upgrade headers and serves the frontend SPA at `/`.
 The geographic UI additionally maps `host.docker.internal` to `host-gateway`
-and proxies `/traffic-observer/` to control port 8091 on the Docker host.
+and proxies `/traffic-observer/` to control port 19090 on the Docker host.
 That Compose extra_hosts entry serves the host proxy; it is separate from the
 bundle's shared aliases.
 
@@ -164,7 +164,7 @@ readiness, runs probes and the custom test, and attempts teardown even on failur
 Checks cover all four services, default bridge IPAM, the API's internal
 attachment and gateway, UI port mappings and HTTP responses, Nginx targets,
 bridge reachability, shared aliases, observer host-network/control-port
-configuration, and a TCP connection to observer port 8091. They do not validate
+configuration, and a TCP connection to observer port 19090. They do not validate
 actual packet capture or traffic control.
 
 The HTTP probes use localhost:8092/8093, so run the lifecycle on the Linux Docker
