@@ -1,13 +1,18 @@
 from __future__ import annotations
+from copy import deepcopy
 from .Layer import Layer
 from .Node import Node
 from .Printable import Printable
 from .Emulator import Emulator
 from .enums import NodeRole
 from .Binding import Binding
-from typing import Dict, List, Set, Tuple
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Set, Tuple
 from .BaseSystem import BaseSystem
 from .SystemProfile import SystemProfile
+
+if TYPE_CHECKING:
+    from seedemu.compiler import DockerImage, Platform
+
 
 class Server(Printable): #TODO: make Customizable
     """!
@@ -102,6 +107,10 @@ class Service(Layer):#TODO: add availableOptions()
     The base class for all Services.
     """
 
+    # Subclasses declare platform -> {SystemProfile: DockerImage} defaults.
+    # Keep backend-specific definitions in the Service that owns the profiles.
+    DOCKER_IMAGES: ClassVar[Dict[Platform, Dict[SystemProfile, DockerImage]]] = {}
+
     _pending_targets: Dict[str, Server]
 
     __targets: Set[Tuple[Server, Node]]
@@ -110,6 +119,48 @@ class Service(Layer):#TODO: add availableOptions()
         super().__init__()
         self._pending_targets = {}
         self.__targets = set()
+        self.__docker_images = {}
+
+    def setDockerImage(self, profile: SystemProfile, image: DockerImage, platform: Platform) -> Service:
+        """Declare a Docker image for a profile on one target platform.
+
+        This changes the backend mapping, not any Server's selected profile.
+        Services declare default mappings in their DOCKER_IMAGES class constant.
+        Pass a Platform enum member, such as Platform.AMD64, not a string.
+        Invalid argument types raise TypeError without changing the mappings.
+        """
+        from seedemu.compiler import DockerImage, Platform
+
+        if not isinstance(profile, SystemProfile):
+            raise TypeError("profile must be a SystemProfile")
+        if not isinstance(image, DockerImage):
+            raise TypeError("image must be a DockerImage")
+        if not isinstance(platform, Platform):
+            raise TypeError("platform must be a Platform enum member, e.g. Platform.AMD64")
+        profiles = [profile]
+        for target_platform in Platform:
+            profiles.extend(self.getDockerImages(target_platform))
+        SystemProfile.validateProfiles(profiles)
+        self.__docker_images.setdefault(platform, {})[profile] = image
+        return self
+
+    def getDockerImages(self, platform: Platform) -> Dict[SystemProfile, DockerImage]:
+        """Return this Service's Docker mappings; other backends ignore them.
+
+        Read defaults from DOCKER_IMAGES and apply this instance's setDockerImage()
+        overrides. Copy default images because DockerImage software sets are mutable.
+        Missing profiles are not resolved through their subset automatically.
+        """
+        from seedemu.compiler import Platform
+
+        if not isinstance(platform, Platform):
+            raise TypeError("platform must be a Platform enum member, e.g. Platform.AMD64")
+        images = {
+            profile: deepcopy(image)
+            for profile, image in self.DOCKER_IMAGES.get(platform, {}).items()
+        }
+        images.update(self.__docker_images.get(platform, {}))
+        return images
 
     def _createServer(self) -> Server:
         """!
@@ -172,6 +223,7 @@ class Service(Layer):#TODO: add availableOptions()
 
         node_profile = node.getBaseSystem()
         server_profile = server.getBaseSystem()
+        SystemProfile.validateProfiles((node_profile, server_profile))
         if node_profile == BaseSystem.DEFAULT and server_profile != BaseSystem.DEFAULT:
             node.setBaseSystem(server_profile)
         elif server_profile == BaseSystem.DEFAULT and node_profile != BaseSystem.DEFAULT:
