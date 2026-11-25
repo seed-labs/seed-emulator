@@ -1,6 +1,6 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.containerBundle import ContainerBundle
+from seedemu.containerBundle import ContainerBundle, SystemBundle
 from seedemu.core import Service, Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
@@ -300,10 +300,6 @@ class Docker(Compiler):
     __naming_scheme: str
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
-
-
-    __internet_map_enabled: bool
-    __internet_map_port: int
 
     __client_hide_svcnet: bool
 
@@ -1366,6 +1362,8 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+        # system_bundle
+        self.__containerBundles.insert(0, SystemBundle(emulator))
         for containerBundle in self.__containerBundles:
             bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
             self.__services += bundle_services

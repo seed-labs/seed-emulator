@@ -8,7 +8,7 @@
 ## Add the InternetMap bundle
 
 `Docker()` no longer adds an Internet Map automatically. Create an
-`InternetMap` after `emu.render()`, assign at least three host ports, and
+`InternetMap` after `emu.render()`, assign at least two host ports, and
 register it with the Docker compiler before calling `emu.compile()`:
 
 ```python
@@ -19,14 +19,14 @@ emu.render()
 
 docker = Docker(platform=Platform.AMD64)
 internet_map = InternetMap(emu, ".map.seed")
-internet_map.setPorts([8081, 8082, 8083])
+internet_map.setPorts([8082, 8083])
 docker.addContainerBundle(internet_map)
 
 emu.compile(docker, "./output", override=True)
 ```
 
-The bundle generates four services: an emulator API, a topology UI, a
-geographic UI, and a traffic observer. The suffix distinguishes their Compose
+The bundle generates three services: an emulator API, a topology UI, and a
+geographic UI. The suffix distinguishes their Compose
 service names and build directories from another bundle instance.
 
 To let the emulator API reach an emulated network, attach it explicitly after
@@ -48,19 +48,18 @@ labels. The call checks but does not allocate or reserve the address.
 
 You can call `addInternalNetwork()` more than once. The API joins every
 configured internal network and uses the first address from each pool; the two
-UIs and traffic observer do not join them. The map's single `net.0` metadata
+UIs do not join them. The map's single `net.0` metadata
 entry describes the first internal attachment.
 
 <a id="ports"></a>
 ## Select ports
 
-The first three entries passed to `setPorts()` have fixed roles:
+The first two entries passed to `setPorts()` have fixed roles:
 
 | Position | Service |
 | --- | --- |
-| 1 | Traffic observer control port |
-| 2 | Topology UI HTTP port |
-| 3 | Geographic UI HTTP port |
+| 1 | Topology UI HTTP port |
+| 2 | Geographic UI HTTP port |
 
 Choose ports that are not already published by emulator nodes or other host
 services. The compiler does not probe the host for port availability.
@@ -68,15 +67,9 @@ services. The compiler does not probe the host for port availability.
 <a id="access-map"></a>
 ## Access the services
 
-For `setPorts([8081, 8082, 8083])`, open:
+For `setPorts([8082, 8083])`, open:
 
 - Topology UI: <http://127.0.0.1:8082/>
 - Geographic UI: <http://127.0.0.1:8083/>
-- Traffic observer HTTP control API: <http://127.0.0.1:8081/>
-
-The traffic observer uses host networking, the host PID namespace, privileged
-mode, Docker's socket, and Linux kernel/BPF mounts. Run the complete bundle on
-a Linux Docker host that provides those facilities.
-
 For a complete example, see
 [B08 InternetMap bundle](../../examples/internet/B08_internet_map_bundle/README.md).

@@ -8,7 +8,7 @@ not automatically added to the emulator registry.
 This document describes the current shared implementation. For the complete
 custom-subclass walkthrough, addresses, aliases, run commands, and tests, see
 [A14](../../examples/basic/A14_add_containerBundle/README.md). The concrete
-[InternetMap design](internet_map.md) has its runnable example in
+[InternetMap bundle design](internet_map_bundle.md) has its runnable example in
 [B08](../../examples/internet/B08_internet_map_bundle/README.md).
 
 ## Responsibilities and lifecycle
@@ -58,10 +58,35 @@ containers are separate actions from compilation.
 
 ## Identity and lookup
 
-`_createContainer(local_name, suffix)` registers an object under its unsuffixed
-logical key. getContainer(local_name) uses that key. getContainers() returns a
-shallow copy of the mapping, retaining its objects; getEmulator() and getSuffix()
-expose the bundle inputs.
+Bundles create `PreparedContainer` objects and store them under unsuffixed
+logical keys in `_containers`. `getContainer(local_name)` uses that key.
+`getContainers()` returns a shallow copy of the mapping, retaining its objects;
+`getEmulator()` and `getSuffix()` expose the bundle inputs.
+
+`_containers` is an instance field created with `default_factory=dict`. Each
+bundle instance owns its own mapping, and `ContainerBundle.install()` installs
+the prepared containers in that mapping. It is the bundle's ownership list.
+
+`_shared_containers` is a `ClassVar` mapping, so all `ContainerBundle` instances
+and subclasses in the Python process access the same mapping. A bundle can put
+one of its prepared containers there so another bundle can look it up without
+owning or installing it a second time. For example, `SystemBundle` registers
+`traffic_observer` in both mappings; `InternetMap` keeps its API and UI services
+in its own `_containers` but reads the observer from `_shared_containers` to
+configure the geographic UI proxy.
+
+| Mapping | Scope | Purpose | Installed by |
+| --- | --- | --- | --- |
+| `_containers` | One bundle instance | Owns the bundle's prepared services | That bundle's `install()` |
+| `_shared_containers` | Shared class state across bundle instances/subclasses | Lets bundles find a service owned elsewhere | The bundle that owns the service |
+
+The shared mapping stores references to the same `PreparedContainer` objects,
+not copies. Consumers should treat a shared entry as a reference and avoid
+adding it to their own `_containers`; doing so could emit the same Compose
+service twice. Since the mapping persists for the life of the process, a later
+registration with the same key replaces the previous entry. Bundle authors
+should use stable, unique keys and account for multiple emulator compilations
+in one Python process.
 
 | Value for logical name worker and suffix .example | Result |
 | --- | --- |
@@ -214,16 +239,18 @@ the context directory named by getHostname(), prepares enabled startup files,
 and invokes _generateDockerfile().
 
 - No staged files: no Dockerfile is generated; image remains in the service.
-- Staged files: generation consumes image for FROM, asserts it is nonempty,
-  enables privileged mode, and installs iproute2 and iputils-ping with apt.
-  The current generator always adds this package step for derived images.
+- Staged files: generation enables privileged mode and writes configured
+  Dockerfile lines followed by generated COPY instructions. The bundle must
+  provide a complete Dockerfile prefix, including FROM, with
+  `setDockerfileLines()` when staged files require a derived image.
 - _addFile(path, content) uses MD5 of the destination for context filenames and
   emits COPY instructions. Destinations ending in .sh also receive chmod +x.
 - The installer writes Dockerfile and sets the service build path.
 
 Files trigger derived-image generation even when startup processing is disabled.
-Base images must support the generated apt commands. Generating a Dockerfile
-does not supply an original entrypoint script that the base image lacks.
+Configured Dockerfile lines must match the base image and include a FROM
+directive. Generating a Dockerfile does not supply an original entrypoint script
+that the base image lacks.
 The current implementation uses chdir() without exception-safe restoration;
 installation assumes the compiler's output-directory workflow.
 
