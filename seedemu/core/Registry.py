@@ -1,6 +1,8 @@
 from typing import Dict, Tuple, List
 from .Printable import Printable
 
+_NODE_TYPES = frozenset({'rnode', 'csnode', 'hnode', 'rs', 'snode'})
+
 class Registrable(object):
     """!
     @brief The Registerable base class.
@@ -91,6 +93,7 @@ class Registry(Printable):
         @brief create a new Registry.
         """
         self.__objects = {}
+        self.__node_count = 0
 
     def register(self, scope: str, type: str, name: str, obj: Registrable) -> Registrable:
         """!
@@ -106,7 +109,20 @@ class Registry(Printable):
         assert (scope, type, name) not in self.__objects, 'object with name {} already exist.'.format(name)
         obj.doRegister(scope, type, name)
         self.__objects[(scope, type, name)] = obj
+        if type in _NODE_TYPES:
+            self.__node_count += 1
         return self.__objects[(scope, type, name)]
+
+    def getNodeCount(self) -> int:
+        """!
+        @brief Return the total number of registered physical nodes.
+
+        Counts rnode, csnode, hnode, rs and snode entries. Auxiliary brdnode
+        registrations are excluded because their routers are already rnodes.
+        The count is maintained during registration and queried in constant time.
+        Objects must be registered through register(), not by modifying getAll().
+        """
+        return self.__node_count
 
     def get(self, scope: str, type: str, name: str) -> Registrable:
         """!
@@ -213,6 +229,10 @@ class ScopedRegistry(Registry):
         @throws AssertionError if name exists.
         """
         return self.__reg.register(self.__scope, type, name, obj)
+
+    def getNodeCount(self) -> int:
+        """Return the shared parent registry's total physical node count."""
+        return self.__reg.getNodeCount()
 
     def get(self, type: str, name: str) -> object:
         """!

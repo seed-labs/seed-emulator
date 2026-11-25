@@ -34,8 +34,23 @@ and `python3`.
 
 ### Set up the project
 
-To run the emulator code, we can add this folder to the `PYTHONPATH` environment variable. Running `source development.env` 
-inside the project's root directory can temporarily run our code but will lose its effect when you restart your shell. We do recommend to permanently add the project's root directory to the `PYTHONPATH` environment variable.
+Use Python 3.10 or newer. Install it with:
+
+```sh
+python -m pip install seedemu
+```
+
+To install the latest development source instead:
+
+```sh
+python -m pip install "git+https://github.com/seed-labs/seed-emulator.git@development"
+```
+
+For local development, clone the repository and run `python -m pip install -e .`
+in its root directory. The examples remain in the repository; Docker Engine
+and Docker Compose are needed to build and run their generated deployments.
+
+Maintainers can follow the [PyPI release instructions](docs/developer_manual/pypi-release.md).
 
 ### Set up the proxy (not needed if you don't have an issue)
 
@@ -73,7 +88,7 @@ To run an example, do the following:
 4. Some examples already include the visualization container (called Internet
    Map).  Point your browser to `http://127.0.0.1:8080/map.html`, and you will
    see the visualization. More instructions on how to use the visualization app
-   is given in [this manual](./docs/user_manual/internet_map.md).  If the map
+   is given in [this manual](./docs/user_manual/internet_map_bundle.md).  If the map
    is not included, you can open a new terminal window, navigate to the project
    root directory, cd to `client/`, and run `docker-compose build &&
    docker-compose up`. This will bring up the Internet Map container. 

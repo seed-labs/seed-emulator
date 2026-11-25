@@ -135,7 +135,8 @@ build/load B00 -> render emulator -> create DemoContainerBundle
 -> compile emulator nodes -> configure bundle -> install prepared containers
 ```
 
-The constructor creates two prepared containers. `configure()` calls the base
+The constructor creates two `PreparedContainer` objects and stores them in the
+bundle's instance `_containers` mapping. `configure()` calls the base
 port check, assigns Compose attributes and attachments, registers aliases, and
 stages application files. `docker.addContainerBundle()` only registers; Docker
 later calls configure/install during `emu.compile()`. Avoid manually configuring
@@ -151,8 +152,10 @@ Installation creates build contexts `output/demo-app.demo.seed` and
 `output/demo-helper.demo.seed`. They contain Dockerfiles and staged files whose
 names are MD5 hashes of their destination paths. COPY instructions restore the
 paths, including `/tmp/etc-hosts`, `/new-entrypoint.sh`, and the app's message
-script. Derived images currently install `iproute2` and `iputils-ping` through
-apt, and the installer enables privileged mode.
+script. Each prepared container receives explicit Dockerfile lines through
+`setDockerfileLines()`, including its `FROM` base image and dependency setup;
+the installer no longer injects an apt package-install step. The generated
+Dockerfile enables privileged mode for the service.
 
 ## Automated verification
 
@@ -169,8 +172,9 @@ python -B seedemu/testing/cli.py all examples/basic/A14_add_containerBundle/exam
 The runner cleans declared generated files, compiles, builds, starts the project,
 checks readiness, executes probes and the custom test, and attempts teardown
 even on failure. The test checks both containers' static attachments and
-wrappers, bridge IPAM, the published port, shared hostname resolution, both app
-internal addresses and gateways, and the staged executable script. It does not
+wrappers, configured Dockerfile base/dependency lines, bridge IPAM, the published
+port, shared hostname resolution, both app internal addresses and gateways, and
+the staged executable script. It does not
 expect an HTTP server on 8090.
 
 The manifest uses `standard_args: false` with positional `compile.args: [amd]`.

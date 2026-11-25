@@ -158,16 +158,16 @@ docker = Docker(platform=Platform.AMD64)
 
 # InternetMap is optional and must be registered explicitly.
 internet_map = InternetMap(emu, ".map.seed")
-internet_map.setPorts([8081, 8082, 8083])
+internet_map.setPorts([8082, 8083])
 docker.addContainerBundle(internet_map)
 
 emu.compile(docker, './output', override = True)
 ```
 
 `Docker()` does not add visualization services automatically. The optional
-`InternetMap` bundle above creates the emulator API, topology UI, geographic
-UI, and traffic observer. The three ports are, in order, the observer control
-port, topology UI port, and geographic UI port. Import `InternetMap` from
+`InternetMap` bundle above creates the emulator API, topology UI, and geographic
+UI. The two configured ports are, in order, the topology UI port and geographic
+UI port. Import `InternetMap` from
 `seedemu.containerBundle`.
 The `platform` option indicates which platform
 we are generating the emulation for, AMD64 or ARM64 (for Apple Silicon

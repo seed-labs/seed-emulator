@@ -19,7 +19,15 @@ ContainerBundle containers:
 The checks must inspect the running containers rather than relying only on the
 generated Compose file.
 
-## 2. `show_on_map` Label Checks
+## 2. Custom Dockerfile Checks
+
+Each prepared container stages files and supplies Dockerfile lines explicitly.
+Inspect both generated Dockerfiles and verify they start with
+`FROM debian:bookworm-slim`, contain the configured noninteractive apt argument
+and dependency installation command, and include COPY instructions for their
+staged files.
+
+## 3. `show_on_map` Label Checks
 
 After the containers have started, inspect the labels of each bundle container
 that is configured for display on the map. Verify that these labels exist:

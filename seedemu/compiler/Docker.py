@@ -1,7 +1,7 @@
 from __future__ import annotations
 from seedemu.core.Emulator import Emulator
-from seedemu.containerBundle import ContainerBundle
-from seedemu.core import Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
+from seedemu.containerBundle import ContainerBundle, SystemBundle
+from seedemu.core import Service, Node, Network, Compiler, BaseSystem, SystemProfile, BaseOption, Scope, ScopeType, ScopeTier, OptionHandling, BaseVolume, OptionMode
 from seedemu.core.enums import NodeRole, NetworkType
 from .DockerImage import DockerImage
 from .DockerImageConstant import *
@@ -301,10 +301,6 @@ class Docker(Compiler):
     __self_managed_network: bool
     __dummy_network_pool: Generator[IPv4Network, None, None]
 
-
-    __internet_map_enabled: bool
-    __internet_map_port: int
-
     __client_hide_svcnet: bool
 
     __images: Dict[str, Tuple[DockerImage, int]]
@@ -399,6 +395,53 @@ class Docker(Compiler):
     ) -> Dict[SystemProfile, DockerImage]:
         """Return the system-profile image catalog for a target platform."""
         return dict(BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[platform])
+
+    @staticmethod
+    def _imageDefinition(image: DockerImage):
+        """Compare effective build inputs, including inherited installed software."""
+        return (image.getName(), frozenset(image.getSoftware()), image.isLocal(), image.getDirName())
+
+    def _collectServiceImages(self, emulator: Emulator):
+        """Collect Service image mappings from the final emulator before compilation."""
+        catalog = dict(self._getSystemImageCatalog(self.__platform))
+        owners = {profile: "SeedEmu" for profile in catalog}
+        profiles = list(catalog)
+        for layer in emulator.getLayers():
+            if not isinstance(layer, Service):
+                continue
+            profiles.extend(server.getBaseSystem() for server in layer.getPendingTargets().values())
+            images = layer.getDockerImages(self.__platform)
+            if not isinstance(images, Mapping):
+                raise TypeError("{}.getDockerImages() must return a mapping".format(layer.getName()))
+            for profile, image in images.items():
+                if not isinstance(profile, SystemProfile) or not isinstance(image, DockerImage):
+                    raise TypeError("{}.getDockerImages() must map SystemProfile to DockerImage".format(layer.getName()))
+                profiles.append(profile)
+                if profile in catalog and self._imageDefinition(catalog[profile]) != self._imageDefinition(image):
+                    raise ValueError("Conflicting Docker images for profile {} on {}: {} and {}".format(
+                        profile, self.__platform.value, owners[profile], layer.getName()))
+                catalog[profile] = image
+                owners[profile] = layer.getName()
+
+        profiles.extend(node.getBaseSystem() for node in emulator.getRegistry().getAll().values()
+                        if isinstance(node, Node))
+        SystemProfile.validateProfiles(profiles)
+
+        # Validate shared image names before registering any Service images.
+        registered = {name: image for name, (image, _) in self.__images.items()}
+        for profile, image in catalog.items():
+            name = image.getName()
+            if name in registered:
+                if self._imageDefinition(registered[name]) != self._imageDefinition(image):
+                    raise ValueError("Conflicting Docker image definitions for {}".format(name))
+                catalog[profile] = registered[name]
+            else:
+                registered[name] = image
+
+        for name, image in registered.items():
+            if name not in self.__images:
+                self.addImage(image, priority=0)
+        self.__basesystem_dockerimage_mapping = catalog
 
     def _addVolume(self, vol: BaseVolume):
         """! @brief add a docker volume/bind mount/or tmpfs
@@ -1288,6 +1331,7 @@ class Docker(Compiler):
         return dummies
 
     def _doCompile(self, emulator: Emulator):
+        self._collectServiceImages(emulator)
         registry = emulator.getRegistry()
 
         self._groupSoftware(emulator)
@@ -1318,6 +1362,8 @@ class Docker(Compiler):
                 self._log('compiling service node {}...'.format(name))
                 self.__services += self._compileNode(obj)
 
+        # system_bundle
+        self.__containerBundles.insert(0, SystemBundle(emulator))
         for containerBundle in self.__containerBundles:
             bundle_services, bundle_networks= self._compileContainerBundle(containerBundle)
             self.__services += bundle_services

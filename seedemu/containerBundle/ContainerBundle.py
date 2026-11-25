@@ -6,7 +6,7 @@ from hashlib import md5
 from os import mkdir, chdir
 from textwrap import indent
 from ipaddress import IPv4Address, IPv4Network
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, ClassVar
 from dataclasses import InitVar, dataclass, field
 
 from seedemu.core.Emulator import Emulator
@@ -54,6 +54,7 @@ class ContainerBundle:
     suffix: InitVar[str] = ""
     _emulator: Optional[Emulator] = field(default=None, init=False, repr=False)
     _suffix: str = field(default="", init=False)
+    _shared_containers: ClassVar[Dict[str, PreparedContainer]] = {}
     _containers: Dict[str, PreparedContainer] = field(default_factory=dict, init=False)
     _internal_networks: list[Dict[str, str]] = field(default_factory=list, init=False)
     _external_networks: list[Dict[str, str]] = field(default_factory=list, init=False)
@@ -72,19 +73,6 @@ class ContainerBundle:
         """
         self._emulator = emulator
         self._suffix = suffix
-
-    def _createContainer(self, local_name: str, suffix: str) -> PreparedContainer:
-        """!
-        @brief Create and register a prepared container.
-
-        @param local_name logical Compose service name.
-        @param suffix suffix appended to the generated hostname.
-        @returns the newly registered ``PreparedContainer``.
-        """
-        container = PreparedContainer(name=local_name, suffix=suffix, emulator=self._emulator)
-        self._containers.update({local_name: container})
-
-        return container
 
     def getContainer(self, local_name: str) -> PreparedContainer:
         """!
@@ -407,6 +395,7 @@ class PreparedContainer:
     _start_script_name: str = field(default="/start.sh", init=False)
     _default_route: str = field(default="", init=False)
     _etc_hosts_records: List[Tuple[str, str]] = field(default_factory=list, init=False)
+    _dockerfile_lines: List[str] = field(default_factory=list, init=False)
 
     def __post_init__(self, name: str, suffix: str, emulator: Optional[Emulator]) -> None:
         """!
@@ -678,6 +667,9 @@ class PreparedContainer:
         """
         self._files.update({filename: content})
 
+    def setDockerfileLines(self, dockerfile_lines:List[str]):
+        self._dockerfile_lines = dockerfile_lines[:]
+
     def _generateDockerfile(self) -> str:
         """!
         @brief Stage configured files and generate derived-image instructions.
@@ -692,16 +684,11 @@ class PreparedContainer:
         self._service.update({"privileged": True})
         image = self._service.pop("image", "")
         assert image, f"Container {self.getHostname()!r} has no base image."
-        dockerfile_lines = [
-            f"FROM {image}",
-            "ARG DEBIAN_FRONTEND=noninteractive",
-            "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping && rm -rf /var/lib/apt/lists/*",
-        ]
 
         for filename, content in self._files.items():
-            dockerfile_lines.append(self._addFile(filename, content))
+            self._dockerfile_lines.append(self._addFile(filename, content))
 
-        dockerfile = "\n".join(dockerfile_lines) + "\n"
+        dockerfile = "\n".join(self._dockerfile_lines) + "\n"
 
         return dockerfile
 

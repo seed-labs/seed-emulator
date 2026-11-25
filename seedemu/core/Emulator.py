@@ -438,6 +438,17 @@ class Emulator:
         """
         return self.__registry
 
+    def getNodeCount(self) -> int:
+        """!
+        @brief Return the physical node count after rendering the emulator.
+
+        Includes routers, control service nodes, hosts, route servers and service
+        nodes. Virtual nodes and ContainerBundle containers are not included.
+        @throws AssertionError if the emulator has not been rendered.
+        """
+        assert self.__rendered, 'emulator is not rendered.'
+        return self.__registry.getNodeCount()
+
     def getVirtualNode(self, vnode_name: str) -> core.Node:
         """!
         @brief get a virtual "physical" node.

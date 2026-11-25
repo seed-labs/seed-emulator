@@ -2,8 +2,8 @@
 
 ## 1. Container Checks
 
-After the generated system has started, verify the following behavior for all
-InternetMap bundle containers:
+After the generated system has started, verify the following behavior for the
+three InternetMap services and the separately managed SystemBundle observer:
 
 - Each expected bundle container is running normally and is not repeatedly
   restarting.
@@ -61,7 +61,11 @@ http://127.0.0.1:8092/api/v1/network
 The check passes when the page returns a successful nonempty response and both
 APIs return successful JSON responses containing their result fields.
 
-## 4. Traffic Observer Test
+## 4. SystemBundle Traffic Observer Test
+
+Verify the observer is running as `traffic_observer.system.seed` with host
+networking. It is supplied by `SystemBundle`, independently of the InternetMap
+services.
 
 Use HTTP requests to verify that:
 
