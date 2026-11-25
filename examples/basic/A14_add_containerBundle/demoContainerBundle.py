@@ -1,5 +1,10 @@
-from seedemu.containerBundle import ContainerBundle
+from seedemu.containerBundle import ContainerBundle, PreparedContainer
 
+DOCKERFILE_LINES = [
+    "FROM debian:bookworm-slim",
+    "ARG DEBIAN_FRONTEND=noninteractive",
+    "RUN apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping && rm -rf /var/lib/apt/lists/*",
+]
 
 class DemoContainerBundle(ContainerBundle):
     """!
@@ -14,8 +19,8 @@ class DemoContainerBundle(ContainerBundle):
         @param suffix suffix appended to generated container hostnames.
         """
         super().__init__(emulator=emulator, suffix=suffix)
-        self._createContainer("demo-app", suffix)
-        self._createContainer("demo-helper", suffix)
+        self._containers.update({"demo-app": PreparedContainer(name="demo-app", suffix=suffix, emulator=emulator)})
+        self._containers.update({"demo-helper": PreparedContainer(name="demo-helper", suffix=suffix, emulator=emulator)})
         # Only demo-app needs an internal address and a published host port.
         self._required_internal_address_count = 1
         self._required_port_count = 1
@@ -40,6 +45,7 @@ class DemoContainerBundle(ContainerBundle):
                 "build": f"./{app.getHostname()}",
             }
         )
+        app.setDockerfileLines(DOCKERFILE_LINES)
         for index, network in enumerate(self._external_networks):
             network_name = network["network_name"]
             ip_addresses = network["ip_addresses"]
@@ -67,6 +73,7 @@ class DemoContainerBundle(ContainerBundle):
                 "command": "sleep infinity",
             }
         )
+        helper.setDockerfileLines(DOCKERFILE_LINES)
         # Install a complete startup script for hosts injection. exec sleep keeps
         # the helper running; the trailing /bin/sh delegation is never reached.
         helper.setEntrypointWrapper(

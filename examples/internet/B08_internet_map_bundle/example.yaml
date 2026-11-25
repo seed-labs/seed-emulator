@@ -1,6 +1,6 @@
 id: internet-b08-internet-map-bundle
 name: InternetMap with emulator access
-description: One visualization stack with a default IPAM bridge, an explicit AS151 API attachment, and a host-network observer.
+description: InternetMap services with a system-managed host-network traffic observer.
 runner: internet
 script: internet_map_bundle.py
 platform: amd
@@ -27,7 +27,6 @@ compile:
     - output/emulator_api_server.map.seed.emu/Dockerfile
     - output/internetmap_toplogy.map.seed.emu/Dockerfile
     - output/internetmap_geo.map.seed.emu/Dockerfile
-    - output/traffic_observer.map.seed.emu/Dockerfile
   timeout: 600
 
 build:
@@ -43,7 +42,7 @@ runtime:
         - emulator_api_server.map.seed.emu
         - internetmap_toplogy.map.seed.emu
         - internetmap_geo.map.seed.emu
-        - traffic_observer.map.seed.emu
+        - traffic_observer.system.seed
         - brdnode_151_router0
       retries: 40
       interval: 3
@@ -69,7 +68,7 @@ probes:
   - name: observer control port accepts connections
     type: tcp
     host: 127.0.0.1
-    port: 8091
+    port: 19090
     timeout: 5
     retries: 30
     interval: 2

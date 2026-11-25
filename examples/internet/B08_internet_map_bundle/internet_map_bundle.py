@@ -47,11 +47,11 @@ emu.render()
 
 docker = Docker(platform=platform)
 
-# Create one stack: emulator API, topology UI, geographic UI, and traffic observer.
+# Create one stack: emulator API, topology UI, and geographic UI.
 # The suffix distinguishes generated services, container names, and build folders;
 # it does not select a subnet. With no explicit addExternalNetwork(), configure()
 # registers the default internetMap_network bridge (172.30.0.0/24, gateway .1).
-# API and UIs use .10, .11, and .12; the observer uses host networking.
+# API and UIs use .10, .11, and .12 on the private bridge.
 internet_map = InternetMap(emu, ".map.seed.emu")
 # Give the API an emulator-facing interface on AS151/net0 at an explicit IP.
 # Without it, the API retains bridge and Docker-socket access, but has no direct
@@ -61,10 +61,9 @@ internet_map.addInternalNetwork(asn="151", network_name="net0", ip_addresses=["1
 # AS161
 internet_map.addInternalNetwork(asn="161", network_name="net0", ip_addresses=["10.161.0.16"])
 # Only the API uses the first address of the first internal pool. The UIs reach
-# the API over the private bridge; the observer remains on the host network.
-# Three host ports are required in this order: observer control, topology HTTP,
-# geographic HTTP (for example [8091, 8092, 8093]); shorter lists fail validation.
-internet_map.setPorts([8091, 8092, 8093])
+# the API over the private bridge.
+# Two host ports are required in this order: topology HTTP and geographic HTTP.
+internet_map.setPorts([8092, 8093])
 # Registration only: configure() and install() run later during emu.compile().
 docker.addContainerBundle(internet_map)
 

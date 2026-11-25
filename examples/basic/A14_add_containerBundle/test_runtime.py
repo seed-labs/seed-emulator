@@ -201,6 +201,31 @@ def check_map_labels(test: ComposeRuntimeTest, info: dict[str, Any]) -> None:
     )
 
 
+def check_dockerfile_lines(test: ComposeRuntimeTest) -> None:
+    """Verify custom Dockerfile prefixes and generated file-copy steps."""
+    for service in (APP, HELPER):
+        dockerfile = test.compose_file.parent / service / "Dockerfile"
+        try:
+            lines = dockerfile.read_text(encoding="utf-8").splitlines()
+            detail = f"first_lines={lines[:3]!r}"
+        except OSError as error:
+            lines = []
+            detail = str(error)
+        passed = (
+            len(lines) >= 3
+            and lines[0] == "FROM debian:bookworm-slim"
+            and lines[1] == "ARG DEBIAN_FRONTEND=noninteractive"
+            and lines[2].startswith("RUN apt-get update && apt-get install")
+        )
+        record(
+            test,
+            f"3.1 {service} uses its configured Dockerfile base and dependencies",
+            passed,
+            detail,
+            f"read {service}/Dockerfile",
+        )
+
+
 def main() -> int:
     test = ComposeRuntimeTest(__file__)
     app_info = inspect_service(test, APP)
@@ -212,6 +237,7 @@ def main() -> int:
         check_etc_hosts(test, service)
     check_connectivity(test)
     check_map_labels(test, app_info)
+    check_dockerfile_lines(test)
 
     test.write_summary("a14-runtime-test.json")
     return test.exit_code()
